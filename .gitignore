@@ -1,0 +1,12 @@
+# Ignore logs and Python cache
+logs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+# Virtual envs and environment files
+venv/
+env/
+.env
+
+# Editor folders
+.vscode/
