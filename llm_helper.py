@@ -2,8 +2,16 @@
 import asyncio
 import json
 import os
+import sys
 from typing import Any, Dict, Optional, Tuple
+from io import TextIOWrapper
 import anthropic
+
+# Ensure UTF-8 encoding for stdout on Windows
+if sys.platform == 'win32':
+    sys.stdout = TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 MODEL_ID = "claude-haiku-4-5-20251001"
 
 # Global system prompt cache for multi-agent interactions
@@ -60,9 +68,94 @@ class MockLLMClient(LLMClient):
 
 
 # Helper Functions
-async def call_llm_with_timeout(client: LLMClient, prompt: str, timeout: float = 5.0, max_tokens: int = 200, system_prompt: Optional[str] = None) -> str:
+async def call_llm_with_timeout(client: LLMClient, prompt: str, timeout: float, max_tokens: int = 200, system_prompt: Optional[str] = None) -> str:
     return await asyncio.wait_for(client.complete(prompt, max_tokens=max_tokens, system_prompt=system_prompt), timeout=timeout)
 
+# Print enabled_store in human-readable format
+def print_enabled_store(enabled_store):
+    """
+    Print the contents of enabled_store in a human-readable form.
+    
+    Args:
+        enabled_store: An enabled store object with a messages() method
+    """
+    messages = list(enabled_store.messages())
+    
+    if not messages:
+        print("enabled_store is empty (no messages)")
+        return
+    
+    print(f"\n{'='*80}")
+    print(f"ENABLED STORE CONTENTS ({len(messages)} message(s))")
+    print(f"{'='*80}\n")
+    
+    for idx, partial in enumerate(messages):
+        print(f"[{idx}] Message:")
+        print(f"    Schema Name: {partial.schema.qualified_name}")
+        print(f"    Sender: {partial.schema.sender.name}")
+        print(f"    Recipients: {[r.name for r in partial.schema.recipients]}")
+        print(f"    Parameters:")
+        
+        if hasattr(partial, 'bindings') and partial.bindings:
+            for param_name, param_value in partial.bindings.items():
+                status = "[BOUND]" if param_value is not None else "[MISSING]"
+                print(f"        {param_name}: {param_value} {status}")
+        else:
+            print(f"        (no bindings)")
+        
+        print()
+    
+    print(f"{'='*80}\n")
+
+# Print the constructed user prompt for debugging
+def print_user_prompt(prompt: str, title: str = "USER PROMPT"):
+    """
+    Print the constructed user prompt in a readable format.
+    
+    Args:
+        prompt: The user prompt string to display
+        title: Optional title for the output section
+    """
+    print(f"\n{'='*80}")
+    print(f"{title}")
+    print(f"{'='*80}\n")
+    print(prompt)
+    print(f"\n{'='*80}\n")
+
+# Print the LLM response for debugging
+def print_llm_response(response: Any, title: str = "LLM RESPONSE"):
+    """
+    Print the LLM response in a readable format.
+    Handles both raw string responses and parsed result tuples.
+    If the response is JSON string, it will be pretty-printed.
+    
+    Args:
+        response: The LLM response (can be string or tuple of (choice, params))
+        title: Optional title for the output section
+    """
+    print(f"\n{'='*80}")
+    print(f"{title}")
+    print(f"{'='*80}\n")
+    
+    # Handle tuple response (choice_idx, params)
+    if isinstance(response, tuple):
+        choice_idx, params = response
+        output_dict = {"choice": choice_idx, "params": params}
+        print(json.dumps(output_dict, indent=2))
+    # Handle string response
+    elif isinstance(response, str):
+        # Try to parse and pretty-print as JSON
+        try:
+            parsed_json = json.loads(response)
+            print(json.dumps(parsed_json, indent=2))
+        except (json.JSONDecodeError, ValueError):
+            # If not JSON, print as-is
+            print(response)
+    else:
+        # Fallback for other types
+        print(str(response))
+    
+    print(f"\n{'='*80}\n")
 
 # Parse LLM JSON reply
 def parse_llm_json_reply(text: str) -> Optional[Dict[str, Any]]:
@@ -84,9 +177,32 @@ def parse_llm_json_reply(text: str) -> Optional[Dict[str, Any]]:
         return None
     return {"choice": choice, "params": params}
 
+class RoleEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle Role objects"""
+    def default(self, obj):
+        if hasattr(obj, 'name'):
+            return obj.name
+        return super().default(obj)
+
+# Convert adapter protocol info to JSON
+def protocol_to_json(adapter):
+    """
+    Convert adapter's protocol information (roles and name) to JSON.
+    
+    Args:
+        adapter: An Adapter instance
+        
+    Returns:
+        str: JSON string containing adapter name and roles
+    """
+    data = {
+        "name": adapter.name,
+        "roles": sorted(list(adapter.roles))
+    }
+    return json.dumps(data, cls=RoleEncoder)
 
 # Human-in-the-loop requirement extraction
-async def gather_requirements_from_user(client: LLMClient, available_roles: list = None, context: str = "", *, max_tokens: int = 1000, timeout: float = 10.0) -> Tuple[Optional[str], str]:
+async def gather_requirements_from_user(client: LLMClient, available_roles: list = None, context: str = "", *, max_tokens: int = 1000, timeout: float = 30.0) -> Tuple[Optional[str], str]:
     """
     Conduct a human-in-the-loop conversation via the LLM to determine system requirements and infer agent role.
     
@@ -100,18 +216,22 @@ async def gather_requirements_from_user(client: LLMClient, available_roles: list
     Args:
         client: LLM client instance for processing user input
         available_roles: List of available roles in the protocol (e.g., ["Buyer", "Seller", "Shipper"])
+                        Can include BSPL Role objects; will be serialized automatically
         context: Optional context about the system/agents (e.g., protocol name)
+                Can include BSPL objects; will be serialized automatically
         max_tokens: Maximum tokens for LLM responses
         timeout: Timeout for LLM calls in seconds
     
     Returns:
         Tuple of (inferred_role: str, system_prompt: str) or (None, default_prompt) on failure
     """
+    
     print("\n=== Human-in-the-Loop Requirement Extraction ===")
     if context:
         print(f"Protocol/Context: {context}\n")
     if available_roles:
-        print(f"Available roles: {', '.join(available_roles)}\n")
+        role_strings = [str(role) for role in available_roles]
+        print(f"Available roles: {', '.join(role_strings)}\n")
     
     user_requirements = []
     conversation_history = []
@@ -138,7 +258,8 @@ async def gather_requirements_from_user(client: LLMClient, available_roles: list
     # Construct prompt for LLM to extract role and structure requirements
     role_context = ""
     if available_roles:
-        role_context = f"\n\nAvailable roles in the protocol: {', '.join(available_roles)}. Infer which role best matches the user's stated requirements."
+        role_strings = [str(role) for role in available_roles]
+        role_context = f"\n\nAvailable roles in the protocol: {', '.join(role_strings)}. Infer which role best matches the user's stated requirements."
     
     extraction_prompt = f"""The user has provided the following requirements for a multi-agent system:
 
@@ -156,7 +277,7 @@ Provide a structured analysis."""
     conversation_history.append({"role": "user", "content": extraction_prompt})
     
     try:
-        print("⏳ Analyzing requirements with LLM...")
+        print("[...] Analyzing requirements with LLM...")
         llm_analysis = await call_llm_with_timeout(client, extraction_prompt, timeout=timeout, max_tokens=max_tokens)
     except asyncio.TimeoutError:
         print("Warning: LLM analysis timed out. Using basic requirements.")
@@ -195,7 +316,7 @@ Please update your analysis to incorporate these new requirements and identify a
             conversation_history.append({"role": "user", "content": refinement_prompt})
             
             try:
-                print("⏳ Refining analysis with LLM...")
+                print("[...] Refining analysis with LLM...")
                 llm_refinement = await call_llm_with_timeout(client, refinement_prompt, timeout=timeout, max_tokens=max_tokens)
             except asyncio.TimeoutError:
                 print("Warning: LLM refinement timed out.")
@@ -206,9 +327,10 @@ Please update your analysis to incorporate these new requirements and identify a
     
     # Generate final system prompt and infer role based on all requirements
     # Include the full conversation history so LLM has context for role inference
+    roles_str = ', '.join([str(r) for r in available_roles]) if available_roles else 'any appropriate role'
     final_prompt = f"""Based on the requirements analysis and conversation above, please:
 
-1. Identify the specific agent role that should be used (must be one of: {', '.join(available_roles) if available_roles else 'any appropriate role'})
+1. Identify the specific agent role that should be used (must be one of: {roles_str})
 2. Generate a concise system prompt for that agent role that captures:
    - The core mission and priorities for THIS specific role
    - Key decision-making guidelines
@@ -232,7 +354,7 @@ Make the system prompt clear, actionable, and specific to the inferred role."""
     
     # Use full conversation as context for final LLM call
     try:
-        print("⏳ Generating system prompt and inferring role with LLM...")
+        print("[...] Generating system prompt and inferring role with LLM...")
         final_response = await call_llm_with_timeout(client, full_conversation, timeout=timeout, max_tokens=max_tokens)
     except asyncio.TimeoutError:
         print("Warning: System prompt generation timed out. Using default.")
@@ -258,10 +380,10 @@ Make the system prompt clear, actionable, and specific to the inferred role."""
                 inferred_role = extracted_role
             
             system_prompt = prompt_section
-            print(f"✓ Successfully extracted role: {inferred_role}")
+            print(f"[OK] Successfully extracted role: {inferred_role}")
         else:
             # Fallback: search for role mentions in response
-            print("⚠ Could not find ROLE: and SYSTEM_PROMPT: markers. Attempting extraction...")
+            print("[!] Could not find ROLE: and SYSTEM_PROMPT: markers. Attempting extraction...")
             system_prompt = final_response
             inferred_role = None
             
@@ -270,25 +392,26 @@ Make the system prompt clear, actionable, and specific to the inferred role."""
                 for role in available_roles:
                     if role.lower() in final_response.lower():
                         inferred_role = role
-                        print(f"✓ Found role mention: {role}")
+                        print(f"[OK] Found role mention: {role}")
                         break
             
             if not inferred_role:
-                print("⚠ Could not identify role from response")
+                print("[!] Could not identify role from response")
     except Exception as e:
-        print(f"⚠ Error parsing response ({e}). Using full response as prompt.")
+        print(f"[!] Error parsing response ({e}). Using full response as prompt.")
         system_prompt = final_response
         inferred_role = None
     
     return inferred_role, system_prompt
-
 
 # Build user prompt for LLM to understand Local State (modify this to not include the system prompt details)
 def build_user_prompt(agent_name: str, role_names, options: list, recent_event: dict = None, examples: list = None) -> str:
     lines = []
     lines.append(f"You are agent '{agent_name}'. Choose at most one option, or return null.")
     if role_names:
-        lines.append(f"Roles: {', '.join(role_names)}")
+        # Convert Role objects to strings
+        role_strings = [str(role) for role in role_names]
+        lines.append(f"Roles: {', '.join(role_strings)}")
     lines.append("Options:")
     for o in options:
         lines.append(f"{o['index']}) {o['schema_name']} - missing params: {o['missing_params']}")
@@ -304,9 +427,8 @@ def build_user_prompt(agent_name: str, role_names, options: list, recent_event: 
             lines.append(json.dumps(ex))
     return "\n".join(lines)
 
-
 # Call the LLM
-async def choose_option_from_llm(client: LLMClient, prompt: str, timeout: float = 5.0, system_prompt: Optional[str] = None) -> Optional[Tuple[Optional[int], Dict[str, Any]]]:
+async def choose_option_from_llm(client: LLMClient, prompt: str, timeout: float = 30.0, system_prompt: Optional[str] = None) -> Optional[Tuple[Optional[int], Dict[str, Any]]]:
     try:
         text = await call_llm_with_timeout(client, prompt, timeout=timeout, system_prompt=system_prompt)
     except asyncio.TimeoutError:
@@ -316,9 +438,8 @@ async def choose_option_from_llm(client: LLMClient, prompt: str, timeout: float 
         return None
     return parsed["choice"], parsed["params"]
 
-
 # Prompt the LLM to choose and bid parameters
-async def choose_and_bind(adapter, enabled_store, event: dict, client: LLMClient, *, timeout: float = 5.0):
+async def choose_and_bind(adapter, enabled_store, event: dict, client: LLMClient, *, timeout: float):
     """
     - On first call: Executes gather_requirements_from_user to generate a system prompt and infer agent role.
     - Collect enabled Partial objects from `enabled_store.messages()`.
@@ -329,12 +450,15 @@ async def choose_and_bind(adapter, enabled_store, event: dict, client: LLMClient
     - Return bound Message instance or None.
     """
     global _SYSTEM_PROMPT_CACHE
-    
+    # Extract adapter data
+    adapter_json = protocol_to_json(adapter)
+    adapter_data = json.loads(adapter_json)
+    print(f"\n=== Adapter Data ===\n{adapter_data}\n")
     # On first call, gather requirements and generate system prompt
     if _SYSTEM_PROMPT_CACHE is None:
         print("\n=== First-time initialization: Gathering system requirements ===")
-        agent_context = f"Protocol context for {adapter.name}"
-        available_roles = getattr(adapter, "roles", None)
+        agent_context = f"Protocol context for {adapter_data['name']}"
+        available_roles = adapter_data['roles']
         inferred_role, system_prompt = await gather_requirements_from_user(client, available_roles=available_roles, context=agent_context, timeout=timeout)
         _SYSTEM_PROMPT_CACHE = system_prompt
         print(f"Inferred role: {inferred_role}\n")
@@ -343,7 +467,7 @@ async def choose_and_bind(adapter, enabled_store, event: dict, client: LLMClient
     # Collect enabled Partial objects
     options = []
     idx = 0
-    print("Enabled messages changed.")
+    print_enabled_store(enabled_store)
     for p in enabled_store.messages():
         # p is a Partial; missing params = those present but set to None (or not in payload)
         missing = [k for k in p.bindings.keys() if p.bindings.get(k) is None]
@@ -361,14 +485,15 @@ async def choose_and_bind(adapter, enabled_store, event: dict, client: LLMClient
         return None
 
     # Build detailed user prompt with enabled messages and agent information
-    role_names = [r for r in adapter.roles] if hasattr(adapter, "roles") else None
-    user_prompt = build_user_prompt(adapter.name, role_names, options, recent_event=event, examples=[
+    role_names = adapter_data['roles'] if 'roles' in adapter_data else None
+    user_prompt = build_user_prompt(adapter_data['name'], role_names, options, recent_event=event, examples=[
         {"choice": None, "params": {}},
         {"choice": 0, "params": {}},
     ])
-    
+    print_user_prompt(user_prompt)
     # Call LLM with cached system prompt
     res = await choose_option_from_llm(client, user_prompt, timeout=timeout, system_prompt=_SYSTEM_PROMPT_CACHE)
+    print_llm_response(res) 
     if not res:
         adapter.logger and adapter.logger.debug("LLM returned no usable result")
         return None
