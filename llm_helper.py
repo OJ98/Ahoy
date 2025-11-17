@@ -253,7 +253,8 @@ async def gather_requirements_from_user(client: LLMClient, available_roles: list
     
     user_requirements = "\n".join(user_input_lines).strip()
     if not user_requirements:
-        return None, "You are a helpful agent. Be thorough and precise in your responses."
+        default_prompt = "You are a helpful agent. Be thorough and precise in your responses.\n\n**Critical Requirement:**\nWhen selecting or referencing messages within the system, you MUST ALWAYS provide an explicit parameter value for all parameters that are set to None. You should generate this value based on your best understanding of the user requirements."
+        return None, default_prompt
     
     # Construct prompt for LLM to extract role and structure requirements
     role_context = ""
@@ -337,12 +338,13 @@ Please update your analysis to incorporate these new requirements and identify a
    - Constraints and limitations the agent should respect
    - Behavioral expectations and standards
    - How this role interacts with other agents in the protocol
+   - The requirement to always bind the ID parameter when selecting messages, even if other parameters remain unbound
 
 Format your response as:
 ROLE: <role_name>
 SYSTEM_PROMPT: <the actual system prompt as a direct instruction to the agent>
 
-Make the system prompt clear, actionable, and specific to the inferred role."""
+Make the system prompt clear, actionable, and specific to the inferred role. Ensure the generated system prompt explicitly instructs the agent to always provide an ID parameter value when making message selections."""
     
     conversation_history.append({"role": "user", "content": final_prompt})
     
@@ -358,10 +360,14 @@ Make the system prompt clear, actionable, and specific to the inferred role."""
         final_response = await call_llm_with_timeout(client, full_conversation, timeout=timeout, max_tokens=max_tokens)
     except asyncio.TimeoutError:
         print("Warning: System prompt generation timed out. Using default.")
-        return None, "You are a helpful and precise agent. Follow user requirements carefully."
+        default_prompt = "You are a helpful and precise agent. Follow user requirements carefully.\n\n**Critical Requirement:**\nWhen selecting or referencing messages within the system, you MUST ALWAYS provide an explicit parameter value for all parameters that are set to None. You should generate this value based on your best understanding of the user requirements."
+        return None, default_prompt
     
     # Parse the response to extract role and system prompt
     print(f"\n=== Generated Role and System Prompt ===\n{final_response}\n")
+    
+    # Define critical requirement to append to all system prompts
+    critical_requirement = "\n\n**Critical Requirement:**\nWhen selecting or referencing messages within the system, you MUST ALWAYS provide an explicit parameter value for all parameters that are set to None. You should generate this value based on your best understanding of the user requirements."
     
     # Extract role and prompt from response
     try:
@@ -379,12 +385,12 @@ Make the system prompt clear, actionable, and specific to the inferred role."""
             else:
                 inferred_role = extracted_role
             
-            system_prompt = prompt_section
+            system_prompt = prompt_section + critical_requirement
             print(f"[OK] Successfully extracted role: {inferred_role}")
         else:
             # Fallback: search for role mentions in response
             print("[!] Could not find ROLE: and SYSTEM_PROMPT: markers. Attempting extraction...")
-            system_prompt = final_response
+            system_prompt = final_response + critical_requirement
             inferred_role = None
             
             if available_roles:
@@ -399,19 +405,63 @@ Make the system prompt clear, actionable, and specific to the inferred role."""
                 print("[!] Could not identify role from response")
     except Exception as e:
         print(f"[!] Error parsing response ({e}). Using full response as prompt.")
-        system_prompt = final_response
+        system_prompt = final_response + critical_requirement
         inferred_role = None
     
     return inferred_role, system_prompt
 
+# Build message history context from past messages
+def build_message_history(options: list, max_history: int = 10) -> str:
+    """
+    Build a formatted history of past messages from the enabled store.
+    
+    This function constructs a human-readable summary of recent messages
+    to provide context to the LLM about what has transpired in the system.
+    
+    Args:
+        options: List of option dictionaries containing message information
+        max_history: Maximum number of recent messages to include (default 10)
+    
+    Returns:
+        str: Formatted message history as a string for LLM context
+    """
+    if not options:
+        return "No message history available."
+    
+    history_lines = []
+    history_lines.append("=== PAST MESSAGE HISTORY ===")
+    
+    # Limit history to the most recent messages
+    history_options = options[:max_history]
+    
+    for idx, option in enumerate(history_options, 1):
+        history_lines.append(f"\n{idx}. {option['schema_name']}")
+        
+        # Include message contents (bindings) if available
+        partial = option.get('partial')
+        if partial and hasattr(partial, 'bindings') and partial.bindings:
+            for param_name, param_value in partial.bindings.items():
+                history_lines.append(f"   {param_name}: {param_value}")
+    
+    history_lines.append(f"\n=== END HISTORY ({len(history_options)} message(s)) ===")
+    
+    return "\n".join(history_lines)
+
 # Build user prompt for LLM to understand Local State (modify this to not include the system prompt details)
-def build_user_prompt(agent_name: str, role_names, options: list, recent_event: dict = None, examples: list = None) -> str:
+def build_user_prompt(agent_name: str, role_names, options: list, recent_event: dict = None, examples: list = None, include_history: bool = True) -> str:
     lines = []
     lines.append(f"You are agent '{agent_name}'. Choose at most one option, or return null.")
     if role_names:
         # Convert Role objects to strings
         role_strings = [str(role) for role in role_names]
         lines.append(f"Roles: {', '.join(role_strings)}")
+    
+    # Include message history if requested
+    if include_history and options:
+        lines.append('')
+        lines.append(build_message_history(options, max_history=10))
+    
+    lines.append('')
     lines.append("Options:")
     for o in options:
         lines.append(f"{o['index']}) {o['schema_name']} - missing params: {o['missing_params']}")
