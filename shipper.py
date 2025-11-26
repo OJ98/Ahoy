@@ -3,6 +3,7 @@
 import random, os, asyncio
 from bspl.adapter import Adapter
 from configuration import systems, agents
+from lib.utils import shutdown_watcher
 import bspl.adapter.receiver as _recv
 
 # Import the protocol
@@ -16,26 +17,12 @@ _recv.adapter = adapter
 
 @adapter.enabled(deliver)
 async def deliver_item(msg):
-    msg["outcome"] = "delivered"
-    print(f"Delivered item for order ID {msg['ID']}")
+    """Mark item as delivered."""
+    msg.bindings["outcome"] = "delivered"
+    import sys
+    print(f"[SHIPPER] Delivered: ID={msg.bindings.get('ID')}, item='{msg.bindings.get('item')}', address={msg.bindings.get('address')}", file=sys.stderr)
     return msg
 
 
-async def _shutdown_watcher(adapter, stop_path=".stop_signal"):
-    while True:
-        if os.path.exists(stop_path):
-            try:
-                for r in getattr(adapter, "receivers", []):
-                    if hasattr(r, "stop"):
-                        await r.stop()
-                if hasattr(adapter.emitter, "stop"):
-                    await adapter.emitter.stop()
-            except Exception as e:
-                adapter.warning(f"Error during shutdown: {e}")
-            adapter.running = False
-            break
-        await asyncio.sleep(0.5)
-
-
 if __name__ == "__main__":
-    adapter.start(_shutdown_watcher(adapter))
+    adapter.start(shutdown_watcher(adapter))

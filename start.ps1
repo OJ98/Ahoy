@@ -119,11 +119,7 @@ while (-not [Console]::KeyAvailable) {
 		while (-not $sr.EndOfStream) {
 			$line = $sr.ReadLine()
 			if ($line -ne $null) {
-				if ($r.Type -eq 'err') {
-					Write-Host "[$($r.Name)][err] $line"
-				} else {
-					Write-Host "[$($r.Name)] $line"
-				}
+				Write-Host "$line"
 			}
 		}
 	}

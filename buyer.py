@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
-import uuid, random, asyncio, os
-import sys
-from io import StringIO, TextIOWrapper
+import asyncio
+import json
+import logging
+import traceback
 from datetime import datetime
-
-# Ensure UTF-8 encoding for stdout on Windows
-if sys.platform == 'win32':
-    sys.stdout = TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 from bspl.adapter import Adapter
 from bspl.adapter.core import COLORS
@@ -17,253 +13,329 @@ import bspl.adapter.receiver as _recv
 
 # Import the protocol
 import Purchase
-from Purchase import Buyer, rfq, quote, accept, reject, deliver
+from Purchase import Buyer, rfq, quote, accept, reject, deliver, completed
 
-# Import the LLM Interface
-from llm_helper import LLMClient, MockLLMClient, AnthropicLLMClient, choose_and_bind
-
-# Console output capture class
-class ConsoleTee:
-    """Captures stdout to both console and a file."""
-    def __init__(self, filename):
-        self.filename = filename
-        self.terminal = sys.stdout
-        self.file = None
-        self._open_file()
-    
-    def _open_file(self):
-        """Open or create the log file."""
-        try:
-            self.file = open(self.filename, 'a', encoding='utf-8')
-        except Exception as e:
-            print(f"Warning: Could not open log file {self.filename}: {e}")
-            self.file = None
-    
-    def write(self, message):
-        """Write to both terminal and file."""
-        try:
-            # Try to write to terminal; if it fails due to encoding, use 'replace' error handler
-            self.terminal.write(message)
-        except UnicodeEncodeError:
-            # Fall back to encoding with error handling for terminal output
-            self.terminal.write(message.encode('utf-8', errors='replace').decode('utf-8', errors='replace'))
-        
-        if self.file:
-            try:
-                self.file.write(message)
-                self.file.flush()
-            except Exception:
-                pass
-    
-    def flush(self):
-        """Flush both terminal and file."""
-        self.terminal.flush()
-        if self.file:
-            try:
-                self.file.flush()
-            except Exception:
-                pass
-    
-    def close(self):
-        """Close the log file."""
-        if self.file:
-            try:
-                self.file.close()
-            except Exception:
-                pass
+# Import the helper modules
+from lib import (
+    AnthropicLLMClient,
+    choose_and_bind,
+    UserInterface,
+    setup_logging,
+    log_debug,
+    print_event_debug,
+    print_enabled_store_debug,
+    gather_requirements_from_user,
+    shutdown_watcher,
+)
+from lib.llm_client import initialize_llm_tracker, get_llm_tracker
+from lib.agent_notes import get_agent_notes
+from lib.agent_notes import get_agent_notes_tracker
 
 # Set global timeout
 TIMEOUT = 30.0
 
-# Instantiate console tee for output capture
+# Initialize logging system
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = f"./logs/buyer_console_{timestamp}.log"
-console_tee = ConsoleTee(log_filename)
-sys.stdout = console_tee
+log_filename = f"./logs/buyer_debug_{timestamp}.log"
 
+debug_logger, console_logger = setup_logging(log_filename)
 
 # Instantiate the adapter for the Buyer role
 adapter = Adapter(Buyer, systems, agents, color=COLORS[0])
 _recv.adapter = adapter
 
-# Instantiate the mock LLM client for testing
-llm_client: LLMClient = AnthropicLLMClient()
-#llm_client: LLMClient = MockLLMClient()
+# Suppress adapter's internal logging to console
+adapter_logger = logging.getLogger("bspl")
+adapter_logger.setLevel(logging.CRITICAL)
+adapter_logger.propagate = False
+
+# Instantiate the user interface
+ui = UserInterface()
+
+# Instantiate the LLM client
+llm_client = AnthropicLLMClient()
+
+# Initialize the agent notes system for tracking decisions and actions
+notes = get_agent_notes('Buyer')
 
 deliveries = 0
 rejections = 0
+accepted_deals = 0  # Track successful accepts
+
+
+# ============================================================================
+# MESSAGE OBSERVERS: Track protocol progression (using adapter.publish listener)
+# ============================================================================
+
+# We'll add message tracking via the adapter's publish mechanism in the main loop
+
+
+async def initialize_buyer_with_llm():
+    """
+    Initialize the Buyer agent by gathering system requirements from user.
+    This caches the system prompt for use in llm_decision handler.
+    
+    Returns:
+        tuple: (role, system_prompt) or (None, None) on error
+    """
+    log_debug("Starting Buyer agent initialization...")
+    log_debug("Gathering initial system requirements for Buyer role...")
+    
+    # Gather system requirements on startup
+    inferred_role, system_prompt = await gather_requirements_from_user(
+        llm_client,
+        available_roles=["Buyer"],
+        context="Purchase Protocol - Buyer Role",
+        timeout=TIMEOUT,
+        ui_callback=ui,
+        logger_callback=log_debug
+    )
+    
+    if not system_prompt:
+        log_debug("Failed to gather system requirements")
+        return None, None
+    
+    # Cache the system prompt for all future LLM calls
+    from lib.llm_client import _SYSTEM_PROMPT_CACHE
+    import lib.llm_client as llm_module
+    llm_module._SYSTEM_PROMPT_CACHE = system_prompt
+    log_debug(f"System prompt cached globally for future LLM calls")
+    
+    log_debug(f"Buyer initialization complete. Role: {inferred_role}")
+    log_debug(f"System prompt established:\n{system_prompt}")
+    
+    return inferred_role, system_prompt
+
 
 async def main():
-    for i in range(10):
-        msg = rfq(ID=str(uuid.uuid4()), item=random.sample(["ball", "bat"], 1)[0])
-        await adapter.send(msg)
-        await asyncio.sleep(0.1)
-
-
-@adapter.reaction(quote)
-async def decision(msg):
-    if msg["price"] < 50:
-        await adapter.send(accept(**msg.payload, address="Home", resp="Accept"))
-    else:
-        msg = reject(**msg.payload, outcome="Rejected", resp="Reject")
-        print(msg)
-        global rejections
-        rejections += 1
-        await adapter.send(msg)
-
-
-@adapter.reaction(deliver)
-async def receive(msg):
-    global deliveries
-    deliveries += 1
-    print(msg)
-
-# Print the event in a readable form
-def print_event_debug(event):
     """
-    Print event object in a readable form with set contents if applicable.
-    Handles both dict and object event types.
+    Main entry point: Waits for protocol to complete.
+    
+    System prompt must be cached before this runs, so that
+    the llm_decision handler has it available immediately.
     """
     try:
-        import json
-        print("=" * 50)
-        print("LLM Decision Event Debug Info:")
-        print(f"Event Type: {type(event).__name__}")
-        print(f"Event Module: {type(event).__module__}")
+        log_debug("Buyer agent ready. Waiting for protocol events...")
         
-        if isinstance(event, dict):
-            print(f"Event Content (dict):")
-            # Special handling for set values
-            formatted_event = {}
-            for key, value in event.items():
-                if isinstance(value, set):
-                    # Convert set items to their string representations
-                    set_items = [str(item) for item in value]
-                    formatted_event[key] = f"<set with {len(value)} items>: {set_items}"
-                else:
-                    formatted_event[key] = value
-            print(json.dumps(formatted_event, indent=2, default=str))
-        else:
-            print(f"Event Content (object):")
-            print(f"  String Repr: {event}")
-            if hasattr(event, "__dict__"):
-                event_dict = {k: v for k, v in event.__dict__.items() if not k.startswith('_')}
-                # Special handling for set values in attributes
-                for key, value in event_dict.items():
-                    if isinstance(value, set):
-                        # Convert set items to their string representations
-                        set_items = [str(item) for item in value]
-                        event_dict[key] = f"<set with {len(value)} items>: {set_items}"
-                print(f"  Public Attributes:")
-                print(json.dumps(event_dict, indent=4, default=str))
-            # List all non-private attributes
-            attrs = [attr for attr in dir(event) if not attr.startswith('_')]
-            if attrs:
-                print(f"  Available Methods/Properties: {attrs}")
-        print("=" * 50)
+        # Keep the adapter running indefinitely
+        # The llm_decision handler will be triggered by adapter events
+        await shutdown_watcher(adapter)
+    
     except Exception as e:
-        # defensive: printing should never crash the handler
-        print(f"Error printing event: {e}")
-        import traceback
-        traceback.print_exc()
+        log_debug(f"Error in main: {e}")
+        ui.error_occurred(str(e))
+        raise
 
 
-# Decision handler registered with the Adapter decision decorator
-# Trigger on any enabled change (added or removed)
 @adapter.decision()
 async def llm_decision(enabled_store, event):
     """
-    Ask LLM to choose an enabled message on any enabled-set change.
-    Re-validate the chosen Partial is still present in the enabled set
-    before binding and returning the instance.
+    LLM decision handler triggered by adapter on ANY protocol state change.
+    This includes InitEvent at startup and subsequent message observations.
+    System prompt is cached from initialization.
     """
-    # Debug: print the incoming event in readable form
+    log_debug(f"DEBUG: llm_decision called")
+    log_debug(f"  - enabled_store type: {type(enabled_store)}")
+    log_debug(f"  - event type: {type(event)}")
+    
+    # Fallback requirement callback (system prompt should be cached)
+    async def fallback_callback(roles):
+        return "Buyer", "You are a buyer agent. Make prudent purchasing decisions."
+    
+    # Log event details
     print_event_debug(event)
     
-    # Determine if an event is observed
-    has_observed = False
-    if isinstance(event, dict):
-        has_observed = 'observations' in event
-    else:
-        has_observed = False
-
-    # If there's no meaningful change, skip the decision
-    if has_observed:
-        print("LLM decision invoked due to message observed.")
-    else:    
+    # Check if enabled_store has any messages
+    if not enabled_store:
+        log_debug("DEBUG: No enabled_store available, skipping decision")
         return None
     
-    # Call LLM to choose message and bind parameters
-    instance = await choose_and_bind(adapter=adapter, enabled_store=enabled_store, event=event, client=llm_client, timeout=TIMEOUT)
+    messages = list(enabled_store.messages())
+    log_debug(f"DEBUG: Found {len(messages)} enabled messages")
+    
+    if not messages:
+        log_debug("DEBUG: No enabled messages available, skipping decision")
+        return None
+    
+    log_debug("LLM decision invoked, enabled messages available.")
+    print_enabled_store_debug(enabled_store)
+    
+    # Check for threshold before calling LLM
+    tracker = get_llm_tracker()
+    if tracker:
+        exceeded, reason = tracker.check_threshold_exceeded()
+        if exceeded:
+            log_debug(f"Threshold exceeded: {reason}")
+            ui.error(f"Threshold exceeded: {reason}")
+            ui.divider()
+            # Gracefully terminate
+            raise SystemExit(f"Graceful termination: {reason}")
+    
+    # Call LLM to decide on available messages
+    log_debug("Consulting LLM for decision...")
+    instance = await choose_and_bind(
+        adapter=adapter,
+        enabled_store=enabled_store,
+        event=event,
+        client=llm_client,
+        timeout=TIMEOUT,
+        logger_callback=log_debug,
+        requirement_callback=fallback_callback
+    )
+    
+    # Display status update after LLM call
+    if tracker:
+        status = tracker.get_status()
+        ui.status_update(tracker.call_count, tracker.get_elapsed_seconds())
+        log_debug(f"Status: {status}")
+    
+    # Check for threshold after LLM call
+    if tracker:
+        exceeded, reason = tracker.check_threshold_exceeded()
+        if exceeded:
+            log_debug(f"Threshold exceeded: {reason}")
+            ui.error(f"Threshold exceeded: {reason}")
+            ui.divider()
+            # Gracefully terminate
+            raise SystemExit(f"Graceful termination: {reason}")
+    
+    log_debug(f"DEBUG: choose_and_bind returned: {instance}")
+    
     if instance is None:
+        log_debug("DEBUG: No instance returned from LLM, skipping")
         return None
 
-    # Extra safety: ensure the underlying partial that produced `instance` is still enabled.
-    # Compare by schema + key projection (keys that define matching contexts).
-    chosen_schema = instance.schema
-
-    # Check whether enabled_store still contains a matching partial/context
-    still_enabled = False
-    with open("enabled_store_output.txt", "a") as f:
-        f.write(str(enabled_store) + "\n")
-    for p in enabled_store.messages():
-        # p is a Partial; compare projected key against instance key
-        # create a temporary instance with p.bindings filled to check key projection
-        try:
-            # p.bindings may contain None; project only keys present in schema
-            projected = {k: p.bindings.get(k) for k in chosen_schema.keys}
-            # Only consider p if it has the same schema
-            if p.schema == chosen_schema:
-                # if all key values exist and match the instance's key values
-                matches = all((projected.get(k) is not None) and (projected.get(k) == instance.payload.get(k)) for k in chosen_schema.keys)
-                if matches:
-                    still_enabled = True
-                    break
-        except Exception:
-            continue
-
-    if not still_enabled:
-        adapter.logger and adapter.logger.info("Chosen option no longer enabled; skipping")
-        return None
-
-    # Final precaution: adapter.send() will run protocol checks; returning instance is fine.
+    log_debug(f"DEBUG: Sending message: {instance}")
+    
+    # Track important messages using agent notes
+    if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
+        msg_type = instance.schema.name
+        notes = get_agent_notes_tracker('Buyer')
+        tracker = get_llm_tracker()
+        llm_call_num = tracker.call_count if tracker else 0
+        
+        # Helper to get parameter value from either Message or Partial object
+        def get_param(obj, param_name):
+            if hasattr(obj, 'bindings') and obj.bindings:
+                return obj.bindings.get(param_name)
+            # Try accessing as dict key (Message objects might support this)
+            try:
+                return obj[param_name]
+            except (TypeError, KeyError):
+                pass
+            # Try accessing as attribute
+            try:
+                return getattr(obj, param_name, None)
+            except AttributeError:
+                pass
+            return None
+        
+        # Track RFQ messages
+        if msg_type == 'rfq':
+            if notes:
+                rfq_id = get_param(instance, 'ID')
+                item = get_param(instance, 'item')
+                notes.note_message('rfq', id=rfq_id, item=item, llm_call=llm_call_num)
+                log_debug(f"[NOTED] RFQ sent: ID={rfq_id}, item={item}")
+        
+        # Track quote responses (received from seller)
+        elif msg_type == 'quote':
+            if notes:
+                rfq_id = get_param(instance, 'ID')
+                price = get_param(instance, 'price')
+                notes.note_message('quote', rfq_id=rfq_id, price=price, llm_call=llm_call_num)
+                log_debug(f"[NOTED] Quote received: ID={rfq_id}, price=${price}")
+        
+        # Track accept decisions
+        elif msg_type == 'accept':
+            if notes:
+                transaction_id = get_param(instance, 'ID')
+                item = get_param(instance, 'item')
+                price = get_param(instance, 'price')
+                notes.note_message('accept', id=transaction_id, item=item, price=price, llm_call=llm_call_num)
+                log_debug(f"[NOTED] Accept decision: ID={transaction_id}, item={item}, price=${price}")
+        
+        # Track reject decisions
+        elif msg_type == 'reject':
+            if notes:
+                transaction_id = get_param(instance, 'ID')
+                item = get_param(instance, 'item')
+                price = get_param(instance, 'price')
+                outcome = get_param(instance, 'outcome')
+                notes.note_message('reject', id=transaction_id, item=item, price=price, reason=outcome, llm_call=llm_call_num)
+                log_debug(f"[NOTED] Reject decision: ID={transaction_id}, reason={outcome}")
+        
+        # Track delivery confirmations
+        elif msg_type == 'deliver':
+            if notes:
+                transaction_id = get_param(instance, 'ID')
+                item = get_param(instance, 'item')
+                outcome = get_param(instance, 'outcome')
+                notes.note_message('deliver', id=transaction_id, item=item, status=outcome, llm_call=llm_call_num)
+                log_debug(f"[NOTED] Delivery: ID={transaction_id}, outcome={outcome}")
+        
+        # Track completion message
+        elif msg_type == 'completed':
+            log_debug(f"[GOAL ACHIEVED] LLM sent completion signal: {instance}")
+            if notes:
+                notes.note_message('completed', id=get_param(instance, 'ID'), item=get_param(instance, 'item'), 
+                                   price=get_param(instance, 'price'), satisfaction=get_param(instance, 'satisfaction'), 
+                                   llm_call=llm_call_num)
+            raise SystemExit(f"✅ Goal achieved: LLM marked transaction complete. {instance}")
+    
     return instance
 
 
-async def _shutdown_watcher(adapter, stop_path=".stop_signal"):
-    while True:
-        if os.path.exists(stop_path):
-            try:
-                for r in getattr(adapter, "receivers", []):
-                    if hasattr(r, "stop"):
-                        await r.stop()
-                if hasattr(adapter.emitter, "stop"):
-                    await adapter.emitter.stop()
-            except Exception as e:
-                adapter.warning(f"Error during shutdown: {e}")
-            adapter.running = False
-            break
-        await asyncio.sleep(0.5)
-
-# Add decision handler for user events.
-
 if __name__ == "__main__":
     try:
-        async def _runner():
-            await asyncio.gather(main(), _shutdown_watcher(adapter))
-
-        adapter.start(_runner())
-        print(
-            f"Completed enactments: {rejections + deliveries} "
-            + f"({rejections} rejections, {deliveries} deliveries)"
-        )
+        # Initialize the LLM call tracker with thresholds: 20 calls or 3 minutes (180 seconds)
+        initialize_llm_tracker(max_calls=20, max_duration_seconds=180.0)
+        log_debug("LLM tracker initialized: max 20 calls or 3 minutes")
+        
+        # Initialize agent notes tracker for general-purpose note tracking
+        notes_tracker = get_agent_notes_tracker('Buyer')
+        log_debug("Agent notes tracker initialized with JSON file tracking")
+        
+        # Initialize system prompt BEFORE starting the adapter
+        # This ensures it's cached before the first decision event
+        import asyncio as _asyncio
+        role, system_prompt = _asyncio.run(initialize_buyer_with_llm())
+        
+        if not role:
+            ui.error_occurred("Failed to initialize buyer")
+        else:
+            # Now start the adapter with the cached system prompt
+            adapter.start(main())
+            total = rejections + accepted_deals + deliveries
+            if total > 0:
+                ui.transaction_complete(total, rejections, accepted_deals)
+                log_debug(f"[FINAL] Transactions: Total={total}, Rejected={rejections}, Accepted={accepted_deals}, Delivered={deliveries}")
+            else:
+                ui.info("⏸", "No transactions processed")
     except KeyboardInterrupt:
-        print("\n[INFO] Ctrl+C pressed. Shutting down gracefully...")
+        ui.interrupted()
+    except SystemExit as e:
+        # Handle graceful termination due to threshold or successful completion
+        log_debug(f"System exit: {e}")
+        ui.divider()
+        # Show final statistics
+        total = rejections + accepted_deals + deliveries
+        if total > 0:
+            ui.transaction_complete(total, rejections, accepted_deals)
+            log_debug(f"[FINAL] Transactions: Total={total}, Rejected={rejections}, Accepted={accepted_deals}, Delivered={deliveries}")
+        
+        # Show agent notes summary
+        if notes:
+            summary = notes.get_summary()
+            notes.export(f"./logs/buyer_notes_{timestamp}.json")
+            log_debug(f"\n[AGENT NOTES SUMMARY]\n{json.dumps(summary, indent=2)}")
+            ui.info("📝", f"Agent notes exported: logs/buyer_notes_{timestamp}.json")
     except Exception as e:
-        print(f"[ERROR] Unexpected error: {e}")
-        import traceback
-        traceback.print_exc()
+        ui.error_occurred(str(e))
+        log_debug(f"Full traceback:\n{traceback.format_exc()}")
     finally:
-        print(f"[INFO] Console output saved to: {log_filename}")
-        console_tee.close()
-        sys.stdout = sys.__stdout__  # Restore original stdout
+        ui.show_log_location(log_filename)
+        for handler in debug_logger.handlers:
+            handler.close()
+        for handler in console_logger.handlers:
+            handler.close()
