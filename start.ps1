@@ -113,7 +113,7 @@ foreach ($entry in $startedProcs) {
 }
 
 # Loop until a key is pressed; poll readers for new lines and print them with agent prefix.
-while (-not [Console]::KeyAvailable) {
+while (-not [Console]::KeyAvailable -and -not (Test-Path ".stop_signal")) {
 	foreach ($r in $readers) {
 		$sr = $r.Stream
 		while (-not $sr.EndOfStream) {
@@ -126,8 +126,13 @@ while (-not [Console]::KeyAvailable) {
 	Start-Sleep -Milliseconds 150
 }
 
-# Consume the pressed key so it doesn't appear in the console
-[Console]::ReadKey($true) | Out-Null
+# Check if we stopped due to stop signal
+if (Test-Path ".stop_signal") {
+	Write-Host "`n✅ Stop signal detected - shutting down all agents gracefully...`n"
+} else {
+	# Consume the pressed key so it doesn't appear in the console
+	[Console]::ReadKey($true) | Out-Null
+}
 
 Write-Host "Stopping jobs and terminating matching python processes..."
 
@@ -217,4 +222,14 @@ try {
 }
 
 Write-Host "Shutdown complete. Logs written to $logFile"
+
+# Clean up stop signal file if it exists
+try {
+	if (Test-Path ".stop_signal") {
+		Remove-Item -Path ".stop_signal" -Force -ErrorAction SilentlyContinue
+	}
+} catch {
+	Write-Host "Warning: failed to clean up stop signal file: $_"
+}
+
 

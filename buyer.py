@@ -281,6 +281,15 @@ async def llm_decision(enabled_store, event):
                 notes.note_message('completed', id=get_param(instance, 'ID'), item=get_param(instance, 'item'), 
                                    price=get_param(instance, 'price'), satisfaction=get_param(instance, 'satisfaction'), 
                                    llm_call=llm_call_num)
+            
+            # Create stop signal for all agents
+            try:
+                with open(".stop_signal", "w") as f:
+                    f.write("transaction_complete")
+                log_debug("Stop signal created - all agents will shut down")
+            except Exception as e:
+                log_debug(f"Error creating stop signal: {e}")
+            
             raise SystemExit(f"✅ Goal achieved: LLM marked transaction complete. {instance}")
     
     return instance
@@ -318,6 +327,16 @@ if __name__ == "__main__":
         # Handle graceful termination due to threshold or successful completion
         log_debug(f"System exit: {e}")
         ui.divider()
+        
+        # Check if this is a successful completion
+        exit_msg = str(e)
+        if "Goal achieved" in exit_msg or "successful" in exit_msg.lower():
+            print(f"\n{'='*70}")
+            print(f"✅ TRANSACTION COMPLETE!")
+            print(f"{'='*70}")
+            print(f"All agents are shutting down gracefully...")
+            print(f"{'='*70}\n")
+        
         # Show final statistics
         total = rejections + accepted_deals + deliveries
         if total > 0:

@@ -14,6 +14,13 @@ from .llm_client import (
     parse_llm_json_reply,
     choose_option_from_llm,
     reset_system_prompt_cache,
+    generate_unique_id,
+    save_state_to_memory,
+    get_agent_memory,
+    build_optional_tools,
+    execute_tool_call,
+    call_llm_with_optional_tools,
+    reset_agent_notes_storage,
     MODEL_ID,
 )
 
@@ -55,6 +62,14 @@ __all__ = [
     "choose_option_from_llm",
     "reset_system_prompt_cache",
     "MODEL_ID",
+    # Tool calling for note-taking and UID generation
+    "generate_unique_id",
+    "save_state_to_memory",
+    "get_agent_memory",
+    "build_optional_tools",
+    "execute_tool_call",
+    "call_llm_with_optional_tools",
+    "reset_agent_notes_storage",
     # UI & logging
     "UserInterface",
     "setup_logging",
