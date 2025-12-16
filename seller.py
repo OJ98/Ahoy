@@ -36,7 +36,18 @@ adapter_logger.propagate = False
 
 @adapter.enabled(quote)
 async def send_quote(msg):
-    """Generate a realistic price based on item type."""
+    """
+    Generate and send a realistic price quote based on item type.
+    
+    Implements dynamic pricing strategy where simple items (stationery)
+    are cheaper and complex items (electronics) are more expensive.
+    
+    Args:
+        msg: Partial object with bindings containing item description
+    
+    Returns:
+        msg: Modified Partial with price binding set
+    """
     # msg is a Partial object, access bindings through it
     item = msg.bindings.get("item", "").lower() if hasattr(msg, 'bindings') else ""
     
@@ -63,9 +74,24 @@ async def send_quote(msg):
 
 @adapter.enabled(ship)
 async def send_ship(msg):
-    """Mark item as shipped."""
+    """
+    Mark an accepted order as shipped.
+    
+    Sets the shipped flag to True and logs shipping details
+    for the adapter to process. Note: price is not in the ship message
+    binding (protocol only passes ID, item, address).
+    
+    Args:
+        msg: Partial object with bindings containing order details
+    
+    Returns:
+        msg: Modified Partial with shipped binding set to True
+    """
     msg.bindings["shipped"] = True
-    log_debug(f"Shipping: ID={msg.bindings.get('ID')}, item='{msg.bindings.get('item')}', price=${msg.bindings.get('price')}")
+    delivery_id = msg.bindings.get('ID')
+    item = msg.bindings.get('item')
+    address = msg.bindings.get('address')
+    log_debug(f"Shipping: ID={delivery_id}, item='{item}', address={address}")
     return msg
 
 

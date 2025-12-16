@@ -35,7 +35,22 @@ adapter_logger.propagate = False
 
 @adapter.enabled(deliver)
 async def deliver_item(msg):
-    """Mark item as delivered."""
+    """
+    Mark an item as delivered and signal transaction completion.
+    
+    Sets delivery outcome to "delivered" and creates a stop signal
+    that instructs all agents to gracefully shut down when the
+    transaction reaches its final state.
+    
+    Args:
+        msg: Partial object with bindings containing delivery details
+    
+    Returns:
+        msg: Modified Partial with outcome binding set to "delivered"
+    
+    Raises:
+        Creates .stop_signal file for all agents to monitor
+    """
     msg.bindings["outcome"] = "delivered"
     delivery_id = msg.bindings.get('ID')
     item = msg.bindings.get('item')

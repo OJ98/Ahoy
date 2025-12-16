@@ -709,6 +709,11 @@ EXCEPTION: Only proceed with a decision if it genuinely reflects a NEW state cha
         log_msg(f"\n{'='*80}")
         log_msg(f"EXECUTING TOOL REQUESTS")
         log_msg(f"{'='*80}")
+        
+        # IMPORTANT: Store original params before tool execution
+        # These are the params the LLM committed to, and we'll use them even after tools run
+        original_params = params.copy()
+        
         for tool_req in tool_requests:
             tool_name = tool_req.get("tool")
             tool_args = tool_req.get("args", {})
@@ -723,6 +728,15 @@ EXCEPTION: Only proceed with a decision if it genuinely reflects a NEW state cha
                     "status": "success"
                 })
                 log_msg(f"  Result: {result}")
+                
+                # IMPORTANT: If a tool generates a value (like generate_unique_id), 
+                # update the corresponding param if it was a placeholder
+                if tool_name == "generate_unique_id" and result_obj:
+                    actual_result = result_obj.get("result") if isinstance(result_obj, dict) else result_obj
+                    if "ID" in params and (params["ID"] is None or "TBD" in str(params["ID"]) or "PENDING" in str(params["ID"])):
+                        params["ID"] = actual_result
+                        log_msg(f"  Updated param ID to: {actual_result}")
+                        
             except Exception as e:
                 log_msg(f"  Error: {str(e)}")
                 tool_results.append({
@@ -733,55 +747,7 @@ EXCEPTION: Only proceed with a decision if it genuinely reflects a NEW state cha
                 })
         log_msg(f"{'='*80}")
         
-        # Build tool results summary for LLM follow-up
-        tool_results_text = "\n\nTool Execution Results:\n"
-        for result in tool_results:
-            if result["status"] == "success":
-                result_data = result.get("result", {})
-                if isinstance(result_data, dict):
-                    actual_result = result_data.get("result", result_data)
-                else:
-                    actual_result = result_data
-                tool_results_text += f"- {result['tool']}: {actual_result}\n"
-            else:
-                tool_results_text += f"- {result['tool']}: ERROR - {result['error']}\n"
-        
-        # Call LLM again with tool results to get final params
-        log_msg(f"\nCalling LLM again with tool results...")
-        # Build follow-up prompt that locks in the original choice/params and only asks for confirmation
-        # This prevents the LLM from modifying parameters on the second call
-        original_params_json = json.dumps(params, indent=2)
-        follow_up_prompt = f"""Your tool requests have been executed. Here are the results:
-
-{tool_results_text}
-
-CRITICAL: You must return your final response with the EXACT SAME parameters as your original choice:
-- Choice: {choice_idx}
-- Parameters (DO NOT MODIFY):
-{original_params_json}
-
-Your response MUST include these exact parameters. Do not change, refine, or modify the item description or any other parameter.
-Respond with the final JSON confirming your choice with these locked parameters."""
-        
-        res2 = await choose_option_from_llm(
-            client,
-            follow_up_prompt,
-            timeout=timeout,
-            system_prompt=enhanced_system_prompt,
-            agent_name=adapter_name,
-            allow_tools=False  # Don't allow nested tool requests
-        )
-        
-        if res2:
-            choice_idx, params, raw_text, _ = res2
-            log_msg(f"\n{'='*80}")
-            log_msg(f"FOLLOW-UP LLM RESPONSE (WITH TOOL RESULTS)")
-            log_msg(f"{'='*80}")
-            log_msg(raw_text)
-            log_msg(f"{'='*80}")
-
-    # Log tool execution results if any
-    if tool_results:
+        # Log tool results summary
         log_msg(f"\n{'='*80}")
         log_msg(f"TOOL EXECUTION SUMMARY")
         log_msg(f"{'='*80}")
@@ -854,6 +820,8 @@ def save_state_to_memory(agent_name: str, key: str, value: str) -> Dict[str, str
     """
     Save important agent state/notes to memory for later recall.
     
+    Also records the saved content to the agent_notes.json file.
+    
     Args:
         agent_name: Name of the agent saving the note
         key: Key for the state entry (e.g., "current_transaction", "decision_rationale")
@@ -862,10 +830,21 @@ def save_state_to_memory(agent_name: str, key: str, value: str) -> Dict[str, str
     Returns:
         Dict with status: {"status": "saved", "key": key, "value": value}
     """
+    # Store in in-memory storage (for tool access during this run)
     if agent_name not in _agent_notes_storage:
         _agent_notes_storage[agent_name] = {}
     
     _agent_notes_storage[agent_name][key] = value
+    
+    # Also record to agent_notes.json (persistent notes file)
+    try:
+        from .agent_notes import get_agent_notes
+        notes = get_agent_notes(agent_name)
+        notes.save(key, value)
+    except Exception as e:
+        # Don't fail the tool if notes recording fails
+        print(f"Warning: Could not save to agent_notes for {agent_name}: {e}")
+    
     return {"status": "saved", "key": key, "value": value}
 
 

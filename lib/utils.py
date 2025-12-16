@@ -309,6 +309,158 @@ async def _call_llm_for_analysis(
         return f"[Timeout] Fallback: {prompt[:100]}..."
 
 
+async def _build_system_prompt_from_conversation(
+    client: "LLMClient",
+    conversation: list,
+    available_roles: Optional[list] = None,
+    max_tokens: int = 1000,
+    timeout: float = 30.0,
+    ui_callback: Optional[Any] = None,
+    logger_callback: Optional[Any] = None
+) -> Tuple[Optional[str], str]:
+    """Generate system prompt from multi-turn conversation history.
+    
+    Uses LLM to synthesize all requirements gathered during conversation
+    into a coherent system prompt with inferred agent role.
+    
+    Args:
+        client: LLM client instance
+        conversation: List of {"role": "user"|"assistant", "content": "..."} messages
+        available_roles: List of valid roles for role inference
+        max_tokens: Max tokens for LLM response
+        timeout: Timeout for LLM call
+        ui_callback: Optional UI callback for display
+        logger_callback: Optional logging callback
+    
+    Returns:
+        Tuple of (inferred_role, system_prompt)
+    """
+    def log_msg(msg, level='debug'):
+        if logger_callback:
+            logger_callback(msg, level)
+    
+    # Build role context string
+    roles_str = ', '.join(str(r) for r in available_roles) if available_roles else "any role"
+    
+    # Construct the final system prompt generation prompt
+    final_prompt = f"""Based on all requirements:
+
+1. Identify the agent role (must be one of: {roles_str})
+2. Generate system prompt with:
+   - Core mission
+   - Decision guidelines
+   - Constraints
+   - Behavioral standards
+   - Role interactions
+   - ID parameter requirement
+
+Format:
+ROLE: <role_name>
+SYSTEM_PROMPT: <prompt>"""
+    
+    # Add to conversation history
+    conversation.append({"role": "user", "content": final_prompt})
+    
+    # Format conversation for logging
+    full_conversation = "\n\n".join(
+        f"{m['role'].upper()}: {m['content']}" for m in conversation
+    )
+    
+    log_msg(f"{'='*80}")
+    log_msg(f"FINAL SYSTEM PROMPT GENERATION REQUEST")
+    log_msg(f"{'='*80}")
+    log_msg(full_conversation)
+    log_msg(f"{'='*80}")
+    
+    # Call LLM to generate final system prompt
+    final = await _call_llm_for_analysis(
+        client, full_conversation, timeout, max_tokens, ui_callback, "generating system prompt"
+    )
+    
+    log_msg(f"\n{'='*80}")
+    log_msg(f"FINAL SYSTEM PROMPT GENERATION RESPONSE")
+    log_msg(f"{'='*80}")
+    log_msg(final)
+    log_msg(f"{'='*80}\n")
+    
+    # Extract role and system prompt from response
+    inferred_role = _extract_role_from_response(final, available_roles)
+    system_prompt = _extract_system_prompt_from_response(final)
+    
+    return inferred_role, system_prompt
+
+
+async def _analyze_requirements(
+    client: "LLMClient",
+    user_requirements: str,
+    available_roles: Optional[list] = None,
+    max_tokens: int = 1000,
+    timeout: float = 30.0,
+    ui_callback: Optional[Any] = None,
+    logger_callback: Optional[Any] = None
+) -> Tuple[str, list]:
+    """Analyze user requirements and extract key information.
+    
+    Performs initial LLM analysis to identify priorities, guidelines,
+    and decision criteria from raw user input.
+    
+    Args:
+        client: LLM client instance
+        user_requirements: Raw requirements text from user
+        available_roles: Optional list of available roles for context
+        max_tokens: Max tokens for LLM response
+        timeout: Timeout for LLM call
+        ui_callback: Optional UI callback
+        logger_callback: Optional logging callback
+    
+    Returns:
+        Tuple of (analysis_text, conversation_list)
+    """
+    def log_msg(msg, level='debug'):
+        if logger_callback:
+            logger_callback(msg, level)
+    
+    # Build role context
+    role_context = ""
+    if available_roles:
+        roles_str = ', '.join(str(r) for r in available_roles)
+        role_context = f"\n\nAvailable roles: {roles_str}. Infer the best match."
+    
+    # Construct analysis prompt
+    analysis_prompt = f"""Requirements: {user_requirements}{role_context}
+
+Analyze and:
+1. Infer agent role
+2. Identify priorities
+3. Extract behavioral guidelines
+4. Note decision criteria"""
+    
+    log_msg(f"{'='*80}")
+    log_msg(f"REQUIREMENT ANALYSIS PROMPT")
+    log_msg(f"{'='*80}")
+    log_msg(analysis_prompt)
+    log_msg(f"{'='*80}")
+    
+    # Call LLM for analysis
+    analysis = await _call_llm_for_analysis(
+        client, analysis_prompt, timeout, max_tokens, ui_callback, "analyzing requirements"
+    )
+    
+    log_msg(f"\n{'='*80}")
+    log_msg(f"REQUIREMENT ANALYSIS RESPONSE")
+    log_msg(f"{'='*80}")
+    log_msg(analysis)
+    log_msg(f"{'='*80}\n")
+    
+    # Initialize conversation with this exchange
+    conversation = [
+        {"role": "user", "content": analysis_prompt},
+        {"role": "assistant", "content": analysis}
+    ]
+    
+    return analysis, conversation
+
+
 async def gather_requirements_from_user(
     client: "LLMClient",
     available_roles: Optional[list] = None,
@@ -353,53 +505,23 @@ async def gather_requirements_from_user(
         roles_str = ', '.join(str(r) for r in available_roles)
         log_msg(f"Available roles: {roles_str}")
     
-    # Collect initial requirements
+    # Collect initial requirements from user
     if ui_callback:
         ui_callback.start_requirements()
-    
     user_requirements = _collect_user_input()
     
     if not user_requirements:
         return None, "You are a helpful agent. Be thorough and precise in your responses."
     
-    # First LLM analysis
-    role_context = ""
-    if available_roles:
-        roles_str = ', '.join(str(r) for r in available_roles)
-        role_context = f"\n\nAvailable roles: {roles_str}. Infer the best match."
-    
-    analysis_prompt = f"""Requirements: {user_requirements}{role_context}
-
-Analyze and:
-1. Infer agent role
-2. Identify priorities
-3. Extract behavioral guidelines
-4. Note decision criteria"""
-    
-    log_msg(f"{'='*80}")
-    log_msg(f"REQUIREMENT ANALYSIS PROMPT")
-    log_msg(f"{'='*80}")
-    log_msg(analysis_prompt)
-    log_msg(f"{'='*80}")
-    
-    analysis = await _call_llm_for_analysis(
-        client, analysis_prompt, timeout, max_tokens, ui_callback, "analyzing requirements"
+    # Perform initial LLM analysis of requirements
+    analysis, conversation = await _analyze_requirements(
+        client, user_requirements, available_roles, max_tokens, timeout, ui_callback, logger_callback
     )
-    log_msg(f"\n{'='*80}")
-    log_msg(f"REQUIREMENT ANALYSIS RESPONSE")
-    log_msg(f"{'='*80}")
-    log_msg(analysis)
-    log_msg(f"{'='*80}\n")
     
     if ui_callback:
         ui_callback.show_analysis(analysis)
     
-    # Optional refinement loop
-    conversation = [
-        {"role": "user", "content": analysis_prompt},
-        {"role": "assistant", "content": analysis}
-    ]
-    
+    # Optional refinement loop - allow user to refine requirements
     while True:
         if ui_callback:
             ui_callback.ask_refine_requirements()
@@ -415,6 +537,7 @@ Analyze and:
         if not additional:
             continue
         
+        # Add refinement to conversation and update analysis
         refine_prompt = f"Additional requirements: {additional}\n\nUpdate your analysis."
         conversation.append({"role": "user", "content": refine_prompt})
         
@@ -427,46 +550,9 @@ Analyze and:
         if ui_callback:
             ui_callback.show_analysis(refined)
     
-    # Generate final system prompt
-    roles_str = ', '.join(str(r) for r in available_roles) if available_roles else "any role"
-    final_prompt = f"""Based on all requirements:
-
-1. Identify the agent role (must be one of: {roles_str})
-2. Generate system prompt with:
-   - Core mission
-   - Decision guidelines
-   - Constraints
-   - Behavioral standards
-   - Role interactions
-   - ID parameter requirement
-
-Format:
-ROLE: <role_name>
-SYSTEM_PROMPT: <prompt>"""
-    
-    conversation.append({"role": "user", "content": final_prompt})
-    full_conversation = "\n\n".join(
-        f"{m['role'].upper()}: {m['content']}" for m in conversation
+    # Generate final system prompt from conversation history
+    inferred_role, system_prompt = await _build_system_prompt_from_conversation(
+        client, conversation, available_roles, max_tokens, timeout, ui_callback, logger_callback
     )
-    
-    log_msg(f"{'='*80}")
-    log_msg(f"FINAL SYSTEM PROMPT GENERATION REQUEST")
-    log_msg(f"{'='*80}")
-    log_msg(full_conversation)
-    log_msg(f"{'='*80}")
-    
-    final = await _call_llm_for_analysis(
-        client, full_conversation, timeout, max_tokens, ui_callback, "generating system prompt"
-    )
-    
-    log_msg(f"\n{'='*80}")
-    log_msg(f"FINAL SYSTEM PROMPT GENERATION RESPONSE")
-    log_msg(f"{'='*80}")
-    log_msg(final)
-    log_msg(f"{'='*80}\n")
-    
-    # Parse role and prompt
-    inferred_role = _extract_role_from_response(final, available_roles)
-    system_prompt = _extract_system_prompt_from_response(final)
     
     return inferred_role, system_prompt

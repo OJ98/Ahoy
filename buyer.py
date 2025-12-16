@@ -55,19 +55,18 @@ ui = UserInterface()
 # Instantiate the LLM client
 llm_client = AnthropicLLMClient()
 
+# Reset agent notes at startup - fresh notes for each run
+from lib.agent_notes import reset_agent_notes
+reset_agent_notes('Buyer')
+reset_agent_notes('Adapter')
+
 # Initialize the agent notes system for tracking decisions and actions
 notes = get_agent_notes('Buyer')
 
+# Global counters for transaction statistics (passed to display functions)
 deliveries = 0
 rejections = 0
-accepted_deals = 0  # Track successful accepts
-
-
-# ============================================================================
-# MESSAGE OBSERVERS: Track protocol progression (using adapter.publish listener)
-# ============================================================================
-
-# We'll add message tracking via the adapter's publish mechanism in the main loop
+accepted_deals = 0
 
 
 async def initialize_buyer_with_llm():
@@ -107,6 +106,173 @@ async def initialize_buyer_with_llm():
     return inferred_role, system_prompt
 
 
+def _validate_enabled_store(enabled_store):
+    """
+    Validate that enabled_store has messages available.
+    
+    Args:
+        enabled_store: The adapter's enabled store object
+    
+    Returns:
+        tuple: (is_valid, messages_list)
+    """
+    if not enabled_store:
+        log_debug("DEBUG: No enabled_store available, skipping decision")
+        return False, []
+    
+    messages = list(enabled_store.messages())
+    log_debug(f"DEBUG: Found {len(messages)} enabled messages")
+    
+    if not messages:
+        log_debug("DEBUG: No enabled messages available, skipping decision")
+        return False, []
+    
+    return True, messages
+
+
+def _check_threshold():
+    """
+    Check if LLM call threshold has been exceeded.
+    
+    Used both before and after LLM calls to enforce resource limits.
+    
+    Returns:
+        tuple: (should_continue, threshold_reason) where should_continue is bool
+    """
+    tracker = get_llm_tracker()
+    if not tracker:
+        return True, None
+    
+    exceeded, reason = tracker.check_threshold_exceeded()
+    if exceeded:
+        log_debug(f"Threshold exceeded: {reason}")
+        ui.error(f"Threshold exceeded: {reason}")
+        ui.divider()
+        return False, reason
+    
+    return True, None
+
+
+def _update_llm_status():
+    """Display current LLM call status and elapsed time."""
+    tracker = get_llm_tracker()
+    if tracker:
+        status = tracker.get_status()
+        ui.status_update(tracker.call_count, tracker.get_elapsed_seconds())
+        log_debug(f"Status: {status}")
+
+
+def _get_param(obj, param_name):
+    """
+    Extract parameter value from either Message or Partial object.
+    Tries multiple access patterns: bindings, dict key, attribute.
+    
+    Args:
+        obj: Message or Partial object
+        param_name: Name of parameter to extract
+    
+    Returns:
+        Parameter value or None if not found
+    """
+    # Try accessing via bindings dict (Partial objects)
+    if hasattr(obj, 'bindings') and obj.bindings:
+        return obj.bindings.get(param_name)
+    
+    # Try accessing as dict key
+    try:
+        return obj[param_name]
+    except (TypeError, KeyError):
+        pass
+    
+    # Try accessing as attribute
+    try:
+        return getattr(obj, param_name, None)
+    except AttributeError:
+        pass
+    
+    return None
+
+
+def _track_message_note(msg_type, instance, llm_call_num):
+    """
+    Track important protocol messages in agent notes system.
+    Records message type, parameters, and LLM call count for analysis.
+    
+    Args:
+        msg_type: Type of message (e.g., 'rfq', 'quote', 'accept', etc.)
+        instance: The message instance with bindings
+        llm_call_num: Current LLM call number for tracking
+    """
+    if not notes:
+        return
+    
+    # Track RFQ messages
+    if msg_type == 'rfq':
+        rfq_id = _get_param(instance, 'ID')
+        item = _get_param(instance, 'item')
+        notes.note_message('rfq', id=rfq_id, item=item, llm_call=llm_call_num)
+        log_debug(f"[NOTED] RFQ sent: ID={rfq_id}, item={item}")
+    
+    # Track quote responses
+    elif msg_type == 'quote':
+        rfq_id = _get_param(instance, 'ID')
+        price = _get_param(instance, 'price')
+        notes.note_message('quote', rfq_id=rfq_id, price=price, llm_call=llm_call_num)
+        log_debug(f"[NOTED] Quote received: ID={rfq_id}, price=${price}")
+    
+    # Track accept decisions
+    elif msg_type == 'accept':
+        transaction_id = _get_param(instance, 'ID')
+        item = _get_param(instance, 'item')
+        price = _get_param(instance, 'price')
+        notes.note_message('accept', id=transaction_id, item=item, price=price, llm_call=llm_call_num)
+        log_debug(f"[NOTED] Accept decision: ID={transaction_id}, item={item}, price=${price}")
+    
+    # Track reject decisions
+    elif msg_type == 'reject':
+        transaction_id = _get_param(instance, 'ID')
+        item = _get_param(instance, 'item')
+        price = _get_param(instance, 'price')
+        outcome = _get_param(instance, 'outcome')
+        notes.note_message('reject', id=transaction_id, item=item, price=price, reason=outcome, llm_call=llm_call_num)
+        log_debug(f"[NOTED] Reject decision: ID={transaction_id}, reason={outcome}")
+    
+    # Track delivery confirmations
+    elif msg_type == 'deliver':
+        transaction_id = _get_param(instance, 'ID')
+        item = _get_param(instance, 'item')
+        outcome = _get_param(instance, 'outcome')
+        notes.note_message('deliver', id=transaction_id, item=item, status=outcome, llm_call=llm_call_num)
+        log_debug(f"[NOTED] Delivery: ID={transaction_id}, outcome={outcome}")
+    
+    # Track completion message
+    elif msg_type == 'completed':
+        log_debug(f"[GOAL ACHIEVED] LLM sent completion signal: {instance}")
+        notes.note_message('completed', id=_get_param(instance, 'ID'), item=_get_param(instance, 'item'), 
+                          price=_get_param(instance, 'price'), satisfaction=_get_param(instance, 'satisfaction'), 
+                          llm_call=llm_call_num)
+
+
+def _handle_transaction_completion(instance):
+    """
+    Handle successful transaction completion by creating stop signal.
+    
+    Args:
+        instance: The completed message instance
+    
+    Raises:
+        SystemExit: Always raises to signal completion
+    """
+    try:
+        with open(".stop_signal", "w") as f:
+            f.write("transaction_complete")
+        log_debug("Stop signal created - all agents will shut down")
+    except Exception as e:
+        log_debug(f"Error creating stop signal: {e}")
+    
+    raise SystemExit(f"✅ Goal achieved: LLM marked transaction complete. {instance}")
+
+
 async def main():
     """
     Main entry point: Waits for protocol to complete.
@@ -133,7 +299,10 @@ async def llm_decision(enabled_store, event):
     LLM decision handler triggered by adapter on ANY protocol state change.
     This includes InitEvent at startup and subsequent message observations.
     System prompt is cached from initialization.
+    
+    Coordinates validation, LLM calls, message tracking, and threshold monitoring.
     """
+
     log_debug(f"DEBUG: llm_decision called")
     log_debug(f"  - enabled_store type: {type(enabled_store)}")
     log_debug(f"  - event type: {type(event)}")
@@ -145,31 +314,18 @@ async def llm_decision(enabled_store, event):
     # Log event details
     print_event_debug(event)
     
-    # Check if enabled_store has any messages
-    if not enabled_store:
-        log_debug("DEBUG: No enabled_store available, skipping decision")
-        return None
-    
-    messages = list(enabled_store.messages())
-    log_debug(f"DEBUG: Found {len(messages)} enabled messages")
-    
-    if not messages:
-        log_debug("DEBUG: No enabled messages available, skipping decision")
+    # Validate enabled_store and retrieve messages
+    is_valid, messages = _validate_enabled_store(enabled_store)
+    if not is_valid:
         return None
     
     log_debug("LLM decision invoked, enabled messages available.")
     print_enabled_store_debug(enabled_store)
     
-    # Check for threshold before calling LLM
-    tracker = get_llm_tracker()
-    if tracker:
-        exceeded, reason = tracker.check_threshold_exceeded()
-        if exceeded:
-            log_debug(f"Threshold exceeded: {reason}")
-            ui.error(f"Threshold exceeded: {reason}")
-            ui.divider()
-            # Gracefully terminate
-            raise SystemExit(f"Graceful termination: {reason}")
+    # Check threshold before making LLM call
+    should_continue, reason = _check_threshold()
+    if not should_continue:
+        raise SystemExit(f"Graceful termination: {reason}")
     
     # Call LLM to decide on available messages
     log_debug("Consulting LLM for decision...")
@@ -183,21 +339,13 @@ async def llm_decision(enabled_store, event):
         requirement_callback=fallback_callback
     )
     
-    # Display status update after LLM call
-    if tracker:
-        status = tracker.get_status()
-        ui.status_update(tracker.call_count, tracker.get_elapsed_seconds())
-        log_debug(f"Status: {status}")
+    # Display status after LLM call
+    _update_llm_status()
     
-    # Check for threshold after LLM call
-    if tracker:
-        exceeded, reason = tracker.check_threshold_exceeded()
-        if exceeded:
-            log_debug(f"Threshold exceeded: {reason}")
-            ui.error(f"Threshold exceeded: {reason}")
-            ui.divider()
-            # Gracefully terminate
-            raise SystemExit(f"Graceful termination: {reason}")
+    # Check threshold after making LLM call
+    should_continue, reason = _check_threshold()
+    if not should_continue:
+        raise SystemExit(f"Graceful termination: {reason}")
     
     log_debug(f"DEBUG: choose_and_bind returned: {instance}")
     
@@ -210,100 +358,62 @@ async def llm_decision(enabled_store, event):
     # Track important messages using agent notes
     if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
         msg_type = instance.schema.name
-        notes = get_agent_notes_tracker('Buyer')
         tracker = get_llm_tracker()
         llm_call_num = tracker.call_count if tracker else 0
         
-        # Helper to get parameter value from either Message or Partial object
-        def get_param(obj, param_name):
-            if hasattr(obj, 'bindings') and obj.bindings:
-                return obj.bindings.get(param_name)
-            # Try accessing as dict key (Message objects might support this)
-            try:
-                return obj[param_name]
-            except (TypeError, KeyError):
-                pass
-            # Try accessing as attribute
-            try:
-                return getattr(obj, param_name, None)
-            except AttributeError:
-                pass
-            return None
+        # Track different message types
+        _track_message_note(msg_type, instance, llm_call_num)
         
-        # Track RFQ messages
-        if msg_type == 'rfq':
-            if notes:
-                rfq_id = get_param(instance, 'ID')
-                item = get_param(instance, 'item')
-                notes.note_message('rfq', id=rfq_id, item=item, llm_call=llm_call_num)
-                log_debug(f"[NOTED] RFQ sent: ID={rfq_id}, item={item}")
-        
-        # Track quote responses (received from seller)
-        elif msg_type == 'quote':
-            if notes:
-                rfq_id = get_param(instance, 'ID')
-                price = get_param(instance, 'price')
-                notes.note_message('quote', rfq_id=rfq_id, price=price, llm_call=llm_call_num)
-                log_debug(f"[NOTED] Quote received: ID={rfq_id}, price=${price}")
-        
-        # Track accept decisions
-        elif msg_type == 'accept':
-            if notes:
-                transaction_id = get_param(instance, 'ID')
-                item = get_param(instance, 'item')
-                price = get_param(instance, 'price')
-                notes.note_message('accept', id=transaction_id, item=item, price=price, llm_call=llm_call_num)
-                log_debug(f"[NOTED] Accept decision: ID={transaction_id}, item={item}, price=${price}")
-        
-        # Track reject decisions
-        elif msg_type == 'reject':
-            if notes:
-                transaction_id = get_param(instance, 'ID')
-                item = get_param(instance, 'item')
-                price = get_param(instance, 'price')
-                outcome = get_param(instance, 'outcome')
-                notes.note_message('reject', id=transaction_id, item=item, price=price, reason=outcome, llm_call=llm_call_num)
-                log_debug(f"[NOTED] Reject decision: ID={transaction_id}, reason={outcome}")
-        
-        # Track delivery confirmations
-        elif msg_type == 'deliver':
-            if notes:
-                transaction_id = get_param(instance, 'ID')
-                item = get_param(instance, 'item')
-                outcome = get_param(instance, 'outcome')
-                notes.note_message('deliver', id=transaction_id, item=item, status=outcome, llm_call=llm_call_num)
-                log_debug(f"[NOTED] Delivery: ID={transaction_id}, outcome={outcome}")
-        
-        # Track completion message
-        elif msg_type == 'completed':
-            log_debug(f"[GOAL ACHIEVED] LLM sent completion signal: {instance}")
-            if notes:
-                notes.note_message('completed', id=get_param(instance, 'ID'), item=get_param(instance, 'item'), 
-                                   price=get_param(instance, 'price'), satisfaction=get_param(instance, 'satisfaction'), 
-                                   llm_call=llm_call_num)
-            
-            # Create stop signal for all agents
-            try:
-                with open(".stop_signal", "w") as f:
-                    f.write("transaction_complete")
-                log_debug("Stop signal created - all agents will shut down")
-            except Exception as e:
-                log_debug(f"Error creating stop signal: {e}")
-            
-            raise SystemExit(f"✅ Goal achieved: LLM marked transaction complete. {instance}")
+        # Handle transaction completion
+        if msg_type == 'completed':
+            _handle_transaction_completion(instance)
     
     return instance
 
 
+def _initialize_tracking_systems():
+    """Initialize LLM call tracker and agent notes tracker."""
+    # Initialize the LLM call tracker with thresholds: 20 calls or 3 minutes
+    initialize_llm_tracker(max_calls=20, max_duration_seconds=180.0)
+    log_debug("LLM tracker initialized: max 20 calls or 3 minutes")
+    
+    # Initialize agent notes tracker for general-purpose note tracking
+    get_agent_notes_tracker('Buyer')
+    log_debug("Agent notes tracker initialized with JSON file tracking")
+
+
+def _display_transaction_summary(rejections_count, accepted_count, delivered_count):
+    """Display final transaction summary statistics."""
+    total = rejections_count + accepted_count + delivered_count
+    if total > 0:
+        ui.transaction_complete(total, rejections_count, accepted_count)
+        log_debug(f"[FINAL] Transactions: Total={total}, Rejected={rejections_count}, Accepted={accepted_count}, Delivered={delivered_count}")
+    else:
+        ui.info("⏸", "No transactions processed")
+
+
+def _export_agent_notes():
+    """Export agent notes summary to file."""
+    agent_notes = get_agent_notes('Buyer')
+    if agent_notes:
+        summary = agent_notes.get_summary()
+        agent_notes.export(f"./logs/buyer_notes_{timestamp}.json")
+        log_debug(f"\n[AGENT NOTES SUMMARY]\n{json.dumps(summary, indent=2)}")
+        ui.info("📝", f"Agent notes exported: logs/buyer_notes_{timestamp}.json")
+
+
+def _cleanup_logging():
+    """Close all logging handlers."""
+    for handler in debug_logger.handlers:
+        handler.close()
+    for handler in console_logger.handlers:
+        handler.close()
+
+
 if __name__ == "__main__":
     try:
-        # Initialize the LLM call tracker with thresholds: 20 calls or 3 minutes (180 seconds)
-        initialize_llm_tracker(max_calls=20, max_duration_seconds=180.0)
-        log_debug("LLM tracker initialized: max 20 calls or 3 minutes")
-        
-        # Initialize agent notes tracker for general-purpose note tracking
-        notes_tracker = get_agent_notes_tracker('Buyer')
-        log_debug("Agent notes tracker initialized with JSON file tracking")
+        # Initialize tracking and monitoring systems
+        _initialize_tracking_systems()
         
         # Initialize system prompt BEFORE starting the adapter
         # This ensures it's cached before the first decision event
@@ -315,12 +425,7 @@ if __name__ == "__main__":
         else:
             # Now start the adapter with the cached system prompt
             adapter.start(main())
-            total = rejections + accepted_deals + deliveries
-            if total > 0:
-                ui.transaction_complete(total, rejections, accepted_deals)
-                log_debug(f"[FINAL] Transactions: Total={total}, Rejected={rejections}, Accepted={accepted_deals}, Delivered={deliveries}")
-            else:
-                ui.info("⏸", "No transactions processed")
+            _display_transaction_summary(rejections, accepted_deals, deliveries)
     except KeyboardInterrupt:
         ui.interrupted()
     except SystemExit as e:
@@ -337,24 +442,12 @@ if __name__ == "__main__":
             print(f"All agents are shutting down gracefully...")
             print(f"{'='*70}\n")
         
-        # Show final statistics
-        total = rejections + accepted_deals + deliveries
-        if total > 0:
-            ui.transaction_complete(total, rejections, accepted_deals)
-            log_debug(f"[FINAL] Transactions: Total={total}, Rejected={rejections}, Accepted={accepted_deals}, Delivered={deliveries}")
-        
-        # Show agent notes summary
-        if notes:
-            summary = notes.get_summary()
-            notes.export(f"./logs/buyer_notes_{timestamp}.json")
-            log_debug(f"\n[AGENT NOTES SUMMARY]\n{json.dumps(summary, indent=2)}")
-            ui.info("📝", f"Agent notes exported: logs/buyer_notes_{timestamp}.json")
+        # Show final statistics and export notes
+        _display_transaction_summary(rejections, accepted_deals, deliveries)
+        _export_agent_notes()
     except Exception as e:
         ui.error_occurred(str(e))
         log_debug(f"Full traceback:\n{traceback.format_exc()}")
     finally:
         ui.show_log_location(log_filename)
-        for handler in debug_logger.handlers:
-            handler.close()
-        for handler in console_logger.handlers:
-            handler.close()
+        _cleanup_logging()

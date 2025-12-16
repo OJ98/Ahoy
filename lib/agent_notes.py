@@ -1,29 +1,27 @@
 #!/usr/bin/env python3
 """
-Agent Notes - Microsoft Agent Framework inspired note-taking system
-Allows agents to call note() function to record arbitrary information in structured format.
-Notes are stored as JSON for easy retrieval and analysis.
+Agent Notes - Lightweight note-taking system for agents.
+Agents save important state/memory during execution.
+Notes are stored as simple key-value pairs in JSON and reset each run.
 """
 
 import json
 import os
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 class AgentNotes:
     """
-    General-purpose note-taking system for agents.
+    Simplified note-taking system for agents to save important state.
     
-    Agents can call note() to record any information they want to track.
-    Notes are automatically timestamped and saved to JSON files.
+    Only records key-value pairs from save_state_to_memory tool calls.
+    Notes are NOT persisted across runs - they reset with each execution.
     
     Usage:
         notes = AgentNotes('Buyer')
-        notes.note('observation', {'type': 'price_comparison', 'vendor_a': 10, 'vendor_b': 12})
-        notes.note('decision', {'action': 'accept', 'reason': 'best_value', 'vendor': 'vendor_a'})
-        notes.note('action', {'sent_message': 'rfq', 'id': 'RFQ_001', 'item': 'pen'})
+        notes.save('procurement_constraints', 'Budget: $20.00...')
+        notes.get_all()  # Returns {'procurement_constraints': 'Budget: $20.00...'}
     """
     
     def __init__(self, agent_name: str, notes_dir: str = "logs/agent_notes"):
@@ -31,169 +29,90 @@ class AgentNotes:
         Initialize the notes system.
         
         Args:
-            agent_name: Name of the agent (e.g., 'Buyer', 'Seller', 'Shipper')
+            agent_name: Name of the agent (e.g., 'Buyer', 'Seller', 'Adapter')
             notes_dir: Directory to store JSON note files
+        
+        Notes do NOT load from previous runs - always start fresh.
         """
         self.agent_name = agent_name
         self.notes_dir = Path(notes_dir)
         self.notes_dir.mkdir(parents=True, exist_ok=True)
         
-        # All notes stored in a single list with type/category field
-        self.entries: List[Dict[str, Any]] = []
-        self.notes_file = self.notes_dir / f"{agent_name.lower()}_notes.json"
+        # Simple key-value store for saved state
+        self.data: Dict[str, Any] = {}
+        # All agents share the same agent_notes.json file
+        self.notes_file = self.notes_dir / "agent_notes.json"
         
-        # Load existing notes if they exist
-        self._load()
+        # NOTE: Deliberately NOT loading previous run data - notes reset each run
     
-    def note(self, note_type: str, data: Dict[str, Any] = None, **kwargs) -> None:
+    def save(self, key: str, value: Any) -> None:
         """
-        Record a note of any type.
+        Save a key-value pair to the agent's notes.
         
-        This is the primary method agents use to track information.
-        Notes are automatically timestamped and persisted to JSON.
+        This is called when save_state_to_memory tool is executed.
         
         Args:
-            note_type: Type/category of note (e.g., 'rfq', 'observation', 'decision', 'action', etc.)
-                      Agents can define their own types as needed
-            data: Dictionary containing the note content
-            **kwargs: Alternative way to pass note content as keyword arguments
-        
-        Examples:
-            # Using data dict
-            notes.note('action', {'sent': 'rfq', 'id': 'RFQ_001'})
-            
-            # Using kwargs
-            notes.note('decision', action='accept', reason='best_price', score=9.5)
-            
-            # Mixed
-            notes.note('observation', {'comparison': 'vendors'}, a=10, b=12)
+            key: The key to store (e.g., 'procurement_constraints', 'transaction_strategy')
+            value: The value to store (string or any JSON-serializable value)
         """
-        # Merge data dict and kwargs
-        note_content = data.copy() if data else {}
-        note_content.update(kwargs)
-        
-        # Create entry with automatic timestamp
-        entry = {
-            'timestamp': datetime.now().isoformat(),
-            'type': note_type,
-            'data': note_content
-        }
-        
-        self.entries.append(entry)
+        self.data[key] = value
         self._save()
     
-    def note_message(self, message_type: str, **kwargs) -> None:
+    def get(self, key: str, default: Any = None) -> Any:
         """
-        Convenience method to note protocol messages.
+        Retrieve a saved value by key.
         
         Args:
-            message_type: Type of message (rfq, quote, accept, reject, deliver, completed, etc.)
-            **kwargs: Message parameters (ID, item, price, reason, etc.)
-        """
-        self.note('message', {'type': message_type, **kwargs})
-    
-    def note_decision(self, decision: str, **details) -> None:
-        """
-        Convenience method to note a decision made by the agent.
-        
-        Args:
-            decision: What decision was made (e.g., 'accept_quote', 'reject_offer', 'complete_transaction')
-            **details: Additional decision details (reason, criteria, score, etc.)
-        """
-        self.note('decision', {'action': decision, **details})
-    
-    def note_observation(self, observation: str, **details) -> None:
-        """
-        Convenience method to note an observation about the protocol or market.
-        
-        Args:
-            observation: What was observed (e.g., 'price_increase', 'supplier_unavailable', 'delivery_delay')
-            **details: Additional observation details (values, timing, impact, etc.)
-        """
-        self.note('observation', {'what': observation, **details})
-    
-    def get_all_notes(self) -> List[Dict[str, Any]]:
-        """Get all notes in chronological order."""
-        return self.entries.copy()
-    
-    def get_notes_by_type(self, note_type: str) -> List[Dict[str, Any]]:
-        """Get all notes of a specific type."""
-        return [e for e in self.entries if e['type'] == note_type]
-    
-    def get_latest_notes(self, count: int = 10) -> List[Dict[str, Any]]:
-        """Get the most recent N notes."""
-        return self.entries[-count:] if self.entries else []
-    
-    def get_summary(self) -> Dict[str, Any]:
-        """
-        Get a summary of all notes.
-        
+            key: The key to retrieve
+            default: Value to return if key not found
+            
         Returns:
-            Dictionary with summary information
+            The saved value or default if not found
         """
-        note_types = {}
-        for entry in self.entries:
-            note_type = entry['type']
-            note_types[note_type] = note_types.get(note_type, 0) + 1
-        
-        return {
-            'agent': self.agent_name,
-            'total_notes': len(self.entries),
-            'note_types': note_types,
-            'timestamp': datetime.now().isoformat()
-        }
+        return self.data.get(key, default)
     
-    def _load(self) -> None:
-        """Load notes from JSON file if it exists."""
-        if self.notes_file.exists():
-            try:
-                with open(self.notes_file, 'r') as f:
-                    data = json.load(f)
-                    self.entries = data.get('entries', [])
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Warning: Could not load notes from {self.notes_file}: {e}")
-                self.entries = []
-        else:
-            self.entries = []
+    def get_all(self) -> Dict[str, Any]:
+        """Get all saved key-value pairs."""
+        return self.data.copy()
+    
+    def clear(self) -> None:
+        """
+        Clear all saved notes for this run.
+        
+        Called at startup to ensure fresh notes each execution.
+        """
+        self.data = {}
+        self._delete_file()
+    
+    def _delete_file(self) -> None:
+        """Delete the notes file if it exists."""
+        try:
+            if self.notes_file.exists():
+                self.notes_file.unlink()
+        except IOError as e:
+            print(f"Warning: Could not delete notes file {self.notes_file}: {e}")
     
     def _save(self) -> None:
-        """Save notes to JSON file."""
+        """Save all notes to JSON file."""
         try:
-            data = {
-                'agent': self.agent_name,
-                'last_updated': datetime.now().isoformat(),
-                'entries': self.entries
-            }
+            # Write all agent data to shared agent_notes.json
+            # Load existing file to see all agents' data
+            all_agents_data = {}
+            if self.notes_file.exists():
+                try:
+                    with open(self.notes_file, 'r') as f:
+                        all_agents_data = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    all_agents_data = {}
             
+            # Update this agent's data
+            all_agents_data[self.agent_name] = self.data
+            
+            # Write back
             with open(self.notes_file, 'w') as f:
-                json.dump(data, f, indent=2, default=str)
+                json.dump(all_agents_data, f, indent=2, default=str)
         except IOError as e:
             print(f"Warning: Could not save notes to {self.notes_file}: {e}")
-    
-    def clear_all(self) -> None:
-        """Clear all notes."""
-        self.entries = []
-        self._save()
-    
-    def export(self, filepath: str) -> None:
-        """
-        Export all notes to a specified JSON file.
-        
-        Args:
-            filepath: Path to export the notes to
-        """
-        try:
-            export_data = {
-                'agent': self.agent_name,
-                'export_time': datetime.now().isoformat(),
-                'summary': self.get_summary(),
-                'entries': self.entries
-            }
-            
-            with open(filepath, 'w') as f:
-                json.dump(export_data, f, indent=2, default=str)
-        except IOError as e:
-            print(f"Error: Could not export notes to {filepath}: {e}")
 
 
 # Global notes instances (per-agent)
@@ -205,17 +124,18 @@ def get_agent_notes(agent_name: str) -> AgentNotes:
     Get or create an AgentNotes instance for the specified agent.
     
     This function is the primary API for agents to access their notes.
+    Notes do NOT persist across runs - calling this creates a fresh instance.
     
     Args:
-        agent_name: Name of the agent (e.g., 'Buyer', 'Seller', 'Shipper')
+        agent_name: Name of the agent (e.g., 'Buyer', 'Seller', 'Adapter')
         
     Returns:
         AgentNotes instance for that agent
     
     Example:
         notes = get_agent_notes('Buyer')
-        notes.note('rfq', {'id': 'RFQ_001', 'item': 'pen'})
-        notes.note_decision('accept_quote', reason='best_price', vendor='A')
+        notes.save('budget_constraint', '$20.00')
+        notes.get('budget_constraint')  # Returns '$20.00'
     """
     if agent_name not in _agent_notes:
         _agent_notes[agent_name] = AgentNotes(agent_name)
@@ -229,6 +149,13 @@ def get_agent_notes_tracker(agent_name: str) -> AgentNotes:
 
 
 def reset_agent_notes(agent_name: str) -> None:
-    """Reset the notes for an agent."""
+    """
+    Reset the notes for an agent.
+    
+    Clears the in-memory data and deletes the notes file for that agent.
+    Call this at startup to ensure fresh notes each run.
+    """
     if agent_name in _agent_notes:
+        _agent_notes[agent_name].clear()
         del _agent_notes[agent_name]
+
