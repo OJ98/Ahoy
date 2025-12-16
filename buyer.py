@@ -210,23 +210,20 @@ def _track_message_note(msg_type, instance, llm_call_num):
     if msg_type == 'rfq':
         rfq_id = _get_param(instance, 'ID')
         item = _get_param(instance, 'item')
-        notes.note_message('rfq', id=rfq_id, item=item, llm_call=llm_call_num)
-        log_debug(f"[NOTED] RFQ sent: ID={rfq_id}, item={item}")
+        log_debug(f"[SENT] RFQ: ID={rfq_id}, item={item}")
     
     # Track quote responses
     elif msg_type == 'quote':
         rfq_id = _get_param(instance, 'ID')
         price = _get_param(instance, 'price')
-        notes.note_message('quote', rfq_id=rfq_id, price=price, llm_call=llm_call_num)
-        log_debug(f"[NOTED] Quote received: ID={rfq_id}, price=${price}")
+        log_debug(f"[RECEIVED] Quote: ID={rfq_id}, price=${price}")
     
     # Track accept decisions
     elif msg_type == 'accept':
         transaction_id = _get_param(instance, 'ID')
         item = _get_param(instance, 'item')
         price = _get_param(instance, 'price')
-        notes.note_message('accept', id=transaction_id, item=item, price=price, llm_call=llm_call_num)
-        log_debug(f"[NOTED] Accept decision: ID={transaction_id}, item={item}, price=${price}")
+        log_debug(f"[DECISION] Accept: ID={transaction_id}, item={item}, price=${price}")
     
     # Track reject decisions
     elif msg_type == 'reject':
@@ -234,23 +231,18 @@ def _track_message_note(msg_type, instance, llm_call_num):
         item = _get_param(instance, 'item')
         price = _get_param(instance, 'price')
         outcome = _get_param(instance, 'outcome')
-        notes.note_message('reject', id=transaction_id, item=item, price=price, reason=outcome, llm_call=llm_call_num)
-        log_debug(f"[NOTED] Reject decision: ID={transaction_id}, reason={outcome}")
+        log_debug(f"[DECISION] Reject: ID={transaction_id}, reason={outcome}")
     
     # Track delivery confirmations
     elif msg_type == 'deliver':
         transaction_id = _get_param(instance, 'ID')
         item = _get_param(instance, 'item')
         outcome = _get_param(instance, 'outcome')
-        notes.note_message('deliver', id=transaction_id, item=item, status=outcome, llm_call=llm_call_num)
-        log_debug(f"[NOTED] Delivery: ID={transaction_id}, outcome={outcome}")
+        log_debug(f"[DELIVERY] ID={transaction_id}, outcome={outcome}")
     
     # Track completion message
     elif msg_type == 'completed':
         log_debug(f"[GOAL ACHIEVED] LLM sent completion signal: {instance}")
-        notes.note_message('completed', id=_get_param(instance, 'ID'), item=_get_param(instance, 'item'), 
-                          price=_get_param(instance, 'price'), satisfaction=_get_param(instance, 'satisfaction'), 
-                          llm_call=llm_call_num)
 
 
 def _handle_transaction_completion(instance):
