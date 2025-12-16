@@ -424,8 +424,13 @@ def construct_system_prompt(
     """
     Construct an enhanced system prompt with contextual guidance.
     
-    Takes the base system prompt and adds relevant guidance based on the
-    current state of the transaction (messages seen, decisions made, etc.).
+    Takes the base system prompt (which contains protocol-specific constraints
+    and decisions) and adds generic process guidance based on the current
+    state of the transaction (messages seen, decisions made, etc.).
+    
+    This function is protocol-agnostic - it detects generic patterns like
+    "inquiries sent", "responses received", "decisions made" without assuming
+    any specific message types, constraints, or workflows.
     
     Args:
         base_prompt: The base system prompt (from user requirements gathering)
@@ -433,25 +438,36 @@ def construct_system_prompt(
         log_callback: Optional function for logging
     
     Returns:
-        Enhanced system prompt with contextual guidance appended
+        Enhanced system prompt with generic process guidance appended
     """
     def log_msg(msg):
         if log_callback:
             log_callback(msg)
     
-    enhanced_prompt = base_prompt
+    # BSPL Protocol Explanation
+    bspl_explanation = """
+    You are participating in BSPL (Blindingly Simple Protocol Language) protocol enactments. 
+    BSPL defines multi-agent protocols where:
+    - Roles are named agents (e.g., Merchant, Buyer)
+    - Messages are directed communication between roles with parameters marked as `out` (sender provides) or `in` (requires prior binding from other messages)
+    - Parameters marked `key` identify protocol instances
+    - You play one role and must track received messages to determine which messages you can legally send next
+    - A message can only be sent when all its `in` parameters are bound by prior messages
+    - When multiple messages are enabled, choose based on domain reasoning and the protocol's intended flow"""
+
+
+    # Prepend BSPL explanation to the base prompt
+    enhanced_prompt = bspl_explanation + "\n\n" + base_prompt
     
     # STARTUP GUIDANCE: If no prior messages, guide initial action
     if not all_messages and enhanced_prompt:
         startup_guidance = """
 
 STARTUP CONTEXT:
-This is the beginning of a new transaction. No prior message history exists.
-Rather than decline to act, initialize the transaction with reasonable placeholder values:
-- Use typical/generic but realistic identifiers (e.g., "ORDER_001", "Widget", "10 units")
-- These values will evolve as the other parties respond and provide feedback
-- Your role is to begin the workflow by proposing initial parameters
-- Treating startup differently from operational refusal shows adaptive behavior"""
+This is the beginning of a new interaction. No prior message history exists.
+Your role is to initialize the workflow by selecting an appropriate initial message
+and providing necessary parameters. Use the constraints and decision criteria from
+your system prompt to guide your choice."""
         enhanced_prompt = enhanced_prompt + startup_guidance
         return enhanced_prompt
     
@@ -459,109 +475,134 @@ Rather than decline to act, initialize the transaction with reasonable placehold
     if not all_messages:
         return enhanced_prompt
     
-    # TRANSACTION STATE ANALYSIS
-    has_inquiry_messages = any(
-        msg.get("schema_name") and 
-        any(keyword in msg.get("schema_name", "").lower() 
-            for keyword in ["rfq", "inquiry", "request", "ask", "query"])
-        for msg in all_messages
-    )
-    has_responses = any(
-        msg.get("schema_name") and 
-        any(keyword in msg.get("schema_name", "").lower() 
-            for keyword in ["quote", "proposal", "offer", "response"])
-        for msg in all_messages
-    )
-    has_final_decisions = any(
-        msg.get("schema_name") and 
-        any(keyword in msg.get("schema_name", "").lower() 
-            for keyword in ["accept", "confirm"])
-        for msg in all_messages
-    )
-    has_accepted = any(
-        msg.get("schema_name") and msg.get("schema_name", "").lower() == "accept"
-        for msg in all_messages
-    )
-    has_delivered = any(
-        msg.get("schema_name") and msg.get("schema_name", "").lower() == "deliver"
-        for msg in all_messages
-    )
+    # GENERIC STATE ANALYSIS: Detect workflow phase based on message patterns
+    # Count different message categories without assuming protocol-specific types
+    all_schema_names = [msg.get("schema_name", "").lower() for msg in all_messages]
+    total_messages = len(all_messages)
     
-    log_msg(f"[construct_system_prompt] State: inquiries={has_inquiry_messages}, responses={has_responses}, final={has_final_decisions}, accepted={has_accepted}, delivered={has_delivered}")
+    log_msg(f"[construct_system_prompt] Message history: {total_messages} messages total")
+    log_msg(f"  Message types seen: {set(all_schema_names)}")
     
-    # DECISION EVALUATION GUIDANCE: If responses received, guide evaluation
-    if has_responses and not has_final_decisions:
-        decision_guidance = """
+    # Add workflow phase reminder for multi-turn interactions
+    if total_messages > 0:
+        workflow_reminder = f"""
 
-RESPONSE EVALUATION STRATEGY:
-You have received response(s) to your inquiry. Now evaluate and make a decision:
-
-DECISION TREE:
-1. **Is the quote acceptable?** (within budget, correct delivery location, reasonable quality)
-   - YES → Send an ACCEPT message with the delivery address and confirmation response
-   - NO → Send a REJECT message with the reason (price too high, can't deliver, etc.)
-
-2. **After acceptance, when you receive delivery confirmation:**
-   - Send a COMPLETED message with satisfaction feedback
-
-3. **Never abandon good deals** - If a quote meets your constraints, accept it.
-   - Budget: Must be ≤ $20 total (including shipping/taxes)
-   - Location: Must deliver to Raleigh, NC 27606
-   - Product: Must be a functional pen
-
-ACTION NOW: Choose one of the available options (accept/reject/completed) and provide all required parameters."""
-        enhanced_prompt = enhanced_prompt + decision_guidance
+WORKFLOW CONTEXT:
+You have {total_messages} message(s) in the conversation history. Review them carefully
+and use your system prompt constraints and decision criteria to determine your next action.
+Each message you send should represent a deliberate decision based on the current state."""
+        enhanced_prompt = enhanced_prompt + workflow_reminder
     
-    # EXPLORATION GUIDANCE: If inquiries sent but no responses yet
-    elif has_inquiry_messages and not has_responses and not has_final_decisions:
-        negotiation_guidance = """
+    # TOOL USAGE GUIDANCE: Direct LLM to use tools for ID generation and memory
+    tool_guidance = """
 
-MULTI-OPTION EXPLORATION STRATEGY:
-You have sent inquiry message(s) but have not yet received responses. You may:
+AVAILABLE TOOLS FOR YOUR USE:
+You have two tools available to enhance your decision-making:
 
-OPTION A: Wait for responses to your current inquiry (Recommended for single supplier)
-OPTION B: Send NEW rfq messages with DIFFERENT ID values to explore other suppliers
-✓ EXAMPLE: If you sent ID='TRANS_001', now send ID='TRANS_002' with different item specs
-✓ PURPOSE: Get multiple quotes to compare options
-✗ DO NOT: Reuse the same ID with different items (causes protocol errors)
+1. **generate_unique_id** - Creates guaranteed-unique message IDs
+   - Use this EVERY TIME you need a new message ID
+   - Parameters: prefix (e.g., "RFQ", "ORDER") and purpose (what the message is for)
+   - Returns a unique ID in format: PREFIX_HEXID_TIMESTAMP
+   - This ensures no ID conflicts or parameter duplication errors
+   
+   When to use:
+   - Sending a NEW message that requires a unique ID parameter
+   - Exploring multiple options with different IDs
+   - Never manually create IDs - always use this tool
+   
+   Example workflow:
+   1. Decide you need to send a message with a new ID
+   2. Request generate_unique_id with appropriate prefix and purpose
+   3. Receive the generated ID
+   4. Use that exact ID in your message parameters
 
-Choose based on your strategy: single supplier or competitive bidding."""
-        enhanced_prompt = enhanced_prompt + negotiation_guidance
+2. **save_state_to_memory** - Records important information for later recall
+   - Use this to save constraints, decisions, or strategies you want to remember
+   - Parameters: agent_name, key (name of what you're saving), value (the content)
+   - Saved information can help you maintain consistency across decisions
+
+CRITICAL: Always use generate_unique_id for new message IDs - do not invent IDs yourself.
+This prevents parameter variation errors and duplicate message rejection."""
+    enhanced_prompt = enhanced_prompt + tool_guidance
     
-    # COMPLETION GUIDANCE: If transaction accepted and delivered
-    if has_accepted and has_delivered:
-        completion_guidance = """
-
-TRANSACTION COMPLETION DECISION:
-You have:
-1. Accepted a quote from the seller
-2. Received delivery of the item from the shipper
-
-COMPLETION ACTION:
-If the delivery confirms the item meets your requirements (pen acquired at reasonable price):
-- You can send a 'completed' message to indicate transaction success
-- Use the same ID from the accepted quote for consistency
-- Provide satisfaction feedback about the transaction
-- This signals that the procurement goal is achieved
-
-Only use the 'completed' message when you are genuinely satisfied with the outcome.
-This represents the end of the transaction and your achievement of the procurement objective."""
-        enhanced_prompt = enhanced_prompt + completion_guidance
-    
-    # DUPLICATE PREVENTION: Always include if messages exist
+    # CRITICAL: Prevent duplicate messages (applies to all protocols)
     duplicate_prevention = """
 
-CRITICAL: AVOID DUPLICATE MESSAGES
-DO NOT send the same message multiple times with different parameters (especially different 'resp' values).
-- If you have already sent an accept/reject/completed message with a specific ID, do NOT send it again
-- If asked for the same decision multiple times, choose null to decline
-- Each message must have unique identity or reflect a genuinely different decision
-- Protocol will reject duplicate messages with different parameter values
+CRITICAL: AVOID DUPLICATE MESSAGES AND PARAMETERS
+- Each message ID must be sent at most once with the exact same parameters
+- Do NOT reuse the same ID with different descriptions, values, or wording
+- Do NOT send similar messages with slight variations (capitalization, wording, etc.)
+- Do NOT create near-duplicates with the same ID but different parameter values
 
-EXCEPTION: Only proceed with a decision if it genuinely reflects a NEW state change or NEW information."""
+If you need to retry a message:
+- Use the EXACT SAME parameter values as before
+- Do not generate new descriptions or parameter values
+
+If the protocol rejects a message with a specific ID:
+- Either accept the rejection and move forward with a different message type
+- Or create a completely NEW message with a DIFFERENT ID
+- Never retry the same ID with modified parameters
+
+Protocol enforcement: Messages with the same schema and ID but different parameters will be rejected."""
     enhanced_prompt = enhanced_prompt + duplicate_prevention
     
+    # CRITICAL: Guide rejection decisions to prevent premature rejections
+    rejection_guidance = """
+
+CRITICAL: REJECTION AND COMPARISON STRATEGY (Protocol-Agnostic)
+When you receive multiple response options (quotes, offers, proposals, or any message variants):
+- DO NOT immediately reject/dismiss after seeing just one option
+- WAIT to see multiple options before making rejection decisions
+- COMPARE all available alternatives before deciding to reject any
+- Only reject if: (1) multiple options have arrived AND (2) this option is clearly inferior
+- If unsure, ASK FOR MORE INFORMATION rather than rejecting
+
+Rejection consequences (vary by protocol):
+- Once you reject/dismiss an option with a specific ID, you may not be able to revert that decision
+- Rejecting too early removes your alternatives when better options arrive later
+- Protocol state may prevent you from accepting a previously rejected option
+
+Strategy:
+1. On first option received: Do NOT reject immediately - wait for competing options
+2. When multiple options arrive: Compare them all before deciding
+3. Select the best option or request additional information
+4. Only reject if the option is clearly unacceptable even with alternatives available
+
+This approach maximizes your choices and prevents losing good options due to premature rejection."""
+    enhanced_prompt = enhanced_prompt + rejection_guidance
+    
+    # TOOL USAGE: Instruct agent to use save_state_to_memory tool for audit trail
+    tool_usage_guidance = """
+
+AGENT DECISION LOGGING:
+You have access to the save_state_to_memory tool which you should use to create an audit trail:
+
+1. BEFORE COMMITTING TO A DECISION:
+   Use save_state_to_memory with:
+   - agent_name: Your role (e.g., "Buyer")
+   - key: "enactment_decision_intent"
+   - value: JSON with your decision details including:
+     {"choice_made": "Option X: [message type]", "reason": "[why this choice]", "will_affect": "[impact on protocol]"}
+
+2. EXAMPLE (Purchase Protocol):
+   If you decide to accept an RFQ with price $12:
+   save_state_to_memory("Buyer", "enactment_decision_intent", '{"choice_made": "Option 2: Purchase/accept", "reason": "Lowest price at $12", "will_affect": "Seller will receive acceptance, Shipper will deliver"}')
+
+   EXAMPLE (Any Other Protocol):
+   If you decide to send any message:
+   save_state_to_memory("YourRole", "enactment_decision_intent", '{"choice_made": "Option 1: [Your Message Type]", "reason": "[Your reason]", "will_affect": "[Protocol impact]"}')
+
+3. AFTER SENDING THE MESSAGE:
+   Record what actually happened with:
+   - agent_name: Your role
+   - key: "message_execution_log"
+   - value: JSON with execution details
+
+Using these tools creates a persistent record of your decisions and actions, enabling verification that what you intended matched what actually executed."""
+    enhanced_prompt = enhanced_prompt + tool_usage_guidance
+    
     return enhanced_prompt
+
 
 
 async def choose_and_bind(
@@ -804,15 +845,56 @@ async def choose_and_bind(
 
     chosen_partial = options[choice_idx]["partial"]
 
-    # Validate parameter names
-    for param_name in params.keys():
+    # VALIDATION: Log what the LLM chose vs what's bound to ensure successful enactment
+    log_msg(f"\n{'='*80}")
+    log_msg(f"DECISION VALIDATION - Ensuring Enactment Success")
+    log_msg(f"{'='*80}")
+    log_msg(f"LLM chose: Option {choice_idx} ({options[choice_idx].get('schema_name')})")
+    log_msg(f"Message type: {chosen_partial.schema.qualified_name}")
+    
+    # Log all bound parameters (protocol-level bindings)
+    bound_params = {k: v for k, v in chosen_partial.bindings.items() if v is not None}
+    if bound_params:
+        log_msg(f"Protocol-bound parameters (non-overridable):")
+        for key, value in bound_params.items():
+            log_msg(f"  {key}: {value}")
+    
+    # Log LLM-provided parameters
+    if params:
+        log_msg(f"LLM-provided parameters (to fill missing values):")
+        for key, value in params.items():
+            log_msg(f"  {key}: {value}")
+    
+    # Log decision details for human debugging (but don't automatically save)
+    log_msg(f"\n{'='*80}")
+    log_msg(f"DECISION: Option {choice_idx} ({options[choice_idx].get('schema_name')})")
+    log_msg(f"Message type: {chosen_partial.schema.qualified_name}")
+    
+    if bound_params:
+        log_msg(f"This message will use bound parameters:")
+        for param_name, param_value in bound_params.items():
+            log_msg(f"  {param_name}: {param_value}")
+    
+    log_msg(f"⚠️ REMINDER: Use save_state_to_memory tool to record your decision intent")
+    log_msg(f"{'='*80}\n")
+
+    # Validate parameter names and filter out already-bound parameters
+    filtered_params = {}
+    for param_name, param_value in params.items():
         if param_name not in chosen_partial.schema.parameters:
             log_msg(f"LLM returned unknown parameter '{param_name}'")
             return None
+        
+        # Skip parameters that are already bound (in parameters)
+        if param_name in chosen_partial.bindings and chosen_partial.bindings[param_name] is not None:
+            log_msg(f"Skipping already-bound parameter '{param_name}' (will use bound value: {chosen_partial.bindings[param_name]})")
+            continue
+        
+        filtered_params[param_name] = param_value
 
-    # Bind parameters
+    # Bind parameters (now only with unbound params)
     try:
-        message_instance = chosen_partial.bind(**params)
+        message_instance = chosen_partial.bind(**filtered_params)
     except Exception as exc:
         log_msg(f"Parameter binding failed: {exc}")
         return None

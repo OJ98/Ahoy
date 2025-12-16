@@ -132,19 +132,43 @@ def build_user_prompt(
         )
         lines.append(history)
     
-    # Add available options
+    # Add available options with bound parameters for clarity
     lines.append("")
     lines.append("Options:")
     for opt in options:
         idx = opt.get('index', '?')
         schema = opt.get('schema_name', 'Unknown')
         missing = opt.get('missing_params', [])
-        lines.append(f"{idx}) {schema} - REQUIRED params: {missing}")
+        
+        # Extract bound parameters for display
+        partial = opt.get('partial')
+        bindings_str = ""
+        if partial and hasattr(partial, 'bindings'):
+            bound_params = {k: v for k, v in partial.bindings.items() if v is not None}
+            if bound_params:
+                # Show all bound parameters (protocol-agnostic)
+                display_bindings = [f"{key}={value}" for key, value in bound_params.items()]
+                if display_bindings:
+                    bindings_str = f" [BOUND: {', '.join(display_bindings)}]"
+        
+        lines.append(f"{idx}) {schema}{bindings_str} - FILL ONLY: {missing}")
+    
+    # Add critical note about option selection leading to execution
+    lines.append("")
+    lines.append("⚠️  CRITICAL: Your choice will directly determine what message gets SENT and what happens next:")
+    lines.append("- The BOUND parameters shown above (in [BOUND: ...]) are already set and will be used")
+    lines.append("- You only need to provide values for parameters marked in FILL ONLY")
+    lines.append("- Your selection will trigger protocol actions based on the message type and parameters")
+    lines.append("- Make sure the BOUND ID and price match your intended selection")
     
     # Add critical instruction
     lines.append("")
-    lines.append("**CRITICAL: If you choose an option, you MUST provide values for ALL required parameters.**")
-    lines.append("**Do not return incomplete params. Either send with all required params, or choose null.**")
+    lines.append("**CRITICAL PARAMETER RULES:**")
+    lines.append("1. Parameters marked [BOUND: ...] are ALREADY SET and should NOT be provided by you")
+    lines.append("2. Parameters marked 'FILL ONLY: [...]' are the ONLY ones you should provide values for")
+    lines.append("3. If you choose an option, provide values for ALL parameters in the FILL ONLY list")
+    lines.append("4. Do not provide values for BOUND parameters - they will cause errors")
+    lines.append("5. Either provide all required FILL ONLY params, or choose null.")
     
     # Add optional tool guidance
     lines.append("")

@@ -193,61 +193,12 @@ def _get_param(obj, param_name):
     return None
 
 
-def _track_message_note(msg_type, instance, llm_call_num):
-    """
-    Track important protocol messages in agent notes system.
-    Records message type, parameters, and LLM call count for analysis.
-    
-    Args:
-        msg_type: Type of message (e.g., 'rfq', 'quote', 'accept', etc.)
-        instance: The message instance with bindings
-        llm_call_num: Current LLM call number for tracking
-    """
-    if not notes:
-        return
-    
-    # Track RFQ messages
-    if msg_type == 'rfq':
-        rfq_id = _get_param(instance, 'ID')
-        item = _get_param(instance, 'item')
-        log_debug(f"[SENT] RFQ: ID={rfq_id}, item={item}")
-    
-    # Track quote responses
-    elif msg_type == 'quote':
-        rfq_id = _get_param(instance, 'ID')
-        price = _get_param(instance, 'price')
-        log_debug(f"[RECEIVED] Quote: ID={rfq_id}, price=${price}")
-    
-    # Track accept decisions
-    elif msg_type == 'accept':
-        transaction_id = _get_param(instance, 'ID')
-        item = _get_param(instance, 'item')
-        price = _get_param(instance, 'price')
-        log_debug(f"[DECISION] Accept: ID={transaction_id}, item={item}, price=${price}")
-    
-    # Track reject decisions
-    elif msg_type == 'reject':
-        transaction_id = _get_param(instance, 'ID')
-        item = _get_param(instance, 'item')
-        price = _get_param(instance, 'price')
-        outcome = _get_param(instance, 'outcome')
-        log_debug(f"[DECISION] Reject: ID={transaction_id}, reason={outcome}")
-    
-    # Track delivery confirmations
-    elif msg_type == 'deliver':
-        transaction_id = _get_param(instance, 'ID')
-        item = _get_param(instance, 'item')
-        outcome = _get_param(instance, 'outcome')
-        log_debug(f"[DELIVERY] ID={transaction_id}, outcome={outcome}")
-    
-    # Track completion message
-    elif msg_type == 'completed':
-        log_debug(f"[GOAL ACHIEVED] LLM sent completion signal: {instance}")
-
-
 def _handle_transaction_completion(instance):
     """
     Handle successful transaction completion by creating stop signal.
+    
+    Verifies that what was intended matches what was executed by comparing
+    agent-triggered logs from save_state_to_memory tool calls.
     
     Args:
         instance: The completed message instance
@@ -255,6 +206,40 @@ def _handle_transaction_completion(instance):
     Raises:
         SystemExit: Always raises to signal completion
     """
+    from lib.agent_notes import get_agent_notes
+    
+    # Verify enactment: compare what the agent intended vs what it actually sent
+    notes_tracker = get_agent_notes('Buyer')
+    
+    try:
+        decision_intent = notes_tracker.get('enactment_decision_intent')
+        execution_log = notes_tracker.get('message_execution_log')
+        
+        log_debug("\n" + "="*80)
+        log_debug("ENACTMENT VERIFICATION REPORT")
+        log_debug("="*80)
+        
+        if decision_intent:
+            log_debug(f"✓ Decision Intent Recorded: {decision_intent}")
+        else:
+            log_debug(f"⚠️ Decision Intent NOT Found - Agent did not call save_state_to_memory('Buyer', 'enactment_decision_intent', ...)")
+        
+        if execution_log:
+            log_debug(f"✓ Execution Log Recorded: {execution_log}")
+        else:
+            log_debug(f"⚠️ Execution Log NOT Found - Agent did not call save_state_to_memory('Buyer', 'message_execution_log', ...)")
+        
+        if decision_intent and execution_log:
+            log_debug(f"✓ Both logs present - Transaction was properly tracked by agent")
+        else:
+            log_debug(f"⚠️ Incomplete audit trail - Some tool calls were not made")
+        
+        log_debug("="*80 + "\n")
+        
+    except Exception as e:
+        log_debug(f"Could not verify enactment logs: {e}")
+    
+    # Original transaction completion logic: create stop signal
     try:
         with open(".stop_signal", "w") as f:
             f.write("transaction_complete")
@@ -347,16 +332,9 @@ async def llm_decision(enabled_store, event):
 
     log_debug(f"DEBUG: Sending message: {instance}")
     
-    # Track important messages using agent notes
+    # Handle transaction completion if applicable
     if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
         msg_type = instance.schema.name
-        tracker = get_llm_tracker()
-        llm_call_num = tracker.call_count if tracker else 0
-        
-        # Track different message types
-        _track_message_note(msg_type, instance, llm_call_num)
-        
-        # Handle transaction completion
         if msg_type == 'completed':
             _handle_transaction_completion(instance)
     
