@@ -412,6 +412,158 @@ async def choose_option_from_llm(
 _SYSTEM_PROMPT_CACHE = None
 
 
+# ============================================================================
+# SYSTEM PROMPT CONSTRUCTION: Build enhanced prompts based on transaction state
+# ============================================================================
+
+def construct_system_prompt(
+    base_prompt: str,
+    all_messages: list,
+    log_callback=None
+) -> str:
+    """
+    Construct an enhanced system prompt with contextual guidance.
+    
+    Takes the base system prompt and adds relevant guidance based on the
+    current state of the transaction (messages seen, decisions made, etc.).
+    
+    Args:
+        base_prompt: The base system prompt (from user requirements gathering)
+        all_messages: List of all messages seen so far in the transaction
+        log_callback: Optional function for logging
+    
+    Returns:
+        Enhanced system prompt with contextual guidance appended
+    """
+    def log_msg(msg):
+        if log_callback:
+            log_callback(msg)
+    
+    enhanced_prompt = base_prompt
+    
+    # STARTUP GUIDANCE: If no prior messages, guide initial action
+    if not all_messages and enhanced_prompt:
+        startup_guidance = """
+
+STARTUP CONTEXT:
+This is the beginning of a new transaction. No prior message history exists.
+Rather than decline to act, initialize the transaction with reasonable placeholder values:
+- Use typical/generic but realistic identifiers (e.g., "ORDER_001", "Widget", "10 units")
+- These values will evolve as the other parties respond and provide feedback
+- Your role is to begin the workflow by proposing initial parameters
+- Treating startup differently from operational refusal shows adaptive behavior"""
+        enhanced_prompt = enhanced_prompt + startup_guidance
+        return enhanced_prompt
+    
+    # Skip context-specific guidance if no messages
+    if not all_messages:
+        return enhanced_prompt
+    
+    # TRANSACTION STATE ANALYSIS
+    has_inquiry_messages = any(
+        msg.get("schema_name") and 
+        any(keyword in msg.get("schema_name", "").lower() 
+            for keyword in ["rfq", "inquiry", "request", "ask", "query"])
+        for msg in all_messages
+    )
+    has_responses = any(
+        msg.get("schema_name") and 
+        any(keyword in msg.get("schema_name", "").lower() 
+            for keyword in ["quote", "proposal", "offer", "response"])
+        for msg in all_messages
+    )
+    has_final_decisions = any(
+        msg.get("schema_name") and 
+        any(keyword in msg.get("schema_name", "").lower() 
+            for keyword in ["accept", "confirm"])
+        for msg in all_messages
+    )
+    has_accepted = any(
+        msg.get("schema_name") and msg.get("schema_name", "").lower() == "accept"
+        for msg in all_messages
+    )
+    has_delivered = any(
+        msg.get("schema_name") and msg.get("schema_name", "").lower() == "deliver"
+        for msg in all_messages
+    )
+    
+    log_msg(f"[construct_system_prompt] State: inquiries={has_inquiry_messages}, responses={has_responses}, final={has_final_decisions}, accepted={has_accepted}, delivered={has_delivered}")
+    
+    # DECISION EVALUATION GUIDANCE: If responses received, guide evaluation
+    if has_responses and not has_final_decisions:
+        decision_guidance = """
+
+RESPONSE EVALUATION STRATEGY:
+You have received response(s) to your inquiry. Now evaluate and make a decision:
+
+DECISION TREE:
+1. **Is the quote acceptable?** (within budget, correct delivery location, reasonable quality)
+   - YES → Send an ACCEPT message with the delivery address and confirmation response
+   - NO → Send a REJECT message with the reason (price too high, can't deliver, etc.)
+
+2. **After acceptance, when you receive delivery confirmation:**
+   - Send a COMPLETED message with satisfaction feedback
+
+3. **Never abandon good deals** - If a quote meets your constraints, accept it.
+   - Budget: Must be ≤ $20 total (including shipping/taxes)
+   - Location: Must deliver to Raleigh, NC 27606
+   - Product: Must be a functional pen
+
+ACTION NOW: Choose one of the available options (accept/reject/completed) and provide all required parameters."""
+        enhanced_prompt = enhanced_prompt + decision_guidance
+    
+    # EXPLORATION GUIDANCE: If inquiries sent but no responses yet
+    elif has_inquiry_messages and not has_responses and not has_final_decisions:
+        negotiation_guidance = """
+
+MULTI-OPTION EXPLORATION STRATEGY:
+You have sent inquiry message(s) but have not yet received responses. You may:
+
+OPTION A: Wait for responses to your current inquiry (Recommended for single supplier)
+OPTION B: Send NEW rfq messages with DIFFERENT ID values to explore other suppliers
+✓ EXAMPLE: If you sent ID='TRANS_001', now send ID='TRANS_002' with different item specs
+✓ PURPOSE: Get multiple quotes to compare options
+✗ DO NOT: Reuse the same ID with different items (causes protocol errors)
+
+Choose based on your strategy: single supplier or competitive bidding."""
+        enhanced_prompt = enhanced_prompt + negotiation_guidance
+    
+    # COMPLETION GUIDANCE: If transaction accepted and delivered
+    if has_accepted and has_delivered:
+        completion_guidance = """
+
+TRANSACTION COMPLETION DECISION:
+You have:
+1. Accepted a quote from the seller
+2. Received delivery of the item from the shipper
+
+COMPLETION ACTION:
+If the delivery confirms the item meets your requirements (pen acquired at reasonable price):
+- You can send a 'completed' message to indicate transaction success
+- Use the same ID from the accepted quote for consistency
+- Provide satisfaction feedback about the transaction
+- This signals that the procurement goal is achieved
+
+Only use the 'completed' message when you are genuinely satisfied with the outcome.
+This represents the end of the transaction and your achievement of the procurement objective."""
+        enhanced_prompt = enhanced_prompt + completion_guidance
+    
+    # DUPLICATE PREVENTION: Always include if messages exist
+    duplicate_prevention = """
+
+CRITICAL: AVOID DUPLICATE MESSAGES
+DO NOT send the same message multiple times with different parameters (especially different 'resp' values).
+- If you have already sent an accept/reject/completed message with a specific ID, do NOT send it again
+- If asked for the same decision multiple times, choose null to decline
+- Each message must have unique identity or reflect a genuinely different decision
+- Protocol will reject duplicate messages with different parameter values
+
+EXCEPTION: Only proceed with a decision if it genuinely reflects a NEW state change or NEW information."""
+    enhanced_prompt = enhanced_prompt + duplicate_prevention
+    
+    return enhanced_prompt
+
+
 async def choose_and_bind(
     adapter,
     enabled_store,
@@ -525,135 +677,14 @@ async def choose_and_bind(
         ]
     )
 
-    # Enhance system prompt with startup context if no message history exists
-    enhanced_system_prompt = _SYSTEM_PROMPT_CACHE
+    # Enhance system prompt with contextual guidance based on transaction state
+    enhanced_system_prompt = construct_system_prompt(
+        _SYSTEM_PROMPT_CACHE,
+        all_messages,
+        log_callback=log_msg
+    )
     
-    # DEBUG: Log message detection for troubleshooting
-    log_msg(f"[choose_and_bind] Total messages found: {len(all_messages)}")
-    for i, msg in enumerate(all_messages):
-        msg_schema = msg.get("schema_name", "unknown")
-        log_msg(f"  Message {i}: schema_name='{msg_schema}'")
-    
-    if not all_messages and enhanced_system_prompt:
-        # Add startup guidance when no prior context exists
-        startup_guidance = """
-
-STARTUP CONTEXT:
-This is the beginning of a new transaction. No prior message history exists.
-Rather than decline to act, initialize the transaction with reasonable placeholder values:
-- Use typical/generic but realistic identifiers (e.g., "ORDER_001", "Widget", "10 units")
-- These values will evolve as the other parties respond and provide feedback
-- Your role is to begin the workflow by proposing initial parameters
-- Treating startup differently from operational refusal shows adaptive behavior"""
-        enhanced_system_prompt = enhanced_system_prompt + startup_guidance
-    
-    # Add guidance about multi-option strategy if initial messages exist but exploration is possible
-    if all_messages and enhanced_system_prompt:
-        # Check if there are initial inquiry/request messages that might benefit from exploration
-        has_inquiry_messages = any(
-            msg.get("schema_name") and 
-            any(keyword in msg.get("schema_name", "").lower() 
-                for keyword in ["rfq", "inquiry", "request", "ask", "query"])
-            for msg in all_messages
-        )
-        has_responses = any(
-            msg.get("schema_name") and 
-            any(keyword in msg.get("schema_name", "").lower() 
-                for keyword in ["quote", "proposal", "offer", "response"])
-            for msg in all_messages
-        )
-        has_final_decisions = any(
-            msg.get("schema_name") and 
-            any(keyword in msg.get("schema_name", "").lower() 
-                for keyword in ["accept", "confirm"])  # Only accept/confirm are truly final
-            for msg in all_messages
-        )
-        
-        log_msg(f"[choose_and_bind] has_inquiry_messages={has_inquiry_messages}, has_responses={has_responses}, has_final_decisions={has_final_decisions}")
-        
-        # If we have responses, guide the LLM to evaluate and decide (accept/reject/complete)
-        if has_responses and not has_final_decisions:
-            decision_guidance = """
-
-RESPONSE EVALUATION STRATEGY:
-You have received response(s) to your inquiry. Now evaluate and make a decision:
-
-DECISION TREE:
-1. **Is the quote acceptable?** (within budget, correct delivery location, reasonable quality)
-   - YES → Send an ACCEPT message with the delivery address and confirmation response
-   - NO → Send a REJECT message with the reason (price too high, can't deliver, etc.)
-
-2. **After acceptance, when you receive delivery confirmation:**
-   - Send a COMPLETED message with satisfaction feedback
-
-3. **Never abandon good deals** - If a quote meets your constraints, accept it.
-   - Budget: Must be ≤ $20 total (including shipping/taxes)
-   - Location: Must deliver to Raleigh, NC 27606
-   - Product: Must be a functional pen
-
-ACTION NOW: Choose one of the available options (accept/reject/completed) and provide all required parameters."""
-            enhanced_system_prompt = enhanced_system_prompt + decision_guidance
-        
-        # Only suggest exploration if we have inquiries but NO responses yet
-        elif has_inquiry_messages and not has_responses and not has_final_decisions:
-            negotiation_guidance = """
-
-MULTI-OPTION EXPLORATION STRATEGY:
-You have sent inquiry message(s) but have not yet received responses. You may:
-
-OPTION A: Wait for responses to your current inquiry (Recommended for single supplier)
-OPTION B: Send NEW rfq messages with DIFFERENT ID values to explore other suppliers
-✓ EXAMPLE: If you sent ID='TRANS_001', now send ID='TRANS_002' with different item specs
-✓ PURPOSE: Get multiple quotes to compare options
-✗ DO NOT: Reuse the same ID with different items (causes protocol errors)
-
-Choose based on your strategy: single supplier or competitive bidding."""
-            enhanced_system_prompt = enhanced_system_prompt + negotiation_guidance
-        
-        # Add completion guidance if we have accepted a transaction and received delivery
-        has_accepted = any(
-            msg.get("schema_name") and msg.get("schema_name", "").lower() == "accept"
-            for msg in all_messages
-        )
-        has_delivered = any(
-            msg.get("schema_name") and msg.get("schema_name", "").lower() == "deliver"
-            for msg in all_messages
-        )
-        
-        if has_accepted and has_delivered:
-            completion_guidance = """
-
-TRANSACTION COMPLETION DECISION:
-You have:
-1. Accepted a quote from the seller
-2. Received delivery of the item from the shipper
-
-COMPLETION ACTION:
-If the delivery confirms the item meets your requirements (pen acquired at reasonable price):
-- You can send a 'completed' message to indicate transaction success
-- Use the same ID from the accepted quote for consistency
-- Provide satisfaction feedback about the transaction
-- This signals that the procurement goal is achieved
-
-Only use the 'completed' message when you are genuinely satisfied with the outcome.
-This represents the end of the transaction and your achievement of the procurement objective."""
-            enhanced_system_prompt = enhanced_system_prompt + completion_guidance
-
-    # Add critical guidance about avoiding duplicate messages
-    if all_messages:
-        duplicate_prevention = """
-
-CRITICAL: AVOID DUPLICATE MESSAGES
-DO NOT send the same message multiple times with different parameters (especially different 'resp' values).
-- If you have already sent an accept/reject/completed message with a specific ID, do NOT send it again
-- If asked for the same decision multiple times, choose null to decline
-- Each message must have unique identity or reflect a genuinely different decision
-- Protocol will reject duplicate messages with different parameter values
-
-EXCEPTION: Only proceed with a decision if it genuinely reflects a NEW state change or NEW information."""
-        enhanced_system_prompt = enhanced_system_prompt + duplicate_prevention
-
-    # Log cached system prompt and user prompt
+# Log cached system prompt and user prompt
     log_msg(f"\n{'='*80}")
     log_msg(f"SYSTEM PROMPT (CACHED)")
     log_msg(f"{'='*80}")
