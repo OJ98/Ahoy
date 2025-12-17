@@ -22,14 +22,10 @@ from lib import (
     UserInterface,
     setup_logging,
     log_debug,
-    print_event_debug,
-    print_enabled_store_debug,
-    gather_requirements_from_user,
     shutdown_watcher,
 )
 from lib.llm_client import initialize_llm_tracker, get_llm_tracker
 from lib.agent_notes import get_agent_notes
-from lib.agent_notes import get_agent_notes_tracker
 
 # Set global timeout
 TIMEOUT = 30.0
@@ -69,87 +65,50 @@ rejections = 0
 accepted_deals = 0
 
 
-async def initialize_buyer_with_llm():
-    """
-    Initialize the Buyer agent by gathering system requirements from user.
-    This caches the system prompt for use in llm_decision handler.
-    
-    Returns:
-        tuple: (role, system_prompt) or (None, None) on error
-    """
-    log_debug("Starting Buyer agent initialization...")
-    log_debug("Gathering initial system requirements for Buyer role...")
-    
-    # Gather system requirements on startup
-    inferred_role, system_prompt = await gather_requirements_from_user(
-        llm_client,
-        available_roles=["Buyer"],
-        context="Purchase Protocol - Buyer Role",
-        timeout=TIMEOUT,
-        ui_callback=ui,
-        logger_callback=log_debug
-    )
-    
-    if not system_prompt:
-        log_debug("Failed to gather system requirements")
-        return None, None
-    
-    # Cache the system prompt for all future LLM calls
-    from lib.llm_client import _SYSTEM_PROMPT_CACHE
-    import lib.llm_client as llm_module
-    llm_module._SYSTEM_PROMPT_CACHE = system_prompt
-    log_debug(f"System prompt cached globally for future LLM calls")
-    
-    log_debug(f"Buyer initialization complete. Role: {inferred_role}")
-    log_debug(f"System prompt established:\n{system_prompt}")
-    
-    return inferred_role, system_prompt
-
-
 def _validate_enabled_store(enabled_store):
     """
     Validate that enabled_store has messages available.
-    
+
     Args:
         enabled_store: The adapter's enabled store object
-    
+
     Returns:
         tuple: (is_valid, messages_list)
     """
     if not enabled_store:
         log_debug("DEBUG: No enabled_store available, skipping decision")
         return False, []
-    
+
     messages = list(enabled_store.messages())
     log_debug(f"DEBUG: Found {len(messages)} enabled messages")
-    
+
     if not messages:
         log_debug("DEBUG: No enabled messages available, skipping decision")
         return False, []
-    
+
     return True, messages
 
 
 def _check_threshold():
     """
     Check if LLM call threshold has been exceeded.
-    
+
     Used both before and after LLM calls to enforce resource limits.
-    
+
     Returns:
         tuple: (should_continue, threshold_reason) where should_continue is bool
     """
     tracker = get_llm_tracker()
     if not tracker:
         return True, None
-    
+
     exceeded, reason = tracker.check_threshold_exceeded()
     if exceeded:
         log_debug(f"Threshold exceeded: {reason}")
         ui.error(f"Threshold exceeded: {reason}")
         ui.divider()
         return False, reason
-    
+
     return True, None
 
 
@@ -284,27 +243,19 @@ async def llm_decision(enabled_store, event):
     log_debug(f"  - enabled_store type: {type(enabled_store)}")
     log_debug(f"  - event type: {type(event)}")
     
-    # Fallback requirement callback (system prompt should be cached)
-    async def fallback_callback(roles):
-        return "Buyer", "You are a buyer agent. Make prudent purchasing decisions."
-    
-    # Log event details
-    print_event_debug(event)
-    
     # Validate enabled_store and retrieve messages
     is_valid, messages = _validate_enabled_store(enabled_store)
     if not is_valid:
         return None
     
     log_debug("LLM decision invoked, enabled messages available.")
-    print_enabled_store_debug(enabled_store)
     
     # Check threshold before making LLM call
     should_continue, reason = _check_threshold()
     if not should_continue:
         raise SystemExit(f"Graceful termination: {reason}")
     
-    # Call LLM to decide on available messages
+    # Call LLM to decide on available messages. This is the core decision point.
     log_debug("Consulting LLM for decision...")
     instance = await choose_and_bind(
         adapter=adapter,
@@ -312,8 +263,7 @@ async def llm_decision(enabled_store, event):
         event=event,
         client=llm_client,
         timeout=TIMEOUT,
-        logger_callback=log_debug,
-        requirement_callback=fallback_callback
+        logger_callback=log_debug
     )
     
     # Display status after LLM call
@@ -342,14 +292,10 @@ async def llm_decision(enabled_store, event):
 
 
 def _initialize_tracking_systems():
-    """Initialize LLM call tracker and agent notes tracker."""
+    """Initialize LLM call tracker."""
     # Initialize the LLM call tracker with thresholds: 20 calls or 3 minutes
     initialize_llm_tracker(max_calls=20, max_duration_seconds=180.0)
     log_debug("LLM tracker initialized: max 20 calls or 3 minutes")
-    
-    # Initialize agent notes tracker for general-purpose note tracking
-    get_agent_notes_tracker('Buyer')
-    log_debug("Agent notes tracker initialized with JSON file tracking")
 
 
 def _display_transaction_summary(rejections_count, accepted_count, delivered_count):
@@ -363,13 +309,13 @@ def _display_transaction_summary(rejections_count, accepted_count, delivered_cou
 
 
 def _export_agent_notes():
-    """Export agent notes summary to file."""
-    agent_notes = get_agent_notes('Buyer')
-    if agent_notes:
-        summary = agent_notes.get_summary()
-        agent_notes.export(f"./logs/buyer_notes_{timestamp}.json")
-        log_debug(f"\n[AGENT NOTES SUMMARY]\n{json.dumps(summary, indent=2)}")
-        ui.info("📝", f"Agent notes exported: logs/buyer_notes_{timestamp}.json")
+    """Log agent notes summary."""
+    try:
+        agent_notes = get_agent_notes('Buyer')
+        if agent_notes:
+            log_debug("Agent notes saved to agent_notes.json")
+    except Exception as e:
+        log_debug(f"Could not export agent notes: {e}")
 
 
 def _cleanup_logging():
@@ -382,26 +328,18 @@ def _cleanup_logging():
 
 if __name__ == "__main__":
     try:
-        # Initialize tracking and monitoring systems
+        # Initialize tracking systems
         _initialize_tracking_systems()
         
-        # Initialize system prompt BEFORE starting the adapter
-        # This ensures it's cached before the first decision event
-        import asyncio as _asyncio
-        role, system_prompt = _asyncio.run(initialize_buyer_with_llm())
-        
-        if not role:
-            ui.error_occurred("Failed to initialize buyer")
-        else:
-            # Now start the adapter with the cached system prompt
-            adapter.start(main())
-            _display_transaction_summary(rejections, accepted_deals, deliveries)
+        # Start the adapter
+        # System prompt will be loaded from input.txt on first LLM call via choose_and_bind
+        adapter.start(main())
+        _display_transaction_summary(rejections, accepted_deals, deliveries)
     except KeyboardInterrupt:
-        ui.interrupted()
+        log_debug("Interrupted by user")
     except SystemExit as e:
         # Handle graceful termination due to threshold or successful completion
         log_debug(f"System exit: {e}")
-        ui.divider()
         
         # Check if this is a successful completion
         exit_msg = str(e)
@@ -412,12 +350,12 @@ if __name__ == "__main__":
             print(f"All agents are shutting down gracefully...")
             print(f"{'='*70}\n")
         
-        # Show final statistics and export notes
+        # Show final statistics
         _display_transaction_summary(rejections, accepted_deals, deliveries)
-        _export_agent_notes()
     except Exception as e:
-        ui.error_occurred(str(e))
+        log_debug(f"Error occurred: {str(e)}")
         log_debug(f"Full traceback:\n{traceback.format_exc()}")
+        print(f"Error: {e}")
     finally:
-        ui.show_log_location(log_filename)
+        log_debug(f"Logs written to: {log_filename}")
         _cleanup_logging()
