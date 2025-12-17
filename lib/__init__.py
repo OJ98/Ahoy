@@ -11,7 +11,6 @@ from .llm_client import (
     choose_and_bind,
     call_llm_with_timeout,
     parse_llm_json_reply,
-    build_system_prompt,
     generate_unique_id,
     save_state_to_memory,
     get_agent_memory,
@@ -29,6 +28,7 @@ from .ui_manager import (
 from .utils import (
     build_user_prompt,
     build_message_history_from_social_state,
+    build_system_prompt,
     shutdown_watcher,
 )
 
@@ -48,7 +48,6 @@ __all__ = [
     "choose_and_bind",
     "call_llm_with_timeout",
     "parse_llm_json_reply",
-    "build_system_prompt",
     "MODEL_ID",
     # Tool calling for UID generation and state management
     "generate_unique_id",
@@ -61,6 +60,7 @@ __all__ = [
     "log_debug",
     "log_console",
     # Utilities
+    "build_system_prompt",
     "build_user_prompt",
     "build_message_history_from_social_state",
     "shutdown_watcher",

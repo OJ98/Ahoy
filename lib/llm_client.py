@@ -196,35 +196,6 @@ async def call_llm_with_timeout(
     )
 
 
-def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -> str:
-    """
-    Build a system prompt for the agent by reading from a text file.
-    
-    Reads user instructions and constraints from a text file to use as the system prompt.
-    
-    Args:
-        agent_name: Name of the agent (e.g., "Buyer", "Seller")
-        requirements_file: Path to the text file with requirements/constraints (default: "input.txt")
-    
-    Returns:
-        System prompt string for the LLM (file contents)
-    
-    Raises:
-        FileNotFoundError: If the requirements file cannot be found
-    """
-    try:
-        with open(requirements_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-            if not content.strip():
-                raise ValueError(f"Requirements file '{requirements_file}' is empty")
-            return content
-    except FileNotFoundError:
-        raise FileNotFoundError(
-            f"System prompt file '{requirements_file}' not found. "
-            f"Please create it with your agent's instructions and constraints."
-        )
-
-
 def parse_llm_json_reply(text: str) -> Optional[Dict[str, Any]]:
     """
     Parse JSON response from LLM.
@@ -393,7 +364,7 @@ async def choose_and_bind(
         Bound Message instance or None if no valid choice made
     """
     from .state_manager import extract_social_state
-    from .utils import build_user_prompt
+    from .utils import build_user_prompt, build_system_prompt
 
     global _system_prompt_cache
 

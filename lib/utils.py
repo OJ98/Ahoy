@@ -10,6 +10,40 @@ from typing import Any, Dict, Optional
 
 
 # ============================================================================
+# SYSTEM PROMPT BUILDING
+# ============================================================================
+
+def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -> str:
+    """
+    Build a system prompt for the agent by reading from a text file.
+    
+    Reads user instructions and constraints from a text file to use as the system prompt.
+    
+    Args:
+        agent_name: Name of the agent (e.g., "Buyer", "Seller")
+        requirements_file: Path to the text file with requirements/constraints (default: "input.txt")
+        The file should contain the agent's instructions and constraints.
+    
+    Returns:
+        System prompt string for the LLM (file contents)
+    
+    Raises:
+        FileNotFoundError: If the requirements file cannot be found
+    """
+    try:
+        with open(requirements_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if not content.strip():
+                raise ValueError(f"Requirements file '{requirements_file}' is empty")
+            return content
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"System prompt file '{requirements_file}' not found. "
+            f"Please create it with your agent's instructions and constraints."
+        )
+
+
+# ============================================================================
 # ADAPTER MANAGEMENT: Graceful shutdown
 # ============================================================================
 
