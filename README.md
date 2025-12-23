@@ -29,19 +29,19 @@ The **Purchase Protocol** demonstrates a realistic e-commerce transaction involv
 
 ### Agents and Roles
 
-**1. Buyer Agent** (`buyer.py`)
+**1. Buyer Agent** (`agents/buyer.py`)
 - **Mission:** Identify and acquire a pen within specified constraints ($20 budget, delivery to Raleigh, NC 27606)
 - **Decision Logic:** Uses Claude AI to evaluate quotes against constraints and make purchasing decisions
 - **Behavior:** Initiates RFQs, compares multiple quotes, negotiates terms, verifies shipping capability
 - **Constraints:** Must stay within budget, confirm delivery location, request shipping estimates before committing
 
-**2. Seller Agent** (`seller.py`)
+**2. Seller Agent** (`agents/seller.py`)
 - **Role:** Respond to quote requests and fulfill accepted orders
 - **Decision Logic:** Provides dynamic pricing based on inventory and market conditions
 - **Behavior:** Quotes prices, confirms orders, coordinates with Shipper for delivery
 - **State Tracking:** Maintains order history and fulfillment status
 
-**3. Shipper Agent** (`shipper.py`)
+**3. Shipper Agent** (`agents/shipper.py`)
 - **Role:** Manage logistics and delivery operations
 - **Decision Logic:** Handles shipping assignments and delivery confirmations
 - **Behavior:** Receives shipping instructions from Seller, confirms delivery to buyer
@@ -101,7 +101,7 @@ The system uses a decentralized architecture with three independent agent proces
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                    Purchase Protocol                      │
-│  Defined in BSPL (purchase.bspl)                         │
+│  Defined in BSPL (protocols/purchase.bspl)               │
 └──────────────────────────────────────────────────────────┘
          ↓              ↓              ↓
     ┌─────────┐   ┌─────────┐   ┌──────────┐
@@ -124,7 +124,7 @@ The system uses a decentralized architecture with three independent agent proces
 
 ```
 ┌─────────────────────────────────────────────────┐
-│          Agent Decision Layer (buyer.py)         │
+│      Agent Decision Layer (agents/buyer.py)      │
 │  • LLM-driven choice of enabled messages        │
 │  • Constraint enforcement (budget, delivery)    │
 │  • Decision reasoning and audit logging         │
@@ -156,14 +156,14 @@ The system uses a decentralized architecture with three independent agent proces
 
 ### Component Descriptions
 
-**1. Agent Executables** (`buyer.py`, `seller.py`, `shipper.py`)
+**1. Agent Executables** (`agents/buyer.py`, `agents/seller.py`, `agents/shipper.py`)
 - Each agent implements a BSPL role with independent decision logic
 - **Buyer:** Claude AI-powered with constraint checking and reasoning
 - **Seller/Shipper:** Rule-based with deterministic behavior (extensible to LLM)
 - All agents include lifecycle management: initialization, message loop, shutdown
 
 **2. BSPL Adapter** (`configuration.py`)
-- Loads the formal protocol specification from `purchase.bspl`
+- Loads the formal protocol specification from `protocols/purchase.bspl`
 - Validates protocol rules and message schemas
 - Manages state bindings and parameter inheritance
 - Enforces enabled message constraints per BSPL semantics
@@ -476,17 +476,17 @@ This launches all three agents in separate terminal windows and coordinates thei
 
 Terminal 1 - Buyer Agent:
 ```bash
-python buyer.py
+python agents/buyer.py
 ```
 
 Terminal 2 - Seller Agent:
 ```bash
-python seller.py
+python agents/seller.py
 ```
 
 Terminal 3 - Shipper Agent:
 ```bash
-python shipper.py
+python agents/shipper.py
 ```
 
 ### User Interaction
@@ -510,7 +510,7 @@ The Buyer agent will then:
 
 ### Configuration
 
-**Protocol Definition:** `purchase.bspl`
+**Protocol Definition:** `protocols/purchase.bspl`
 - Formal BSPL specification of all roles, messages, and rules
 - Edit to modify protocol behavior or add new message types
 
@@ -523,7 +523,7 @@ AGENTS = {
 }
 ```
 
-**LLM Configuration:** Set in `buyer.py`
+**LLM Configuration:** Set in `agents/buyer.py`
 ```python
 llm_client = AnthropicLLMClient(model="claude-3-5-sonnet-20241022")
 ```
@@ -564,37 +564,38 @@ tail -f logs/buyer_debug_*.log
 
 ```
 MAF/
-├── buyer.py                      # LLM-driven Buyer agent
-├── seller.py                     # Rule-based Seller agent  
-├── shipper.py                    # Rule-based Shipper agent
-├── configuration.py              # Agent endpoints & protocol config
-├── purchase.bspl                 # BSPL formal protocol specification
-├── start.ps1                     # PowerShell launch script
+├── agents/
+│   ├── buyer.py                 # LLM-driven Buyer agent
+│   ├── seller.py                # Rule-based Seller agent
+│   └── shipper.py               # Rule-based Shipper agent
+├── configuration.py             # Agent endpoints & protocol config
+├── protocols/
+│   └── purchase.bspl            # BSPL formal protocol specification
+├── start.ps1                    # PowerShell launch script
+├── start.sh                     # Bash launch script
 │
 ├── lib/
 │   ├── __init__.py
-│   ├── llm_client.py            # Claude API & mock clients
-│   │                            # + LLM call tracking
-│   ├── ui_manager.py            # Console & debug logging
-│   ├── state_manager.py         # Protocol state serialization
-│   ├── rfq_tracker.py           # RFQ history tracking
 │   ├── agent_notes.py           # Agent decision logging
+│   ├── llm_client.py            # Claude API & mock clients
+│   ├── state_manager.py         # Protocol state serialization
+│   ├── ui_manager.py            # Console & debug logging
 │   └── utils.py                 # Shared utilities
 │
-├── logs/                        # Generated debug log files
+├── logs/                       # Generated debug log files
 │   ├── buyer_debug_*.log
 │   ├── seller_debug_*.log
 │   ├── shipper_debug_*.log
 │   ├── agents.log              # Shared event log
 │   └── agent_notes/
-│       └── agent_notes.json    # Decision audit trail
+│       └── agent_notes.json   # Decision audit trail
 │
-├── debug_scripts/              # Testing utilities
+├── debug_scripts/             # Testing utilities
 │   └── test_agent_notes.py
 │
-├── __pycache__/                # Python cache
+├── __pycache__/               # Python cache
 ├── LICENSE
-└── README.md                   # This file
+└── README.md                  # This file
 ```
 
 ## Key Design Principles
@@ -652,7 +653,7 @@ cat logs/agent_notes/agent_notes.json | python -m json.tool
 
 To add new message types or modify the protocol:
 
-1. Edit `purchase.bspl` with new message definitions
+1. Edit `protocols/purchase.bspl` with new message definitions
 2. Update agent logic to handle new message types
 3. Modify `configuration.py` if role changes required
 4. Test with mock client first before using production API

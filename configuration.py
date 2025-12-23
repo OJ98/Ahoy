@@ -1,7 +1,12 @@
+from pathlib import Path
+
 import bspl
 
+BASE_DIR = Path(__file__).resolve().parent
+PROTOCOL_PATH = BASE_DIR / "protocols" / "purchase.bspl"
+
 # Load the specification and get the Protocol object for 'Purchase'
-spec = bspl.load_file("./purchase.bspl")
+spec = bspl.load_file(str(PROTOCOL_PATH))
 protocol = spec.protocols.get("Purchase")
 # Also export a module named 'Purchase' for convenient imports
 spec.export("Purchase")

@@ -34,7 +34,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out
 $logFile = Join-Path $logDir "agents.log"
 
 # List of agent scripts to start
-$agents = @("buyer.py", "seller.py", "shipper.py")
+$agents = @("agents/buyer.py", "agents/seller.py", "agents/shipper.py")
 
 $startedAny = $false
 # Track started processes so we can terminate them on shutdown
@@ -48,7 +48,7 @@ foreach ($a in $agents) {
 		Write-Host "Starting $a..."
 		# Start as a background job; the job will run python and append stdout+stderr to the shared log
 		# Important: set the job's working directory to the script's directory so that relative paths inside the
-		# Python scripts (e.g. ./purchase.bspl) resolve correctly.
+		# Python scripts (e.g. ./protocols/purchase.bspl) resolve correctly.
 		# Use cmd.exe redirection to append both stdout and stderr to the shared log file.
 		# This avoids PowerShell job output buffering and file-locking issues when multiple writers append to the same file.
 		try {

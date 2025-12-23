@@ -1,0 +1,148 @@
+#!/bin/bash
+
+# Minimal start script for starting agents in the maf-py environment (macOS/Linux).
+# - Activates `maf-py` conda environment
+# - Starts agent scripts as background processes and logs output to ./logs/
+# - Waits for interrupt (Ctrl+C); then stops jobs and cleans up
+
+set -e
+
+# Get the directory where this script lives
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Prepare logging
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+MASTER_LOG="$LOG_DIR/agents.log"
+
+# Initialize master log
+echo "--- Combined agent log started: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---" > "$MASTER_LOG"
+
+# List of agent scripts to start
+AGENTS=("agents/buyer.py" "agents/seller.py" "agents/shipper.py")
+
+# Array to store background process IDs and their log files
+declare -a PIDS
+declare -a PID_NAMES
+declare -a PID_LOGS
+
+# Activate conda environment
+echo "Activating environment 'maf-py'..."
+if ! command -v conda &> /dev/null; then
+	echo "conda not found in PATH. Make sure conda is installed and initialized."
+	exit 1
+fi
+
+# Initialize conda in this shell session
+eval "$(conda shell.bash hook)"
+conda activate maf-py || { echo "Failed to activate maf-py environment"; exit 1; }
+
+echo "Environment activated. Starting agents..."
+echo ""
+
+# Start each agent
+for agent in "${AGENTS[@]}"; do
+	full_path="$SCRIPT_DIR/$agent"
+	if [ -f "$full_path" ]; then
+		agent_name="$(basename "${agent%.py}")"
+		agent_log="$LOG_DIR/${agent_name}.log"
+		
+		# Start the Python script as a background job
+		echo "Starting $agent..."
+		python -u "$full_path" > "$agent_log" 2>&1 &
+		pid=$!
+		
+		PIDS+=($pid)
+		PID_NAMES+=("$agent_name")
+		PID_LOGS+=("$agent_log")
+		
+		echo "  → Started with PID $pid (logging to $agent_log)"
+	else
+		echo "Skipping $agent (not found)"
+	fi
+done
+
+echo ""
+if [ ${#PIDS[@]} -eq 0 ]; then
+	echo "No agent scripts were found/started. Exiting."
+	exit 1
+fi
+
+echo "All requested agents started."
+echo "Combined log: $MASTER_LOG"
+echo ""
+echo "Live output:"
+echo "---"
+
+# Function to cleanup on exit
+cleanup() {
+	echo ""
+	echo "---"
+	echo ""
+	echo "Stopping all agents..."
+	
+	for i in "${!PIDS[@]}"; do
+		pid=${PIDS[$i]}
+		name=${PID_NAMES[$i]}
+		
+		if kill -0 "$pid" 2>/dev/null; then
+			echo "Terminating $name (PID $pid)..."
+			kill -TERM "$pid" 2>/dev/null || true
+			
+			# Wait up to 2 seconds for graceful shutdown
+			for j in {1..20}; do
+				if ! kill -0 "$pid" 2>/dev/null; then
+					break
+				fi
+				sleep 0.1
+			done
+			
+			# Force kill if still running
+			if kill -0 "$pid" 2>/dev/null; then
+				echo "  → Force killing $name (PID $pid)"
+				kill -9 "$pid" 2>/dev/null || true
+			fi
+		fi
+	done
+	
+	# Combine all logs into master log
+	for i in "${!PIDS[@]}"; do
+		name=${PID_NAMES[$i]}
+		log=${PID_LOGS[$i]}
+		
+		echo "" >> "$MASTER_LOG"
+		echo "--- Agent: $name ---" >> "$MASTER_LOG"
+		if [ -f "$log" ]; then
+			cat "$log" >> "$MASTER_LOG"
+		fi
+	done
+	
+	echo "--- Combined agent log ended: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---" >> "$MASTER_LOG"
+	
+	echo "Shutdown complete. Master log written to $MASTER_LOG"
+}
+
+# Register cleanup function to run on exit
+trap cleanup EXIT
+
+# Monitor and display live output from agent logs
+while true; do
+	for i in "${!PIDS[@]}"; do
+		pid=${PIDS[$i]}
+		name=${PID_NAMES[$i]}
+		log=${PID_LOGS[$i]}
+		
+		# Check if process is still running
+		if ! kill -0 "$pid" 2>/dev/null; then
+			# Process has exited, show its final output if not yet shown
+			if [ -f "$log" ]; then
+				# Get new lines that haven't been shown yet
+				tail -f "$log" 2>/dev/null &
+				wait $!
+			fi
+		fi
+	done
+	
+	sleep 0.5
+done
