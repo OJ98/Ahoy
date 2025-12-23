@@ -1,0 +1,21 @@
+name: maf-py
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - openssl
+  - sqlite
+  - tk
+  - xz
+  - zlib
+  - pip:
+    - openai
+    - pydantic
+    - python-pptx
+    - xlsxwriter
+    - httpx
+    - pydantic-core
+    - bspl
+    - anthropic
