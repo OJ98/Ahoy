@@ -40,6 +40,26 @@ def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -
         FileNotFoundError: If the requirements file cannot be found
     """
     try:
+        # Try to find the file: first in current directory, then in parent directory
+        import sys
+        cwd = os.getcwd()
+        
+        if not os.path.exists(requirements_file):
+            parent_file = os.path.join('..', requirements_file)
+            if os.path.exists(parent_file):
+                requirements_file = parent_file
+        
+        if not os.path.exists(requirements_file):
+            # Also try looking from PROJECT_ROOT if available
+            try:
+                from pathlib import Path
+                project_root = Path(__file__).resolve().parent.parent
+                alt_file = project_root / requirements_file
+                if alt_file.exists():
+                    requirements_file = str(alt_file)
+            except:
+                pass
+        
         with open(requirements_file, 'r', encoding='utf-8') as f:
             enhanced_prompt = f.read()
             if not enhanced_prompt.strip():

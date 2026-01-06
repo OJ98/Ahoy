@@ -475,12 +475,12 @@ async def choose_and_bind(
                 result_obj = json.loads(result) if isinstance(result, str) else result
                 log_msg(f"  Result: {result}")
                 
-                # # If tool generated a value and params has a placeholder, update it
-                # if tool_name == "generate_unique_id" and result_obj:
-                #     generated_id = result_obj.get("result")
-                #     if generated_id and ("ID" in params and ("PENDING" in str(params["ID"]) or params["ID"] is None)):
-                #         log_msg(f"  Updating ID param with generated value: {generated_id}")
-                #         params["ID"] = generated_id
+                # If tool generated a value and params has a placeholder, update it
+                if tool_name == "generate_unique_id" and result_obj:
+                    generated_id = result_obj.get("result")
+                    if generated_id and ("ID" in params and ("PENDING" in str(params["ID"]) or params["ID"] is None)):
+                        log_msg(f"  Updating ID param with generated value: {generated_id}")
+                        params["ID"] = generated_id
             except Exception as e:
                 log_msg(f"  Error: {str(e)}")
         log_msg(f"{'='*80}")
