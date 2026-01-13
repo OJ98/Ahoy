@@ -1,0 +1,4 @@
+I need to buy a pen for less than $20.
+Delivery location: Raleigh, NC 27606
+
+Use Request IDs of the form RFQ-2026-001, RFQ-2026-002 ..

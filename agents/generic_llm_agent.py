@@ -244,7 +244,7 @@ def _cleanup_logging():
 
 async def _initialize_protocol_and_role():
     """
-    First phase: LLM decides which protocol and role to use.
+    First phase: LLM decides which protocol and role to use via a single API call.
     
     Returns:
         tuple: (protocol_name, role_name) or (None, None) on failure
@@ -264,59 +264,57 @@ async def _initialize_protocol_and_role():
         user_input = input_file.read_text()
         log_debug(f"User input: {user_input}")
     
-    # Create initial context for LLM to declare protocol/role
-    context = f"""
-{protocol_summary}
+    try:
+        # Create prompt for LLM to determine protocol and role
+        protocol_choices_str = protocol_summary.replace("\n", "\n  ")
+        
+        prompt = f"""You are a protocol selection assistant. Based on the user's goal, determine which protocol and role they should participate in.
+
+Available Protocols:
+{protocol_choices_str}
 
 User's Goal:
 {user_input}
 
-You must choose which protocol to participate in and which role to play.
-Use the declare_protocol_and_role tool to make your choice.
-"""
-    
-    # For now, we'll do a simplified version: use LLM via llm_client
-    # This is a basic call - you might want to enhance this
-    try:
-        # Use a simple tool to ask LLM what protocol/role to use
-        # For MVP, we'll read from input and infer, or require explicit declaration
-        log_debug("Waiting for protocol/role declaration...")
+Respond with ONLY the protocol and role in this format:
+PROTOCOL: <ProtocolName>
+ROLE: <RoleName>
+
+Be concise and direct. Do not explain your reasoning."""
         
-        # Since we can't easily do LLM tool calling here without full adapter setup,
-        # we'll do a simplified approach: read from input.txt to infer
+        log_debug(f"Sending protocol/role detection prompt to LLM")
         
-        # Simple heuristic: check user input for protocol/role keywords
-        user_input_lower = user_input.lower()
+        # Make a single LLM call to determine protocol and role
+        response = await llm_client.complete(prompt, max_tokens=100)
+        log_debug(f"LLM response for protocol/role: {response}")
         
-        # Check for Logistics protocol keywords (packaging, wrapping, labeling, packing)
-        if any(word in user_input_lower for word in ['wrap', 'label', 'pack', 'logistics', 'shipping', 'packaging']):
-            # Determine specific Logistics role based on keywords
-            if any(word in user_input_lower for word in ['merchant', 'coordinate']):
-                return "Logistics", "Merchant"
-            elif any(word in user_input_lower for word in ['wrap', 'wrapping']):
-                return "Logistics", "Wrapper"
-            elif any(word in user_input_lower for word in ['label', 'labeling']):
-                return "Logistics", "Labeler"
-            elif any(word in user_input_lower for word in ['pack', 'packing']):
-                return "Logistics", "Packer"
+        # Parse the response to extract protocol and role
+        lines = response.strip().split('\n')
+        protocol_name = None
+        role_name = None
+        
+        for line in lines:
+            if line.startswith('PROTOCOL:'):
+                protocol_name = line.replace('PROTOCOL:', '').strip()
+            elif line.startswith('ROLE:'):
+                role_name = line.replace('ROLE:', '').strip()
+        
+        # Validate that the protocol and role exist
+        if protocol_name and role_name:
+            is_valid, error_msg = validate_protocol_and_role(protocol_name, role_name)
+            if is_valid:
+                log_debug(f"LLM selected: {protocol_name} - {role_name}")
+                return protocol_name, role_name
             else:
-                # Default Logistics role if keywords match but role not specified
-                return "Logistics", "Merchant"
+                log_debug(f"LLM selection invalid: {error_msg}")
         
-        # Check for Purchase protocol keywords
-        if any(word in user_input_lower for word in ['buy', 'purchase', 'get', 'order', 'need']):
-            return "Purchase", "Buyer"
-        elif any(word in user_input_lower for word in ['sell', 'quote', 'price', 'offer']):
-            return "Purchase", "Seller"
-        elif any(word in user_input_lower for word in ['ship', 'deliver']):
-            return "Purchase", "Shipper"
-        
-        # Default fallback
-        log_debug("Could not infer protocol from input, defaulting to Purchase.Buyer")
+        # Fallback if LLM response couldn't be parsed or was invalid
+        log_debug("Could not parse LLM response, defaulting to Purchase.Buyer")
         return "Purchase", "Buyer"
         
     except Exception as e:
         log_debug(f"Error during protocol/role initialization: {e}")
+        log_debug(f"Traceback: {traceback.format_exc()}")
         return None, None
 
 
