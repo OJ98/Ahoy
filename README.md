@@ -147,12 +147,13 @@ The system uses a **hybrid architecture** where a single generic LLM agent dynam
 │         Generic LLM Agent (agents/generic_llm_agent.py)          │
 │                                                                   │
 │  1. Reads user input and extracts requirements                  │
-│  2. Uses keyword heuristics to infer protocol + role            │
-│     - "buy", "purchase", "quote", "price" → Purchase:Buyer     │
-│     - "wrap", "label", "pack", "coordinate" → Logistics:role  │
-│  3. Dynamically creates BSPL adapter for detected protocol      │
-│  4. Participates as LLM-driven agent in protocol conversation   │
-│  5. Writes stop signal to temp directory when complete          │
+│  2. Uses LLM to determine protocol + role (single API call)     │
+│     - LLM analyzes user goal against available protocols        │
+│     - LLM responds with: PROTOCOL: <name>, ROLE: <name>        │
+│  3. Validates selection against available protocols             │
+│  4. Dynamically creates BSPL adapter for detected protocol      │
+│  5. Participates as LLM-driven agent in protocol conversation   │
+│  6. Writes stop signal to temp directory when complete          │
 └───────────────┬──────────────────────────────────────────────────┘
                 │
                 ├─ Claims role via temp file: maf_claimed_role_{PID}.txt
@@ -176,22 +177,26 @@ The system uses a **hybrid architecture** where a single generic LLM agent dynam
    Stop signal coordination: maf_stop_signal.txt in system temp directory
 ```
 
-**Key Innovation: Protocol Detection**
+**Key Innovation: LLM-Based Protocol Detection**
 
-The generic agent uses simple keyword heuristics to automatically determine which protocol to use:
+The generic agent uses Claude LLM to intelligently determine which protocol and role to use based on natural language user input:
 
-```python
-PURCHASE_KEYWORDS = {"buy", "purchase", "quote", "price", "seller", "shipping"}
-LOGISTICS_KEYWORDS = {"wrap", "label", "pack", "coordinate", "parcel", "delivery"}
-
-# Example: "I need to buy a pen" 
-#  → Contains "buy" → Purchase protocol → Buyer role → Run generic_llm_agent
-#  → Seller and Shipper agents also start (not claimed by generic agent)
-
-# Example: "Wrap 5 packages for delivery"
-#  → Contains "wrap" → Logistics protocol → Wrapper role → Run generic_llm_agent
-#  → Other Logistics agents (Merchant, Packer, Labeler) start as needed
 ```
+User Input: "I need to buy a pen for less than $20"
+                            ↓
+         LLM receives available protocols and user goal
+                            ↓
+           LLM selects: PROTOCOL: Purchase, ROLE: Buyer
+                            ↓
+     Generic agent validates and creates Purchase:Buyer adapter
+```
+
+The LLM sees the full context of available protocols (including their roles and purposes) and makes an intelligent selection based on user intent. This approach is:
+
+- **Flexible:** Works with any natural language description of user goals
+- **Extensible:** Adding new protocols requires no code changes to the selection logic
+- **Intelligent:** LLM understands intent beyond simple keyword matching
+- **Efficient:** Single 100-token API call at startup
 
 ### Temp File Coordination System
 
@@ -725,35 +730,44 @@ See [LICENSE](LICENSE) file for details.
 ```
 
 This will:
-1. Start the generic LLM agent
-2. Wait for it to determine the protocol and claim a role
-3. Start hardcoded agents for the detected protocol (skipping the claimed role)
-4. Monitor for the stop signal in the temp directory
-5. Gracefully shut down all agents when the transaction completes
+1. Start the generic LLM agent with your input.txt
+2. LLM analyzes available protocols and determines which one matches your goal
+3. LLM selects protocol and role, agent writes claimed role to temp file
+4. Start script reads claimed role and launches other agents (skipping claimed role)
+5. All agents participate in the selected protocol
+6. When transaction completes, agent writes stop signal to temp directory
+7. All agents gracefully shut down
 
 **Option 2: Manual Terminal Execution**
 
-Terminal 1 - Generic LLM Agent:
+Terminal 1 - Generic LLM Agent (determines protocol/role):
 ```bash
 python agents/generic_llm_agent.py
 ```
 
-Terminal 2+ - Other agents (Seller, Shipper for Purchase; Wrapper, Labeler, etc. for Logistics):
+Terminal 2+ - Other protocol agents (based on what LLM selected):
 ```bash
+# For Purchase Protocol:
 python agents/seller.py
 python agents/shipper.py
-# etc.
+
+# For Logistics Protocol:
+python agents/merchant.py
+python agents/wrapper.py
+python agents/labeler.py
+python agents/packer.py
 ```
 
 ### User Interaction
 
-The system reads requirements from `input.txt`. Include:
+The system reads requirements from `input.txt`. The LLM will automatically determine which protocol to use based on your description. Include:
 
-1. **Clear protocol keywords:**
-   - Purchase: "buy", "purchase", "quote", "price"
-   - Logistics: "wrap", "label", "pack", "coordinate"
+1. **Clear description of what you want to accomplish:**
+   - Purchase example: "I need to buy a pen for less than $20"
+   - Logistics example: "Wrap and label 3 packages for delivery"
+   - The LLM will understand your intent and select the right protocol
 
-2. **Request IDs** (required format):
+2. **Request IDs** (required format for protocol state tracking):
    - Purchase: `RFQ-2026-001`, `RFQ-2026-002` (for quote requests)
    - Logistics: `ORD-001`, `ORD-002` (for orders)
 
@@ -829,23 +843,42 @@ initialize_llm_tracker(
 
 ### Understanding Protocol Selection
 
-The generic agent selects protocols using this logic:
+The generic agent uses Claude LLM to intelligently determine which protocol and role to use:
 
-```python
-# Example 1: User input contains "buy"
-if any(keyword in input.lower() for keyword in PURCHASE_KEYWORDS):
-    protocol = Purchase
-    # Infer role from secondary context
-    role = "Buyer"  # or Seller, Shipper
-    
-# Example 2: User input contains "wrap"
-if any(keyword in input.lower() for keyword in LOGISTICS_KEYWORDS):
-    protocol = Logistics
-    # Infer role from secondary context
-    role = "Wrapper"  # or Merchant, Labeler, Packer
+**Initialization Call:**
+The LLM receives:
+1. A list of all available protocols with their roles
+2. A description of each protocol's purpose
+3. The user's goal from `input.txt`
+
+The LLM then responds with:
+```
+PROTOCOL: <ProtocolName>
+ROLE: <RoleName>
 ```
 
-This automatic protocol selection eliminates the need to manually specify which protocol to use.
+**Example 1: Purchase Protocol**
+```
+Input: "I need to buy a pen for less than $20. Delivery location: Raleigh, NC 27606"
+       ↓
+LLM response: PROTOCOL: Purchase
+              ROLE: Buyer
+```
+
+**Example 2: Logistics Protocol**
+```
+Input: "Wrap and label 3 packages for delivery."
+       ↓
+LLM response: PROTOCOL: Logistics
+              ROLE: Wrapper
+```
+
+**Benefits of LLM-Based Selection:**
+- **Natural Language:** User can describe goals in any way
+- **Intelligent:** LLM understands context and intent
+- **Extensible:** Add new protocols without changing selection code
+- **Efficient:** Single 100-token API call at startup
+- **Flexible:** Works with complex, multi-step descriptions
 
 ## Project Structure
 
@@ -901,17 +934,17 @@ MAF/
 
 ### 1. **Protocol-Agnostic Architecture**
 - Single generic LLM agent that dynamically adapts to any BSPL protocol
-- Agent automatically detects protocol from user input keywords
+- Agent automatically detects protocol from user input using Claude LLM
 - No need for protocol-specific agent implementations
 - Dramatically reduces code duplication and maintenance burden
 
-### 2. **Automatic Protocol & Role Selection**
+### 2. **Intelligent Protocol & Role Selection via LLM**
 - User specifies requirements in natural language via `input.txt`
-- System automatically detects protocol based on keywords
-  - "buy", "purchase", "quote" → Purchase protocol
-  - "wrap", "label", "pack" → Logistics protocol
-- System automatically infers appropriate agent role to play
-- No manual configuration needed for protocol selection
+- LLM analyzes available protocols and user's goal to determine best fit
+- LLM selects both protocol and role with a single API call
+- No manual configuration needed - LLM understands context and intent
+- Works with complex, multi-step descriptions or simple requests
+- Easily extensible: add new protocols without changing selection code
 
 ### 3. **Temp File Coordination**
 - PID-based files in system temp directory for coordination
@@ -954,7 +987,7 @@ MAF/
 
 ### Adding a New Protocol
 
-To add a new protocol and have the generic agent support it:
+To add a new protocol and have the generic agent automatically support it:
 
 1. **Create BSPL Protocol File**
    ```
@@ -966,24 +999,20 @@ To add a new protocol and have the generic agent support it:
    ```python
    my_protocol = import_protocol("protocols/my_protocol.bspl")
    ```
+   The protocol will automatically be available to the LLM for selection
 
-3. **Add Keywords to Generic Agent**
-   ```python
-   # In agents/generic_llm_agent.py
-   MY_PROTOCOL_KEYWORDS = {"keyword1", "keyword2", ...}
-   
-   if any(kw in input_text.lower() for kw in MY_PROTOCOL_KEYWORDS):
-       return my_protocol, inferred_role
-   ```
-
-4. **Add Hardcoded Agents (Optional)**
+3. **Add Hardcoded Agents (Optional)**
    - Create `agents/role.py` for non-LLM roles
-   - Start script will automatically include them
+   - Start script will automatically detect and launch them
+   - If a role is claimed by generic agent, it will be skipped
 
-5. **Test with Generic Agent**
+4. **Test with Generic Agent**
    - No additional agent code needed for LLM-driven roles
-   - Update `input.txt` with keywords from your protocol
+   - Update `input.txt` to describe a use case for your protocol
    - Run `./start.ps1`
+   - LLM will see your new protocol in the available list and select it if appropriate
+
+**Key Advantage:** The LLM will automatically discover and consider your new protocol without any code changes to the selection logic. Just add the BSPL file and agents, and the LLM handles the rest.
 
 ### Testing with Mock LLM
 
@@ -1019,13 +1048,32 @@ Role inferred: Buyer
 Action: generic_llm_agent runs as Buyer, other agents (Seller, Shipper) start separately
 ```
 
-Example 2 - Logistics Protocol Detection:
+### LLM Protocol Selection in Action
+
+Example 1 - Purchase Protocol:
 ```
-Input: "Wrap 5 packages and label them for delivery."
-Keywords found: "wrap", "label"
-Protocol selected: Logistics
-Role inferred: Wrapper
-Action: generic_llm_agent runs as Wrapper, other agents (Merchant, Packer, Labeler) start separately
+User Input: "I need to buy a pen for less than $20. 
+            Delivery location: Raleigh, NC 27606"
+                                  ↓
+    LLM analyzes available protocols and user goal
+                                  ↓
+        LLM selects: PROTOCOL: Purchase, ROLE: Buyer
+                                  ↓
+    Generic agent creates Purchase:Buyer adapter
+    and starts participating in Purchase protocol
+```
+
+Example 2 - Logistics Protocol:
+```
+User Input: "Wrap and label 5 packages for delivery.
+            Items: balls, bats, plates, glasses"
+                                  ↓
+    LLM analyzes available protocols and user goal
+                                  ↓
+        LLM selects: PROTOCOL: Logistics, ROLE: Wrapper
+                                  ↓
+    Generic agent creates Logistics:Wrapper adapter
+    and starts participating in Logistics protocol
 ```
 
 ### Request ID Format Requirements
