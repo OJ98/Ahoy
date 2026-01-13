@@ -19,9 +19,6 @@ MASTER_LOG="$LOG_DIR/agents.log"
 # Initialize master log
 echo "--- Combined agent log started: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---" > "$MASTER_LOG"
 
-# List of agent scripts to start
-AGENTS=("agents/buyer.py" "agents/seller.py" "agents/shipper.py")
-
 # Array to store background process IDs and their log files
 declare -a PIDS
 declare -a PID_NAMES
@@ -41,8 +38,89 @@ conda activate maf-py || { echo "Failed to activate maf-py environment"; exit 1;
 echo "Environment activated. Starting agents..."
 echo ""
 
-# Start each agent
-for agent in "${AGENTS[@]}"; do
+# List of agent scripts to start
+# Note: generic_llm_agent.py is the main LLM-driven agent that reads from input.txt
+#       Other agents are hardcoded background agents for various protocols:
+#       - Purchase: buyer.py, seller.py, shipper.py
+#       - Logistics: merchant.py, packer.py, labeler.py, wrapper.py
+ALL_AGENTS=("agents/generic_llm_agent.py" "agents/buyer.py" "agents/seller.py" "agents/shipper.py" "agents/merchant.py" "agents/packer.py" "agents/labeler.py" "agents/wrapper.py")
+
+# Mapping of agent files to their protocol and role
+declare -A AGENT_ROLES=(
+	["agents/buyer.py"]="Purchase:Buyer"
+	["agents/seller.py"]="Purchase:Seller"
+	["agents/shipper.py"]="Purchase:Shipper"
+	["agents/merchant.py"]="Logistics:Merchant"
+	["agents/packer.py"]="Logistics:Packer"
+	["agents/labeler.py"]="Logistics:Labeler"
+	["agents/wrapper.py"]="Logistics:Wrapper"
+)
+
+# Claimed role file will be set dynamically based on generic agent PID
+# Placeholder - will be set after generic agent starts
+$CLAIMED_ROLE_FILE=""
+
+# Start generic_llm_agent first to determine which role it will claim
+echo "Starting generic_llm_agent first to determine claimed role..."
+GENERIC_AGENT="agents/generic_llm_agent.py"
+full_path="$SCRIPT_DIR/$GENERIC_AGENT"
+if [ -f "$full_path" ]; then
+	agent_name="$(basename "${GENERIC_AGENT%.py}")"
+	agent_log="$LOG_DIR/${agent_name}.log"
+	
+	echo "Starting $GENERIC_AGENT..."
+	python -u "$full_path" > "$agent_log" 2>&1 &
+	pid=$!
+	
+	# Set the claimed role file path based on generic agent PID
+	CLAIMED_ROLE_FILE="$TMPDIR/maf_claimed_role_${pid}.txt"
+	
+	PIDS+=($pid)
+	PID_NAMES+=("$agent_name")
+	PID_LOGS+=("$agent_log")
+	
+	echo "  → Started with PID $pid (logging to $agent_log)"
+	
+	# Wait for generic agent to write claimed role file (with timeout)
+	echo "Waiting for LLM agent to determine claimed role (max 10 seconds)..."
+	max_wait=20  # 20 * 0.5 = 10 seconds
+	waited=0
+	while [ ! -f "$CLAIMED_ROLE_FILE" ] && [ $waited -lt $max_wait ]; do
+		sleep 0.5
+		waited=$((waited + 1))
+	done
+	
+	if [ -f "$CLAIMED_ROLE_FILE" ]; then
+		claimed_role=$(cat "$CLAIMED_ROLE_FILE" | tr -d '\n' | tr -d ' ')
+		echo "✓ LLM agent claimed role: $claimed_role"
+	else
+		echo "⚠ Warning: LLM agent did not write claimed role file within timeout"
+	fi
+fi
+
+echo ""
+echo "Starting hardcoded background agents (excluding claimed role)..."
+echo ""
+
+# Now start all other agents EXCEPT the one claimed by LLM
+for agent in "${ALL_AGENTS[@]}"; do
+	if [ "$agent" = "$GENERIC_AGENT" ]; then
+		continue  # Already started generic agent
+	fi
+	
+	# Check if this agent's role was claimed by the LLM
+	if [ -v AGENT_ROLES["$agent"] ]; then
+		agent_role="${AGENT_ROLES[$agent]}"
+		if [ -f "$CLAIMED_ROLE_FILE" ]; then
+			claimed_role=$(cat "$CLAIMED_ROLE_FILE" | tr -d '\n' | tr -d ' ')
+			agent_role_trimmed=$(echo "$agent_role" | tr -d '\n' | tr -d ' ')
+			if [ "$claimed_role" = "$agent_role_trimmed" ]; then
+				echo "Skipping $agent (role claimed by LLM agent: $agent_role)"
+				continue
+			fi
+		fi
+	fi
+	
 	full_path="$SCRIPT_DIR/$agent"
 	if [ -f "$full_path" ]; then
 		agent_name="$(basename "${agent%.py}")"
@@ -141,6 +219,10 @@ while true; do
 				tail -f "$log" 2>/dev/null &
 				wait $!
 			fi
+		fi
+		# Check for stop signal
+		if [ -f "$TMPDIR/maf_stop_signal.txt" ]; then
+			break 2  # Break out of both loops
 		fi
 	done
 	

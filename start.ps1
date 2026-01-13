@@ -28,48 +28,105 @@ try {
 }
 
 # Prepare logging
-# The final combined per-agent log will be written to $logFile at shutdown.
 $logDir = Join-Path $scriptDir "logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 $logFile = Join-Path $logDir "agents.log"
 
 # List of agent scripts to start
-$agents = @("agents/buyer.py", "agents/seller.py", "agents/shipper.py")
+$allAgents = @("agents/generic_llm_agent.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py")
+
+# Mapping of agent files to their protocol and role
+$agentRoles = @{
+	"agents/buyer.py" = "Purchase:Buyer"
+	"agents/seller.py" = "Purchase:Seller"
+	"agents/shipper.py" = "Purchase:Shipper"
+	"agents/merchant.py" = "Logistics:Merchant"
+	"agents/packer.py" = "Logistics:Packer"
+	"agents/labeler.py" = "Logistics:Labeler"
+	"agents/wrapper.py" = "Logistics:Wrapper"
+}
+
+# Initialize array to track started processes
+$startedProcs = @()
+
+# Clean up old claimed role file
+$claimedRoleFile = Join-Path $env:TEMP "maf_claimed_role_$($proc.Id).txt"
+
+# Start generic_llm_agent first to determine which role it will claim
+Write-Host "Starting generic_llm_agent first to determine claimed role..."
+$genericAgent = "agents/generic_llm_agent.py"
+$full = Join-Path $scriptDir $genericAgent
+if (Test-Path $full) {
+	try {
+		$scriptWorkingDir = Split-Path -Parent $full
+		$agentName = [System.IO.Path]::GetFileNameWithoutExtension($genericAgent)
+		$agentLog = Join-Path $logDir ("$agentName.log")
+		$tempName = "$agentName-$([guid]::NewGuid().ToString()).err"
+		$agentErr = Join-Path $env:TEMP $tempName
+		$pythonExe = "C:\\Users\\Omkar\\miniconda3\\envs\\maf-py\\python.exe"
+		$proc = Start-Process -FilePath $pythonExe -ArgumentList @('-u', $full) -WorkingDirectory $scriptWorkingDir -RedirectStandardOutput $agentLog -RedirectStandardError $agentErr -NoNewWindow -PassThru
+		if ($proc) {
+			# Now set the claimed role file path based on the generic agent PID
+			$claimedRoleFile = Join-Path $env:TEMP "maf_claimed_role_$($proc.Id).txt"
+			$startedProcs += @{ Name = $agentName; Proc = $proc; Log = $agentLog; Err = $agentErr }
+			$line = "Started $genericAgent (pid $($proc.Id)) at $(Get-Date -Format o)"
+			Write-Host $line
+			
+			# Wait for generic agent to write claimed role file (with timeout)
+			Write-Host "Waiting for LLM agent to determine claimed role (max 10 seconds)..."
+			$maxWait = 10
+			$waited = 0
+			while ((-not (Test-Path $claimedRoleFile)) -and ($waited -lt $maxWait)) {
+				Start-Sleep -Milliseconds 500
+				$waited += 0.5
+			}
+			
+			if (Test-Path $claimedRoleFile) {
+				$claimedRole = Get-Content -Path $claimedRoleFile -Raw
+				Write-Host "LLM agent claimed role: $claimedRole"
+			} else {
+				Write-Host "Warning: LLM agent did not write claimed role file within timeout"
+			}
+		}
+	} catch {
+		$msg = "Failed to start ${genericAgent}: ${_}"
+		Write-Host $msg
+	}
+}
+
+# Now start all other agents EXCEPT the one claimed by LLM
+Write-Host ""
+Write-Host "Starting hardcoded background agents (excluding claimed role)..."
+$agents = $allAgents | Where-Object { $_ -ne $genericAgent }
 
 $startedAny = $false
-# Track started processes so we can terminate them on shutdown
-$startedProcs = @()
-# Deferred log lines to write after processes have stopped (to avoid file-lock collisions)
-# (no deferred runtime master log entries needed)
 
 foreach ($a in $agents) {
+	# Check if this agent's role was claimed by the LLM
+	if ($agentRoles.ContainsKey($a)) {
+		$agentRole = $agentRoles[$a]
+		if ((Test-Path $claimedRoleFile) -and ((Get-Content -Path $claimedRoleFile -Raw).Trim() -eq $agentRole.Trim())) {
+			Write-Host "Skipping $a (role claimed by LLM agent: $agentRole)"
+			continue
+		}
+	}
+	
 	$full = Join-Path $scriptDir $a
 	if (Test-Path $full) {
 		Write-Host "Starting $a..."
-		# Start as a background job; the job will run python and append stdout+stderr to the shared log
-		# Important: set the job's working directory to the script's directory so that relative paths inside the
-		# Python scripts (e.g. ./protocols/purchase.bspl) resolve correctly.
-		# Use cmd.exe redirection to append both stdout and stderr to the shared log file.
-		# This avoids PowerShell job output buffering and file-locking issues when multiple writers append to the same file.
 		try {
 			$scriptWorkingDir = Split-Path -Parent $full
-			# Per-agent log file (e.g. logs\buyer.log)
 			$agentName = [System.IO.Path]::GetFileNameWithoutExtension($a)
 			$agentLog = Join-Path $logDir ("$agentName.log")
-			# Create a temporary err file outside the repository logs so we don't leave .err files in the logs directory.
 			$tempName = "$agentName-$([guid]::NewGuid().ToString()).err"
 			$agentErr = Join-Path $env:TEMP $tempName
-			# Start agent and redirect stdout and stderr to separate files to avoid Start-Process file-handle conflicts.
-			# Use the hard-coded Python executable from the maf-py conda environment to ensure correct interpreter.
 			$pythonExe = "C:\\Users\\Omkar\\miniconda3\\envs\\maf-py\\python.exe"
-			# Start the python process (unbuffered) and redirect output to per-agent log and errors to a separate .err file.
 			$proc = Start-Process -FilePath $pythonExe -ArgumentList @('-u', $full) -WorkingDirectory $scriptWorkingDir -RedirectStandardOutput $agentLog -RedirectStandardError $agentErr -NoNewWindow -PassThru
 			if ($proc) {
 				$startedProcs += @{ Name = $agentName; Proc = $proc; Log = $agentLog; Err = $agentErr }
 				$startedAny = $true
 				$line = "Started $a (pid $($proc.Id)) at $(Get-Date -Format o)"
 				Write-Host $line
-				# Not writing per-run master entries; combined log will be written at shutdown.
 			}
 		} catch {
 			$msg = "Failed to start ${a}: ${_}"
@@ -88,32 +145,27 @@ if (-not $startedAny) {
 Write-Host "All requested agents started. Consolidated log: $logFile"
 Write-Host "Press any key to stop agents and free ports..."
 
-# Start combined viewer: tail per-agent log files and print prefixed lines to the console.
-# We'll run a loop in the main thread that monitors each agent log file and prints any new lines with a prefix.
-Write-Host "Starting combined live viewer for agent logs... (press any key to stop)"
-
-# Open file streams for each agent log + err with shared read/write so writers can still append.
+# Open file streams for each agent log + err with shared read/write
 $readers = @()
 foreach ($entry in $startedProcs) {
 	$outPath = $entry.Log
 	$errPath = $entry.Err
 	if (-not (Test-Path $outPath)) { New-Item -Path $outPath -ItemType File | Out-Null }
-	# Ensure the temp err file exists so the StreamReader can open it
 	if (-not (Test-Path $errPath)) { New-Item -Path $errPath -ItemType File | Out-Null }
-	# Open output stream
+	
 	$fsOut = [System.IO.File]::Open($outPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
 	$srOut = New-Object System.IO.StreamReader($fsOut, [System.Text.Encoding]::UTF8)
 	try { $fsOut.Seek(0, [System.IO.SeekOrigin]::End) | Out-Null } catch { }
 	$readers += @{ Name = $entry.Name; Stream = $srOut; FileStream = $fsOut; Type = 'out' }
-	# Open error stream
+	
 	$fsErr = [System.IO.File]::Open($errPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
 	$srErr = New-Object System.IO.StreamReader($fsErr, [System.Text.Encoding]::UTF8)
 	try { $fsErr.Seek(0, [System.IO.SeekOrigin]::End) | Out-Null } catch { }
 	$readers += @{ Name = $entry.Name; Stream = $srErr; FileStream = $fsErr; Type = 'err' }
 }
 
-# Loop until a key is pressed; poll readers for new lines and print them with agent prefix.
-while (-not [Console]::KeyAvailable -and -not (Test-Path ".stop_signal")) {
+# Loop until a key is pressed
+while (-not [Console]::KeyAvailable -and -not (Test-Path "$env:TEMP\maf_stop_signal.txt")) {
 	foreach ($r in $readers) {
 		$sr = $r.Stream
 		while (-not $sr.EndOfStream) {
@@ -127,10 +179,9 @@ while (-not [Console]::KeyAvailable -and -not (Test-Path ".stop_signal")) {
 }
 
 # Check if we stopped due to stop signal
-if (Test-Path ".stop_signal") {
-	Write-Host "`n✅ Stop signal detected - shutting down all agents gracefully...`n"
+if (Test-Path "$env:TEMP\maf_stop_signal.txt") {
+	Write-Host "`nStop signal detected - shutting down all agents gracefully...`n"
 } else {
-	# Consume the pressed key so it doesn't appear in the console
 	[Console]::ReadKey($true) | Out-Null
 }
 
@@ -147,7 +198,7 @@ foreach ($entry in $startedProcs) {
 	}
 }
 
-# Wait briefly for processes to exit and log their exit codes for debugging
+# Wait for processes to exit
 foreach ($entry in $startedProcs) {
 	$p = $entry.Proc
 	try {
@@ -171,18 +222,15 @@ foreach ($r in $readers) {
 	try { $r.FileStream.Close() } catch { }
 }
 
-# Append any .err files into the main per-agent .log for a single consolidated file per agent,
-# but avoid leaving .err files in the logs directory when they are empty.
+# Append err files into logs
 foreach ($entry in $startedProcs) {
 	try {
 		if (Test-Path $entry.Err) {
 			$errLength = (Get-Item $entry.Err).Length
 			if ($errLength -gt 0) {
-				# Append the error contents into the agent log and then delete the temp err file
 				Get-Content -Path $entry.Err -ErrorAction SilentlyContinue | Out-File -FilePath $entry.Log -Append -Encoding utf8
 				Remove-Item -Path $entry.Err -ErrorAction SilentlyContinue
 			} else {
-				# No errors: remove the empty temp file
 				Remove-Item -Path $entry.Err -ErrorAction SilentlyContinue
 			}
 		}
@@ -196,7 +244,7 @@ $combined = $logFile
 "--- Combined agent log started: $(Get-Date -Format o) ---" | Out-File -FilePath $combined -Encoding utf8
 foreach ($entry in $startedProcs) {
 	try {
-		"\n--- Agent: $($entry.Name) ---" | Out-File -FilePath $combined -Append -Encoding utf8
+		"`n--- Agent: $($entry.Name) ---" | Out-File -FilePath $combined -Append -Encoding utf8
 		if (Test-Path $entry.Log) {
 			Get-Content -Path $entry.Log -ErrorAction SilentlyContinue | Out-File -FilePath $combined -Append -Encoding utf8
 		}
@@ -206,7 +254,7 @@ foreach ($entry in $startedProcs) {
 }
 "--- Combined agent log ended: $(Get-Date -Format o) ---" | Out-File -FilePath $combined -Append -Encoding utf8
 
-# Find any lingering python processes whose command line contains the script name and terminate them to free ports.
+# Find and terminate lingering python processes
 try {
 	$pyProcs = Get-CimInstance Win32_Process -Filter "Name = 'python.exe' OR Name = 'python3.exe'" -ErrorAction SilentlyContinue
 	foreach ($a in $agents) {
@@ -223,10 +271,10 @@ try {
 
 Write-Host "Shutdown complete. Logs written to $logFile"
 
-# Clean up stop signal file if it exists
+# Clean up stop signal file
 try {
-	if (Test-Path ".stop_signal") {
-		Remove-Item -Path ".stop_signal" -Force -ErrorAction SilentlyContinue
+	if (Test-Path "$env:TEMP\maf_stop_signal.txt") {
+		Remove-Item -Path "$env:TEMP\maf_stop_signal.txt" -Force -ErrorAction SilentlyContinue
 	}
 } catch {
 	Write-Host "Warning: failed to clean up stop signal file: $_"

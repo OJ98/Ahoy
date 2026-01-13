@@ -20,13 +20,15 @@ import bspl.adapter.receiver as _recv
 
 LOG_DIR = PROJECT_ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
-STOP_SIGNAL_PATH = PROJECT_ROOT / ".stop_signal"
+import tempfile
+
+STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
 
 # Initialize logging system
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = str(LOG_DIR / f"seller_debug_{timestamp}.log")
+# Use fixed filename (no timestamp) so logs are overwritten each run
+log_filename = str(LOG_DIR / "seller.log")
 
-debug_logger, console_logger = setup_logging(log_filename)
+debug_logger, console_logger = setup_logging(log_filename, mode='w')
 
 def log_debug(msg):
     """Log to debug logger."""

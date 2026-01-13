@@ -18,12 +18,20 @@ if sys.platform == 'win32':
 # LOGGING SETUP
 # ============================================================================
 
-def setup_logging(log_filename: str, logger_name: str = "buyer_debug", console_logger_name: str = "buyer_console"):
-    """Configure debug file logging and console output logging."""
+def setup_logging(log_filename: str, logger_name: str = "buyer_debug", console_logger_name: str = "buyer_console", mode: str = 'w'):
+    """
+    Configure debug file logging and console output logging.
+    
+    Args:
+        log_filename: Path to the log file
+        logger_name: Name of the debug logger
+        console_logger_name: Name of the console logger
+        mode: File open mode - 'w' (write/overwrite) or 'a' (append)
+    """
     # Debug logger (file only)
     debug_logger = logging.getLogger(logger_name)
     debug_logger.setLevel(logging.DEBUG)
-    debug_handler = logging.FileHandler(log_filename, encoding='utf-8')
+    debug_handler = logging.FileHandler(log_filename, mode=mode, encoding='utf-8')
     debug_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     debug_logger.addHandler(debug_handler)
     debug_logger.propagate = False

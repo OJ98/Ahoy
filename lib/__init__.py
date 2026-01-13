@@ -11,8 +11,9 @@ from .llm_client import (
     choose_and_bind,
     call_llm_with_timeout,
     parse_llm_json_reply,
-    generate_unique_id,
+
     save_state_to_memory,
+    declare_protocol_and_role,
     get_agent_memory,
     reset_agent_notes_storage,
     MODEL_ID,
@@ -41,6 +42,26 @@ from .state_manager import (
     deserialize_social_state,
 )
 
+from .protocol_discovery import (
+    get_all_protocols,
+    get_protocol_structure,
+    get_protocol_summary_for_llm,
+    validate_protocol_and_role,
+    get_protocol_object,
+    get_role_object,
+)
+
+from .protocol_completion_detector import (
+    get_completion_message,
+    is_completion_message,
+    get_all_completion_rules,
+)
+
+from .dynamic_adapter_manager import (
+    create_adapter_for_role,
+    get_color_for_protocol_role,
+)
+
 __all__ = [
     # LLM client
     "LLMClient",
@@ -52,6 +73,7 @@ __all__ = [
     # Tool calling for UID generation and state management
     "generate_unique_id",
     "save_state_to_memory",
+    "declare_protocol_and_role",
     "get_agent_memory",
     "reset_agent_notes_storage",
     # UI & logging
@@ -71,4 +93,18 @@ __all__ = [
     "load_social_state_from_json",
     "social_state_to_json",
     "deserialize_social_state",
+    # Protocol discovery & management
+    "get_all_protocols",
+    "get_protocol_structure",
+    "get_protocol_summary_for_llm",
+    "validate_protocol_and_role",
+    "get_protocol_object",
+    "get_role_object",
+    # Protocol completion detection
+    "get_completion_message",
+    "is_completion_message",
+    "get_all_completion_rules",
+    # Dynamic adapter management
+    "create_adapter_for_role",
+    "get_color_for_protocol_role",
 ]

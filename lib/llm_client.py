@@ -475,12 +475,7 @@ async def choose_and_bind(
                 result_obj = json.loads(result) if isinstance(result, str) else result
                 log_msg(f"  Result: {result}")
                 
-                # If tool generated a value and params has a placeholder, update it
-                if tool_name == "generate_unique_id" and result_obj:
-                    generated_id = result_obj.get("result")
-                    if generated_id and ("ID" in params and ("PENDING" in str(params["ID"]) or params["ID"] is None)):
-                        log_msg(f"  Updating ID param with generated value: {generated_id}")
-                        params["ID"] = generated_id
+
             except Exception as e:
                 log_msg(f"  Error: {str(e)}")
         log_msg(f"{'='*80}")
@@ -537,22 +532,6 @@ _system_prompt_cache: Optional[str] = None
 _agent_notes_storage: Dict[str, Any] = {}
 
 
-def generate_unique_id(prefix: str = "TXN", purpose: str = "") -> str:
-    """
-    Generate a unique transaction ID with optional prefix and timestamp.
-    
-    Args:
-        prefix: Prefix for the ID (default: "TXN")
-        purpose: Purpose description (optional, for logging)
-    
-    Returns:
-        Unique ID string in format: {prefix}_{hex_uuid}_{timestamp}
-    """
-    unique_hex = _uuid.uuid4().hex[:8].upper()
-    timestamp = _datetime.now().strftime("%H%M")
-    return f"{prefix}_{unique_hex}_{timestamp}"
-
-
 def save_state_to_memory(agent_name: str, key: str, value: str) -> Dict[str, str]:
     """
     Save important agent state/notes to memory for later recall.
@@ -583,6 +562,37 @@ def save_state_to_memory(agent_name: str, key: str, value: str) -> Dict[str, str
     return {"status": "saved", "key": key, "value": value}
 
 
+def declare_protocol_and_role(protocol_name: str, role_name: str, reasoning: str = "") -> Dict[str, str]:
+    """
+    Declare which protocol and role an agent wants to participate in.
+    
+    Args:
+        protocol_name: Name of the protocol (e.g., 'Purchase', 'Logistics')
+        role_name: Name of the role (e.g., 'Buyer', 'Seller')
+        reasoning: Explanation for the choice (optional)
+    
+    Returns:
+        Dict with status and validation result
+    """
+    # Import here to avoid circular imports
+    from .protocol_discovery import validate_protocol_and_role
+    
+    is_valid, error_msg = validate_protocol_and_role(protocol_name, role_name)
+    
+    if not is_valid:
+        return {
+            "status": "invalid",
+            "error": error_msg
+        }
+    
+    return {
+        "status": "declared",
+        "protocol": protocol_name,
+        "role": role_name,
+        "reasoning": reasoning
+    }
+
+
 def get_agent_memory(agent_name: str, key: Optional[str] = None) -> Dict[str, Any]:
     """
     Retrieve agent notes/state from memory.
@@ -609,27 +619,7 @@ def get_agent_memory(agent_name: str, key: Optional[str] = None) -> Dict[str, An
 def build_optional_tools() -> list:
     """Build list of optional tools for Claude tool use."""
     return [
-        {
-            "name": "generate_unique_id",
-            "description": "Generate a unique transaction ID for a new message or decision point",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "prefix": {
-                        "type": "string",
-                        "description": "Prefix for the ID (default: 'TXN'). Examples: 'TXN', 'RFQ', 'ORDER'",
-                        "default": "TXN"
-                    },
-                    "purpose": {
-                        "type": "string",
-                        "description": "Purpose of this ID for documentation (optional)",
-                        "default": ""
-                    }
-                },
-                "required": []
-            }
-        },
-        {
+{
             "name": "save_state_to_memory",
             "description": "Save important agent state or decision notes to memory for recall in future steps",
             "input_schema": {
@@ -650,6 +640,28 @@ def build_optional_tools() -> list:
                 },
                 "required": ["agent_name", "key", "value"]
             }
+        },
+        {
+            "name": "declare_protocol_and_role",
+            "description": "Declare which protocol and role you want to participate in. Used during agent initialization to determine your participation.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "protocol_name": {
+                        "type": "string",
+                        "description": "Name of the protocol (e.g., 'Purchase', 'Logistics')"
+                    },
+                    "role_name": {
+                        "type": "string",
+                        "description": "Name of the role within the protocol (e.g., 'Buyer', 'Seller')"
+                    },
+                    "reasoning": {
+                        "type": "string",
+                        "description": "Explain why you chose this protocol and role"
+                    }
+                },
+                "required": ["protocol_name", "role_name"]
+            }
         }
     ]
 
@@ -665,18 +677,19 @@ async def execute_tool_call(tool_name: str, tool_input: Dict[str, Any]) -> str:
     Returns:
         JSON string with the tool result
     """
-    if tool_name == "generate_unique_id":
-        result = generate_unique_id(
-            prefix=tool_input.get("prefix", "TXN"),
-            purpose=tool_input.get("purpose", "")
-        )
-        return json.dumps({"tool": tool_name, "result": result})
-    
-    elif tool_name == "save_state_to_memory":
+    if tool_name == "save_state_to_memory":
         result = save_state_to_memory(
             agent_name=tool_input.get("agent_name", "unknown"),
             key=tool_input.get("key", ""),
             value=tool_input.get("value", "")
+        )
+        return json.dumps({"tool": tool_name, "result": result})
+    
+    elif tool_name == "declare_protocol_and_role":
+        result = declare_protocol_and_role(
+            protocol_name=tool_input.get("protocol_name", ""),
+            role_name=tool_input.get("role_name", ""),
+            reasoning=tool_input.get("reasoning", "")
         )
         return json.dumps({"tool": tool_name, "result": result})
     

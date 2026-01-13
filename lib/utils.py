@@ -97,35 +97,19 @@ def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -
             5. Either provide all required FILL ONLY params, or choose null."""
             enhanced_prompt = enhanced_prompt + parameter_rules
             
-            # TOOL USAGE GUIDANCE: Direct LLM to use tools for ID generation and memory
+            # TOOL USAGE GUIDANCE
             tool_guidance = """
             AVAILABLE TOOLS FOR YOUR USE:
-            You have two tools available to enhance your decision-making:
-
-            1. **generate_unique_id** - Creates guaranteed-unique message IDs
-            - Use this EVERY TIME you need a new message ID
-            - Parameters: prefix (e.g., "RFQ", "ORDER") and purpose (what the message is for)
-            - Returns a unique ID in format: PREFIX_HEXID_TIMESTAMP
-            - This ensures no ID conflicts or parameter duplication errors
             
-            When to use:
-            - Sending a NEW message that requires a unique ID parameter
-            - Exploring multiple options with different IDs
-            - Never manually create IDs - always use this tool
-            
-            Example workflow:
-            1. Decide you need to send a message with a new ID
-            2. Request generate_unique_id with appropriate prefix and purpose
-            3. Receive the generated ID
-            4. Use that exact ID in your message parameters
-
-            2. **save_state_to_memory** - Records important information for later recall
+            1. **save_state_to_memory** - Records important information for later recall
             - Use this to save constraints, decisions, or strategies you want to remember
             - Parameters: agent_name, key (name of what you're saving), value (the content)
             - Saved information can help you maintain consistency across decisions
 
-            CRITICAL: Always use generate_unique_id for new message IDs - do not invent IDs yourself.
-            This prevents parameter variation errors and duplicate message rejection."""
+            ID MANAGEMENT:
+            - Required IDs must come from the user input or protocol message history
+            - Do not invent IDs - use provided values or reasonable defaults from context
+            - If an ID is truly required but unavailable, you may decline the option (return null)"""
             enhanced_prompt = enhanced_prompt + tool_guidance
             
 
@@ -198,8 +182,10 @@ def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -
 # ADAPTER MANAGEMENT: Graceful shutdown
 # ============================================================================
 
-async def shutdown_watcher(adapter, stop_path: str = ".stop_signal"):
+async def shutdown_watcher(adapter, stop_path: str = None):
     """Watch for stop signal file and gracefully shut down the adapter."""
+    if stop_path is None:
+        stop_path = str(Path(tempfile.gettempdir()) / "maf_stop_signal.txt")
     while True:
         if os.path.exists(stop_path):
             try:
@@ -337,12 +323,11 @@ def build_user_prompt(
     # Add tool list
     lines.append("")
     lines.append("AVAILABLE TOOLS:")
-    lines.append("1. **generate_unique_id** - Generates unique transaction IDs")
-    lines.append("   - Input: {\"prefix\": \"RFQ\", \"purpose\": \"inquiry\"}")
-    lines.append("   - Output: Unique ID like 'TXN_a1b2c3_1430'")
-    lines.append("")
-    lines.append("2. **save_state_to_memory** - Saves agent state/notes for later retrieval")
+    lines.append("1. **save_state_to_memory** - Saves agent state/notes for later retrieval")
     lines.append("   - Input: {\"agent_name\": \"Agent\", \"key\": \"key_name\", \"value\": \"state_value\"}")
+    lines.append("")
+    lines.append("NOTE: Required IDs (orderID, itemID, etc.) must come from user input or system state.")
+    lines.append("Do not invent IDs - use values provided or available from message history.")
     lines.append("")
     
     # Add response formatting instructions
@@ -352,15 +337,10 @@ def build_user_prompt(
     lines.append('- To decline all options: {"choice": null, "params": {}, "tool_requests": []}')
     lines.append("- To request tools: include tool_requests array with {\"tool\": \"name\", \"args\": {...}}")
     lines.append("")
-    lines.append("IMPORTANT: When requesting tools to generate parameters (like generate_unique_id for ID):")
-    lines.append("1. Include the tool_requests array with your tool calls")
-    lines.append("2. ALSO include placeholder values in params for those parameters")
-    lines.append("   - For IDs: use params {\"ID\": \"PENDING_FROM_TOOL\", ...}")
-    lines.append("   - The system will execute the tool and use the generated value")
-    lines.append("3. If you request generate_unique_id, the returned ID will fill the ID parameter")
-    lines.append("4. Provide values for ALL required parameters (both generated and manual)")
+    lines.append("DECISION RULE: Always choose an option if you have viable parameters.")
+    lines.append("Use values from the user input, protocol history, or reasonable defaults.")
+    lines.append("Return null only if there is NO viable option at all.")
     lines.append("")
-    lines.append("DECISION RULE: You must make a choice (do not use null) unless there is NO viable option.")
     
     # Add examples if provided
     if examples:

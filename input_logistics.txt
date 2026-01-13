@@ -1,0 +1,15 @@
+I need to coordinate the logistics for packaging and shipping multiple orders.
+We have several items that need to be wrapped, labeled, and packed for shipment.
+
+Items to process: balls, bats, plates, and glasses.
+Some items are fragile (plates and glasses) and need bubblewrap.
+All items need unique labels for tracking.
+
+Orders to process (up to 5 initially):
+1. Order ID: ORD-001, Address: Warehouse 1, Items: 10 balls
+2. Order ID: ORD-002, Address: Warehouse 2, Items: 5 bats  
+3. Order ID: ORD-003, Address: Warehouse 1, Items: 8 plates (fragile)
+4. Order ID: ORD-004, Address: Warehouse 3, Items: 12 glasses (fragile)
+5. Order ID: ORD-005, Address: Warehouse 2, Items: mixed items
+
+Ensure each item is properly wrapped and labeled before packing.
