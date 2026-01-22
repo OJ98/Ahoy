@@ -32,11 +32,6 @@ from lib import (
 )
 from lib.llm_client import initialize_llm_tracker, get_llm_tracker
 from lib.agent_notes import get_agent_notes, reset_agent_notes
-from lib.protocol_discovery import (
-    get_all_protocols,
-    validate_protocol_and_role,
-    get_protocol_summary_for_llm,
-)
 from lib.protocol_completion_detector import is_completion_message
 from lib.dynamic_adapter_manager import create_adapter_for_role, get_color_for_protocol_role
 
@@ -244,76 +239,41 @@ def _cleanup_logging():
 
 async def _initialize_protocol_and_role():
     """
-    First phase: LLM decides which protocol and role to use via a single API call.
+    Read protocol and role from CHIPS config file written by CHIPS interface.
     
     Returns:
         tuple: (protocol_name, role_name) or (None, None) on failure
     """
     global assigned_protocol, assigned_role, adapter
     
-    log_debug("INITIALIZATION PHASE: LLM will choose protocol and role")
-    
-    # Get protocol context for LLM
-    protocol_summary = get_protocol_summary_for_llm()
-    log_debug(f"Available protocols:\n{protocol_summary}")
-    
-    # Load user input for context
-    input_file = PROJECT_ROOT / "input.txt"
-    user_input = ""
-    if input_file.exists():
-        user_input = input_file.read_text()
-        log_debug(f"User input: {user_input}")
+    log_debug("INITIALIZATION PHASE: Reading protocol and role from CHIPS config")
     
     try:
-        # Create prompt for LLM to determine protocol and role
-        protocol_choices_str = protocol_summary.replace("\n", "\n  ")
+        # Read CHIPS config file from temp directory
+        config_file = Path(tempfile.gettempdir()) / "maf_chips_config.txt"
         
-        prompt = f"""You are a protocol selection assistant. Based on the user's goal, determine which protocol and role they should participate in.
-
-Available Protocols:
-{protocol_choices_str}
-
-User's Goal:
-{user_input}
-
-Respond with ONLY the protocol and role in this format:
-PROTOCOL: <ProtocolName>
-ROLE: <RoleName>
-
-Be concise and direct. Do not explain your reasoning."""
+        if not config_file.exists():
+            log_debug(f"Config file not found: {config_file}")
+            log_debug("Please run 'python chips.py' first to configure protocol and role")
+            return None, None
         
-        log_debug(f"Sending protocol/role detection prompt to LLM")
+        config_content = config_file.read_text().strip()
+        log_debug(f"Read config: {config_content}")
         
-        # Make a single LLM call to determine protocol and role
-        response = await llm_client.complete(prompt, max_tokens=100)
-        log_debug(f"LLM response for protocol/role: {response}")
+        # Parse protocol:role format
+        parts = config_content.split(':')
+        if len(parts) != 2:
+            log_debug(f"Invalid config format: {config_content}")
+            return None, None
         
-        # Parse the response to extract protocol and role
-        lines = response.strip().split('\n')
-        protocol_name = None
-        role_name = None
+        protocol_name = parts[0].strip()
+        role_name = parts[1].strip()
         
-        for line in lines:
-            if line.startswith('PROTOCOL:'):
-                protocol_name = line.replace('PROTOCOL:', '').strip()
-            elif line.startswith('ROLE:'):
-                role_name = line.replace('ROLE:', '').strip()
-        
-        # Validate that the protocol and role exist
-        if protocol_name and role_name:
-            is_valid, error_msg = validate_protocol_and_role(protocol_name, role_name)
-            if is_valid:
-                log_debug(f"LLM selected: {protocol_name} - {role_name}")
-                return protocol_name, role_name
-            else:
-                log_debug(f"LLM selection invalid: {error_msg}")
-        
-        # Fallback if LLM response couldn't be parsed or was invalid
-        log_debug("Could not parse LLM response, defaulting to Purchase.Buyer")
-        return "Purchase", "Buyer"
+        log_debug(f"CHIPS config: {protocol_name}:{role_name}")
+        return protocol_name, role_name
         
     except Exception as e:
-        log_debug(f"Error during protocol/role initialization: {e}")
+        log_debug(f"Error reading protocol/role config: {e}")
         log_debug(f"Traceback: {traceback.format_exc()}")
         return None, None
 
