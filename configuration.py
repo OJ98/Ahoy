@@ -5,6 +5,7 @@ import bspl
 BASE_DIR = Path(__file__).resolve().parent
 PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "purchase.bspl"
 LOGISTICS_PROTOCOL_PATH = BASE_DIR / "protocols" / "logistics.bspl"
+CREDIT_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "credit_purchase.bspl"
 
 # Load the Purchase protocol
 purchase_spec = bspl.load_file(str(PURCHASE_PROTOCOL_PATH))
@@ -13,6 +14,13 @@ purchase_protocol = purchase_spec.protocols.get("Purchase")
 purchase_spec.export("Purchase")
 
 from Purchase import Buyer, Seller, Shipper
+
+# Load the CreditPurchase protocol
+credit_purchase_spec = bspl.load_file(str(CREDIT_PURCHASE_PROTOCOL_PATH))
+credit_purchase_protocol = credit_purchase_spec.protocols.get("CreditPurchase")
+# Export a module named 'CreditPurchase' for convenient imports
+credit_purchase_spec.export("CreditPurchase")
+from CreditPurchase import CreditBuyer, CreditSeller, CreditShipper
 
 # Load the Logistics protocol
 logistics_spec = bspl.load_file(str(LOGISTICS_PROTOCOL_PATH))
@@ -32,6 +40,15 @@ systems = {
             purchase_protocol.roles["Shipper"]: Shipper,
         },
         "protocol": purchase_protocol,
+    },
+    "CreditPurchase": {
+        # Map Role objects (from the parsed protocol) to agent identifiers
+        "roles": {
+            credit_purchase_protocol.roles["CreditBuyer"]: CreditBuyer,
+            credit_purchase_protocol.roles["CreditSeller"]: CreditSeller,
+            credit_purchase_protocol.roles["CreditShipper"]: CreditShipper,
+        },
+        "protocol": credit_purchase_protocol,
     },
     "Logistics": {
         # Map Role objects (from the parsed protocol) to agent identifiers
@@ -54,4 +71,7 @@ agents = {
     Merchant: [("127.0.0.1", 8005)],
     Packer: [("127.0.0.1", 8006)],
     Wrapper: [("127.0.0.1", 8007)],
+    CreditBuyer: [("127.0.0.1", 8008)],
+    CreditSeller: [("127.0.0.1", 8009)],
+    CreditShipper: [("127.0.0.1", 8010)],
 }

@@ -69,13 +69,16 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out
 $logFile = Join-Path $logDir "agents.log"
 
 # List of agent scripts to start
-$allAgents = @("agents/ahoy.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py")
+$allAgents = @("agents/ahoy.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py", "agents/credit_buyer.py", "agents/credit_seller.py", "agents/credit_shipper.py")
 
 # Mapping of agent files to their protocol and role
 $agentRoles = @{
 	"agents/buyer.py" = "Purchase:Buyer"
 	"agents/seller.py" = "Purchase:Seller"
 	"agents/shipper.py" = "Purchase:Shipper"
+	"agents/credit_buyer.py" = "CreditPurchase:CreditBuyer"
+	"agents/credit_seller.py" = "CreditPurchase:CreditSeller"
+	"agents/credit_shipper.py" = "CreditPurchase:CreditShipper"
 	"agents/merchant.py" = "Logistics:Merchant"
 	"agents/packer.py" = "Logistics:Packer"
 	"agents/labeler.py" = "Logistics:Labeler"

@@ -77,14 +77,18 @@ echo ""
 # Note: ahoy.py is the main LLM-driven agent configured by CHIPS
 #       Other agents are hardcoded background agents for various protocols:
 #       - Purchase: buyer.py, seller.py, shipper.py
+#       - CreditPurchase: credit_buyer.py, credit_seller.py, credit_shipper.py
 #       - Logistics: merchant.py, packer.py, labeler.py, wrapper.py
-ALL_AGENTS=("agents/ahoy.py" "agents/buyer.py" "agents/seller.py" "agents/shipper.py" "agents/merchant.py" "agents/packer.py" "agents/labeler.py" "agents/wrapper.py")
+ALL_AGENTS=("agents/ahoy.py" "agents/buyer.py" "agents/seller.py" "agents/shipper.py" "agents/credit_buyer.py" "agents/credit_seller.py" "agents/credit_shipper.py" "agents/merchant.py" "agents/packer.py" "agents/labeler.py" "agents/wrapper.py")
 
 # Mapping of agent files to their protocol and role
 declare -A AGENT_ROLES=(
 	["agents/buyer.py"]="Purchase:Buyer"
 	["agents/seller.py"]="Purchase:Seller"
 	["agents/shipper.py"]="Purchase:Shipper"
+	["agents/credit_buyer.py"]="CreditPurchase:CreditBuyer"
+	["agents/credit_seller.py"]="CreditPurchase:CreditSeller"
+	["agents/credit_shipper.py"]="CreditPurchase:CreditShipper"
 	["agents/merchant.py"]="Logistics:Merchant"
 	["agents/packer.py"]="Logistics:Packer"
 	["agents/labeler.py"]="Logistics:Labeler"

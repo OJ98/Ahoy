@@ -5,6 +5,7 @@ Extracts protocol structure for LLM decision-making.
 """
 
 from typing import Dict, List, Any
+from pathlib import Path
 from configuration import systems
 
 
@@ -56,14 +57,43 @@ def get_protocol_structure(protocol_name: str) -> Dict[str, Any]:
     }
 
 
+def _load_protocol_descriptions() -> Dict[str, str]:
+    """
+    Load protocol descriptions from protocol_descriptions.txt file.
+    
+    Returns:
+        dict: Mapping of protocol name -> description
+    """
+    descriptions = {}
+    desc_file = Path(__file__).parent.parent / "protocols" / "protocol_descriptions.txt"
+    
+    if not desc_file.exists():
+        return descriptions
+    
+    try:
+        with open(desc_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if ':' in line:
+                    proto_name, description = line.split(':', 1)
+                    descriptions[proto_name.strip()] = description.strip()
+    except Exception as e:
+        print(f"Warning: Could not load protocol descriptions: {e}")
+    
+    return descriptions
+
+
 def get_protocol_summary_for_llm() -> str:
     """
     Generate human-readable protocol summary for LLM context.
     
     Returns:
-        str: Formatted protocol information
+        str: Formatted protocol information with descriptions
     """
     protocols = get_all_protocols()
+    descriptions = _load_protocol_descriptions()
     
     if not protocols:
         return "No protocols available."
@@ -73,7 +103,11 @@ def get_protocol_summary_for_llm() -> str:
         structure = get_protocol_structure(proto_name)
         if structure:
             roles_str = ", ".join(structure["roles"])
-            summary += f"\n- {proto_name}: roles [{roles_str}]"
+            description = descriptions.get(proto_name, "")
+            if description:
+                summary += f"\n- {proto_name}: {description} (roles: {roles_str})"
+            else:
+                summary += f"\n- {proto_name}: roles [{roles_str}]"
     
     return summary
 

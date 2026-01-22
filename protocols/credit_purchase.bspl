@@ -1,0 +1,16 @@
+CreditPurchase {
+  roles CreditBuyer, CreditSeller, CreditShipper
+  parameters out ID key, out item, out price, out outcome
+  private address, resp, shipped, satisfaction
+
+  CreditBuyer → CreditSeller: rfq[out ID,out item]
+  CreditSeller → CreditBuyer: quote[in ID, in item, out price]
+
+  CreditBuyer → CreditSeller: accept[in ID, in item, in price, out address, out resp]
+  CreditBuyer → CreditSeller: reject[in ID, in item, in price, out outcome, out resp]
+
+  CreditSeller → CreditShipper: ship[in ID, in item, in address, out shipped]
+  CreditShipper → CreditBuyer: deliver[in ID, in item, in address, out outcome]
+
+  CreditBuyer → CreditSeller: completed[in ID, in item, in price, out satisfaction]
+}

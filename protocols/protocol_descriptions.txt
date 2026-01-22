@@ -1,0 +1,3 @@
+Purchase:Facilitates buyer-seller-shipper coordination for product transactions and delivery. Does not accept credit cards.
+Credit_Purchase:Same as Purchase, but adds a 5% surcharge for credit card transactions.
+Logistics:Manages merchant-packer-labeler-wrapper workflow for order processing and fulfillment
