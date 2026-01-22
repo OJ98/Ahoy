@@ -513,6 +513,11 @@ async def choose_and_bind(
         
         filtered_params[param_name] = param_value
 
+    # Auto-generate IDs for any unbound ID parameters
+    from .utils import auto_generate_id_parameters
+    auto_generated_ids = auto_generate_id_parameters(chosen_partial, logger_callback=log_msg)
+    filtered_params.update(auto_generated_ids)
+
     # Bind parameters
     try:
         message_instance = chosen_partial.bind(**filtered_params)

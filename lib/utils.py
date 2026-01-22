@@ -6,6 +6,7 @@ Provides: message history building, user prompt construction, and adapter shutdo
 
 import asyncio
 import os
+import uuid
 from typing import Any, Dict, Optional
 
 
@@ -350,3 +351,66 @@ def build_user_prompt(
             lines.append(json.dumps(ex))
     
     return "\n".join(lines)
+
+
+# ============================================================================
+# ID PARAMETER AUTO-GENERATION
+# ============================================================================
+
+def auto_generate_id_parameters(partial_message, logger_callback=None) -> Dict[str, Any]:
+    """
+    Automatically detect and generate unique IDs for ID-type parameters in a message.
+    
+    Inspects the message schema for parameters marked as 'key' (ID parameters) that are
+    not yet bound, and generates unique UUIDs for them.
+    
+    Args:
+        partial_message: A Partial message object with schema and bindings
+        logger_callback: Optional function for logging: logger_callback(message)
+    
+    Returns:
+        Dict of parameter_name -> generated_id for unbound ID parameters
+    
+    Example:
+        If a message has an ID parameter that's unbound, returns:
+        {"ID": "550e8400-e29b-41d4-a716-446655440000"}
+    """
+    def log_msg(msg):
+        """Helper to log messages if callback provided."""
+        if logger_callback:
+            logger_callback(msg)
+    
+    generated_ids = {}
+    
+    # Check if the message schema has parameter information
+    if not hasattr(partial_message, 'schema'):
+        log_msg("No schema available for auto-ID generation")
+        return generated_ids
+    
+    if not hasattr(partial_message.schema, 'parameters'):
+        log_msg("Schema has no parameters attribute")
+        return generated_ids
+    
+    # Iterate through schema parameters to find key (ID) parameters
+    for param_name in partial_message.schema.parameters:
+        param_info = partial_message.schema.parameters[param_name]
+        
+        # Check if this parameter is marked as 'key' (ID parameter)
+        is_key_param = False
+        if isinstance(param_info, dict):
+            is_key_param = param_info.get('is_key', False)
+        elif hasattr(param_info, 'is_key'):
+            is_key_param = param_info.is_key
+        
+        # Also check parameter name conventions (contains 'ID')
+        param_name_is_id = 'ID' in param_name.upper() or param_name.lower() in ['id', 'uuid']
+        
+        if is_key_param or param_name_is_id:
+            # Check if parameter is not already bound
+            if partial_message.bindings.get(param_name) is None:
+                unique_id = str(uuid.uuid4())
+                generated_ids[param_name] = unique_id
+                log_msg(f"Auto-generated ID for parameter '{param_name}': {unique_id}")
+    
+    return generated_ids
+
