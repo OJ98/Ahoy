@@ -6,6 +6,7 @@ import logging
 import random
 import asyncio
 import sys
+import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -16,6 +17,9 @@ from bspl.adapter import Adapter
 from configuration import systems, agents
 from Logistics import RequestLabel, RequestWrapping, Packed, Merchant
 from lib import setup_logging
+from lib.utils import shutdown_watcher
+
+STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
 
 LOG_DIR = PROJECT_ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -62,4 +66,11 @@ async def packed(msg):
 
 if __name__ == "__main__":
     logger.info("Starting Merchant...")
-    adapter.start(order_generator())
+    try:
+        adapter.start(shutdown_watcher(adapter, stop_path=str(STOP_SIGNAL_PATH)))
+    except KeyboardInterrupt:
+        print("\n⏹ Merchant interrupted by user")
+    except SystemExit:
+        print("✅ Merchant shutting down gracefully")
+    except Exception as e:
+        print(f"❌ Merchant error: {e}")

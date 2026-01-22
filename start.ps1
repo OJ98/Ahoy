@@ -33,7 +33,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out
 $logFile = Join-Path $logDir "agents.log"
 
 # List of agent scripts to start
-$allAgents = @("agents/generic_llm_agent.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py")
+$allAgents = @("agents/ahoy.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py")
 
 # Mapping of agent files to their protocol and role
 $agentRoles = @{
@@ -52,9 +52,9 @@ $startedProcs = @()
 # Clean up old claimed role file
 $claimedRoleFile = Join-Path $env:TEMP "maf_claimed_role_$($proc.Id).txt"
 
-# Start generic_llm_agent first to determine which role it will claim
-Write-Host "Starting generic_llm_agent first to determine claimed role..."
-$genericAgent = "agents/generic_llm_agent.py"
+# Start ahoy first to determine which role it will claim
+Write-Host "Starting ahoy first to determine claimed role..."
+$genericAgent = "agents/ahoy.py"
 $full = Join-Path $scriptDir $genericAgent
 if (Test-Path $full) {
 	try {

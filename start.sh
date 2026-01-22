@@ -39,11 +39,11 @@ echo "Environment activated. Starting agents..."
 echo ""
 
 # List of agent scripts to start
-# Note: generic_llm_agent.py is the main LLM-driven agent that reads from input.txt
+# Note: ahoy.py is the main LLM-driven agent that reads from input.txt
 #       Other agents are hardcoded background agents for various protocols:
 #       - Purchase: buyer.py, seller.py, shipper.py
 #       - Logistics: merchant.py, packer.py, labeler.py, wrapper.py
-ALL_AGENTS=("agents/generic_llm_agent.py" "agents/buyer.py" "agents/seller.py" "agents/shipper.py" "agents/merchant.py" "agents/packer.py" "agents/labeler.py" "agents/wrapper.py")
+ALL_AGENTS=("agents/ahoy.py" "agents/buyer.py" "agents/seller.py" "agents/shipper.py" "agents/merchant.py" "agents/packer.py" "agents/labeler.py" "agents/wrapper.py")
 
 # Mapping of agent files to their protocol and role
 declare -A AGENT_ROLES=(
@@ -60,9 +60,9 @@ declare -A AGENT_ROLES=(
 # Placeholder - will be set after generic agent starts
 $CLAIMED_ROLE_FILE=""
 
-# Start generic_llm_agent first to determine which role it will claim
-echo "Starting generic_llm_agent first to determine claimed role..."
-GENERIC_AGENT="agents/generic_llm_agent.py"
+# Start ahoy first to determine which role it will claim
+echo "Starting ahoy first to determine claimed role..."
+GENERIC_AGENT="agents/ahoy.py"
 full_path="$SCRIPT_DIR/$GENERIC_AGENT"
 if [ -f "$full_path" ]; then
 	agent_name="$(basename "${GENERIC_AGENT%.py}")"

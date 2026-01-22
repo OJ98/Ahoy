@@ -4,6 +4,7 @@ This agent handles wrapping requests by choosing appropriate wrapping material b
 
 import logging
 import sys
+import tempfile
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -14,6 +15,9 @@ from bspl.adapter import Adapter
 from configuration import systems, agents
 from Logistics import Wrapped, RequestWrapping, Wrapper
 from lib import setup_logging
+from lib.utils import shutdown_watcher
+
+STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
 
 LOG_DIR = PROJECT_ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,4 +52,11 @@ async def wrap(msg):
 
 if __name__ == "__main__":
     logger.info("Starting Wrapper...")
-    adapter.start()
+    try:
+        adapter.start(shutdown_watcher(adapter, stop_path=str(STOP_SIGNAL_PATH)))
+    except KeyboardInterrupt:
+        print("\n⏹ Wrapper interrupted by user")
+    except SystemExit:
+        print("✅ Wrapper shutting down gracefully")
+    except Exception as e:
+        print(f"❌ Wrapper error: {e}")

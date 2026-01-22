@@ -1,9 +1,19 @@
 #!/usr/bin/env python3
 
 import uuid, random, asyncio
+import sys
+import tempfile
+from pathlib import Path
 from bspl.adapter import Adapter
 from bspl.adapter.core import COLORS
 from configuration import config
+from lib.utils import shutdown_watcher
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
 
 import Purchase
 from Purchase import Buyer, rfq, quote, accept, reject, deliver
@@ -41,7 +51,14 @@ async def receive(msg):
 
 
 if __name__ == "__main__":
-    adapter.start(main())
+    try:
+        adapter.start(shutdown_watcher(adapter, stop_path=str(STOP_SIGNAL_PATH)))
+    except KeyboardInterrupt:
+        print("\n⏹ Buyer interrupted by user")
+    except SystemExit:
+        print("✅ Buyer shutting down gracefully")
+    except Exception as e:
+        print(f"❌ Buyer error: {e}")
     print(
         f"Completed enactments: {rejections + deliveries} "
         + f"({rejections} rejections, {deliveries} deliveries)"
