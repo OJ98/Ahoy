@@ -108,9 +108,11 @@ def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -
             - Saved information can help you maintain consistency across decisions
 
             ID MANAGEMENT:
-            - Required IDs must come from the user input or protocol message history
-            - Do not invent IDs - use provided values or reasonable defaults from context
-            - If an ID is truly required but unavailable, you may decline the option (return null)"""
+            - The system AUTOMATICALLY generates unique IDs for any ID parameters (marked as 'key' in the protocol)
+            - You DO NOT need to provide or generate IDs - they will be created automatically for you
+            - Simply select the option you want, and any required IDs will be generated and bound automatically
+            - Only provide IDs if they are explicitly required by the protocol as 'FILL ONLY' parameters
+            - Required non-ID parameters (orderID, itemID, etc.) should come from user input or protocol message history"""
             enhanced_prompt = enhanced_prompt + tool_guidance
             
 
@@ -225,7 +227,7 @@ def build_message_history_from_social_state(
     Returns:
         Formatted message history as a string
     """
-    history_lines = ["=== PAST MESSAGE HISTORY ==="]
+    history_lines = ["=== MESSAGE HISTORY ==="]
     
     # Extract all messages from social state systems
     all_messages = []
@@ -327,8 +329,10 @@ def build_user_prompt(
     lines.append("1. **save_state_to_memory** - Saves agent state/notes for later retrieval")
     lines.append("   - Input: {\"agent_name\": \"Agent\", \"key\": \"key_name\", \"value\": \"state_value\"}")
     lines.append("")
-    lines.append("NOTE: Required IDs (orderID, itemID, etc.) must come from user input or system state.")
-    lines.append("Do not invent IDs - use values provided or available from message history.")
+    lines.append("NOTE ON ID PARAMETERS:")
+    lines.append("- The system automatically generates and binds unique IDs for 'key' parameters")
+    lines.append("- You do NOT need to provide IDs - they will be created automatically")
+    lines.append("- Simply select your desired option and the system handles ID generation")
     lines.append("")
     
     # Add response formatting instructions
