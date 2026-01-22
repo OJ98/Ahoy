@@ -2,6 +2,7 @@
 
 # Minimal start script for starting agents in the maf-py environment (macOS/Linux).
 # - Activates `maf-py` conda environment
+# - Runs CHIPS interface to configure protocol/role if needed
 # - Starts agent scripts as background processes and logs output to ./logs/
 # - Waits for interrupt (Ctrl+C); then stops jobs and cleans up
 
@@ -10,6 +11,50 @@ set -e
 # Get the directory where this script lives
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# Activate conda environment
+echo "Activating environment 'maf-py'..."
+if ! command -v conda &> /dev/null; then
+	echo "conda not found in PATH. Make sure conda is installed and initialized."
+	exit 1
+fi
+
+# Initialize conda in this shell session
+eval "$(conda shell.bash hook)"
+conda activate maf-py || { echo "Failed to activate maf-py environment"; exit 1; }
+
+echo "Environment activated."
+echo ""
+
+# Check if CHIPS config already exists
+CHIPS_CONFIG_FILE="$TMPDIR/maf_chips_config.txt"
+if [ ! -f "$CHIPS_CONFIG_FILE" ]; then
+	echo "No CHIPS configuration found. Running CHIPS interface..."
+	echo ""
+	
+	python chips.py
+	
+	if [ ! -f "$CHIPS_CONFIG_FILE" ]; then
+		echo "Error: CHIPS configuration not created. Exiting."
+		exit 1
+	fi
+else
+	echo "CHIPS configuration found: $CHIPS_CONFIG_FILE"
+	current_config=$(cat "$CHIPS_CONFIG_FILE")
+	echo "Current config: $current_config"
+	echo ""
+	
+	read -p "Reconfigure? (yes/no) [default: no]: " reconfigure
+	if [ "$reconfigure" = "yes" ] || [ "$reconfigure" = "y" ]; then
+		echo ""
+		python chips.py
+		
+		if [ ! -f "$CHIPS_CONFIG_FILE" ]; then
+			echo "Error: CHIPS configuration not created. Exiting."
+			exit 1
+		fi
+	fi
+fi
 
 # Prepare logging
 LOG_DIR="$SCRIPT_DIR/logs"
@@ -24,22 +69,12 @@ declare -a PIDS
 declare -a PID_NAMES
 declare -a PID_LOGS
 
-# Activate conda environment
-echo "Activating environment 'maf-py'..."
-if ! command -v conda &> /dev/null; then
-	echo "conda not found in PATH. Make sure conda is installed and initialized."
-	exit 1
-fi
-
-# Initialize conda in this shell session
-eval "$(conda shell.bash hook)"
-conda activate maf-py || { echo "Failed to activate maf-py environment"; exit 1; }
-
-echo "Environment activated. Starting agents..."
+echo ""
+echo "Starting agents..."
 echo ""
 
 # List of agent scripts to start
-# Note: ahoy.py is the main LLM-driven agent that reads from input.txt
+# Note: ahoy.py is the main LLM-driven agent configured by CHIPS
 #       Other agents are hardcoded background agents for various protocols:
 #       - Purchase: buyer.py, seller.py, shipper.py
 #       - Logistics: merchant.py, packer.py, labeler.py, wrapper.py
@@ -56,12 +91,11 @@ declare -A AGENT_ROLES=(
 	["agents/wrapper.py"]="Logistics:Wrapper"
 )
 
-# Claimed role file will be set dynamically based on generic agent PID
-# Placeholder - will be set after generic agent starts
-$CLAIMED_ROLE_FILE=""
+# Claimed role file will be set dynamically based on ahoy PID
+CLAIMED_ROLE_FILE=""
 
 # Start ahoy first to determine which role it will claim
-echo "Starting ahoy first to determine claimed role..."
+echo "Starting ahoy (will read config from CHIPS)..."
 GENERIC_AGENT="agents/ahoy.py"
 full_path="$SCRIPT_DIR/$GENERIC_AGENT"
 if [ -f "$full_path" ]; then
@@ -72,7 +106,7 @@ if [ -f "$full_path" ]; then
 	python -u "$full_path" > "$agent_log" 2>&1 &
 	pid=$!
 	
-	# Set the claimed role file path based on generic agent PID
+	# Set the claimed role file path based on ahoy PID
 	CLAIMED_ROLE_FILE="$TMPDIR/maf_claimed_role_${pid}.txt"
 	
 	PIDS+=($pid)
@@ -81,8 +115,8 @@ if [ -f "$full_path" ]; then
 	
 	echo "  → Started with PID $pid (logging to $agent_log)"
 	
-	# Wait for generic agent to write claimed role file (with timeout)
-	echo "Waiting for LLM agent to determine claimed role (max 10 seconds)..."
+	# Wait for ahoy to write claimed role file (with timeout)
+	echo "Waiting for ahoy to claim role (max 10 seconds)..."
 	max_wait=20  # 20 * 0.5 = 10 seconds
 	waited=0
 	while [ ! -f "$CLAIMED_ROLE_FILE" ] && [ $waited -lt $max_wait ]; do
@@ -92,9 +126,9 @@ if [ -f "$full_path" ]; then
 	
 	if [ -f "$CLAIMED_ROLE_FILE" ]; then
 		claimed_role=$(cat "$CLAIMED_ROLE_FILE" | tr -d '\n' | tr -d ' ')
-		echo "✓ LLM agent claimed role: $claimed_role"
+		echo "✓ ahoy claimed role: $claimed_role"
 	else
-		echo "⚠ Warning: LLM agent did not write claimed role file within timeout"
+		echo "⚠ Warning: ahoy did not write claimed role file within timeout"
 	fi
 fi
 

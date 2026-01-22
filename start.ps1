@@ -1,5 +1,6 @@
 # Minimal start script for starting agents in the maf-py environment.
-# - Tries to activate `maf-py` (conda), falls back to common venv locations.
+# - Activates `maf-py` (conda), falls back to common venv locations.
+# - Runs CHIPS interface to configure protocol/role if needed
 # - Starts agent scripts as background jobs and appends all their console
 #   output (stdout+stderr) to a single log file: ./logs/agents.log
 # - Waits for a keypress; then stops jobs and terminates any matching python processes
@@ -24,6 +25,41 @@ try {
 		& (Join-Path $scriptDir ".venv\Scripts\Activate.ps1")
 	} else {
 		Write-Host "No local activation script found. Continuing without explicit activation. Ensure 'maf-py' is active if required."
+	}
+}
+
+# Check if CHIPS config already exists
+$chipsConfigFile = Join-Path $env:TEMP "maf_chips_config.txt"
+$configExists = Test-Path $chipsConfigFile
+
+# Run CHIPS if config doesn't exist or user wants to reconfigure
+if (-not $configExists) {
+	Write-Host ""
+	Write-Host "No CHIPS configuration found. Running CHIPS interface..."
+	Write-Host ""
+	
+	python chips.py
+	
+	if (-not (Test-Path $chipsConfigFile)) {
+		Write-Host "Error: CHIPS configuration not created. Exiting."
+		exit 1
+	}
+} else {
+	Write-Host ""
+	Write-Host "CHIPS configuration found: $chipsConfigFile"
+	$currentConfig = Get-Content -Path $chipsConfigFile
+	Write-Host "Current config: $currentConfig"
+	Write-Host ""
+	
+	$reconfigure = Read-Host "Reconfigure? (yes/no) [default: no]"
+	if ($reconfigure -eq "yes" -or $reconfigure -eq "y") {
+		Write-Host ""
+		python chips.py
+		
+		if (-not (Test-Path $chipsConfigFile)) {
+			Write-Host "Error: CHIPS configuration not created. Exiting."
+			exit 1
+		}
 	}
 }
 
