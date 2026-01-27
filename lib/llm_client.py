@@ -343,7 +343,8 @@ async def choose_and_bind(
     *,
     timeout: float,
     logger_callback=None,
-    agent_name: str = "unknown"
+    agent_name: str = "unknown",
+    multi_protocol_states: Optional[Dict[str, Any]] = None
 ):
     """
     Prompt LLM to choose a message and bind its parameters.
@@ -359,6 +360,7 @@ async def choose_and_bind(
         timeout: LLM call timeout in seconds
         logger_callback: Optional function for logging: logger_callback(message)
         agent_name: Name of the agent making the decision
+        multi_protocol_states: Optional dict of {adapter_key: social_state} for multi-protocol scenarios
 
     Returns:
         Bound Message instance or None if no valid choice made
@@ -378,6 +380,7 @@ async def choose_and_bind(
     # Extract adapter social state
     social_state = extract_social_state(adapter)
     adapter_name_obj = social_state.get('adapter_name', {})
+
     adapter_name = adapter_name_obj.get('name', 'unknown') if isinstance(adapter_name_obj, dict) else str(adapter_name_obj)
     
     log_msg(f"Adapter: {adapter_name}")
@@ -385,7 +388,12 @@ async def choose_and_bind(
     # Initialize system prompt on first call
     if _system_prompt_cache is None:
         log_msg("First call detected - building and caching system prompt...")
-        _system_prompt_cache = build_system_prompt(adapter_name)
+        # For multi-protocol scenarios, include all protocol context
+        if multi_protocol_states and len(multi_protocol_states) > 1:
+            log_msg(f"Multi-protocol scenario with {len(multi_protocol_states)} active roles")
+            _system_prompt_cache = build_system_prompt(list(multi_protocol_states.keys()))
+        else:
+            _system_prompt_cache = build_system_prompt(adapter_name)
         log_msg(f"System prompt cached (length: {len(_system_prompt_cache)})\n")
     else:
         log_msg("Using cached system prompt from previous call\n")
@@ -418,6 +426,13 @@ async def choose_and_bind(
     
     if not social_state.get("all_messages"):
         social_state["all_messages"] = all_messages
+    
+    # For multi-protocol scenarios, add context about other roles
+    if multi_protocol_states and len(multi_protocol_states) > 1:
+        social_state["multi_protocol_context"] = {
+            key: state for key, state in multi_protocol_states.items()
+            if key != adapter_name  # Don't duplicate current adapter info
+        }
 
     # Build user prompt
     user_prompt = build_user_prompt(
@@ -425,6 +440,7 @@ async def choose_and_bind(
         social_state,
         options,
         recent_event=event,
+
         examples=[
             {"choice": None, "params": {}},
             {"choice": 0, "params": {}},

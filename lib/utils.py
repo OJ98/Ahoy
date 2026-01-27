@@ -7,7 +7,7 @@ Provides: message history building, user prompt construction, and adapter shutdo
 import asyncio
 import os
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union, List
 
 
 # ============================================================================
@@ -23,24 +23,33 @@ from typing import Any, Dict, Optional
 # SYSTEM PROMPT BUILDING
 # ============================================================================
 
-def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -> str:
+def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: str = "input.txt") -> str:
     """
-    Build a system prompt for the agent by reading from a text file.
+    Build a system prompt for single or multi-protocol agent scenarios.
     
     Reads user instructions and constraints from a text file to use as the system prompt.
+    Supports both single agent and multiple agents (multi-protocol).
     
     Args:
-        agent_name: Name of the agent (e.g., "Buyer", "Seller")
+        agent_names: Single agent name string, or list of agent names for multi-protocol
         requirements_file: Path to the text file with requirements/constraints (default: "input.txt")
         The file should contain the agent's instructions and constraints.
     
     Returns:
-        System prompt string for the LLM (file contents)
+        System prompt string for the LLM (file contents + context)
     
     Raises:
         FileNotFoundError: If the requirements file cannot be found
     """
     try:
+        # Normalize agent_names to list
+        if isinstance(agent_names, str):
+            agent_names_list = [agent_names]
+            is_multi_protocol = False
+        else:
+            agent_names_list = agent_names if isinstance(agent_names, list) else [str(agent_names)]
+            is_multi_protocol = len(agent_names_list) > 1
+        
         # Try to find the file: first in current directory, then in parent directory
         import sys
         cwd = os.getcwd()
@@ -66,7 +75,12 @@ def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -
             if not enhanced_prompt.strip():
                 raise ValueError(f"Requirements file '{requirements_file}' is empty")
             
-            enhanced_prompt = f"You are a {agent_name} agent.\n\nThe user has communicated the requirements to be as follows: {enhanced_prompt}. The following is an explanation of the environment in which you operate: \n\n"
+            # Build agent introduction
+            if is_multi_protocol:
+                agents_str = ", ".join(agent_names_list)
+                enhanced_prompt = f"You are enacting MULTIPLE roles: {agents_str}.\n\nThe user has communicated the requirements to be as follows: {enhanced_prompt}. The following is an explanation of the environment in which you operate: \n\n"
+            else:
+                enhanced_prompt = f"You are a {agent_names_list[0]} agent.\n\nThe user has communicated the requirements to be as follows: {enhanced_prompt}. The following is an explanation of the environment in which you operate: \n\n"
 
             # BSPL Protocol Explanation Strings
             bspl_highlevel_explanation = """
@@ -75,9 +89,21 @@ def build_system_prompt(agent_name: str, requirements_file: str = "input.txt") -
             - Roles are named agents (e.g., Merchant, Buyer)
             - Messages are directed communication between roles with parameters marked as `out` (sender provides) or `in` (requires prior binding from other messages)
             - Parameters marked `key` identify protocol instances
+            """
+            
+            if is_multi_protocol:
+                bspl_highlevel_explanation += """
+            - You play MULTIPLE roles across different protocols simultaneously
+            - Each role has its own message flow and state
+            - You must carefully coordinate which role acts at each step
+            - Consider protocol dependencies and prioritize appropriately
+            """
+            else:
+                bspl_highlevel_explanation += """
             - You play one role and must track received messages to determine which messages you can legally send next
             - A message can only be sent when all its `in` parameters are bound by prior messages
             - When multiple messages are enabled, choose based on domain reasoning and the protocol's intended flow"""
+            
             enhanced_prompt = enhanced_prompt + bspl_highlevel_explanation
  
             # Option Selection

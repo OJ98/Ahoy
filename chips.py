@@ -8,8 +8,9 @@ then generates input.txt based on the conversation. Uses LLM for inference.
 import asyncio
 import sys
 import tempfile
+import json
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -30,6 +31,7 @@ class CHIPS:
     def __init__(self):
         self.protocol: Optional[str] = None
         self.role: Optional[str] = None
+        self.roles_list: List[Tuple[str, str]] = []  # List of (protocol, role) tuples
         self.conversation: str = ""
         self.llm_client = AnthropicLLMClient()
         self.protocols = get_all_protocols()
@@ -204,10 +206,26 @@ Be concise. Do not explain your reasoning."""
         return protocol, role
     
     def write_config_file(self) -> bool:
-        """Write the protocol:role config to temp file for ahoy to read."""
+        """Write the protocol:role config to temp file for ahoy to read.
+        
+        Supports both single role (backward compatible) and multiple roles.
+        Single role: "Protocol:Role"
+        Multiple roles: JSON format with list of {protocol, role} objects
+        """
         try:
             config_file = Path(tempfile.gettempdir()) / "maf_chips_config.txt"
-            config_file.write_text(f"{self.protocol}:{self.role}")
+            
+            # Use single-role format for backward compatibility if only one role
+            if len(self.roles_list) == 1:
+                protocol, role = self.roles_list[0]
+                config_file.write_text(f"{protocol}:{role}")
+            else:
+                # Use JSON format for multiple roles
+                config_data = {
+                    "roles": [{"protocol": p, "role": r} for p, r in self.roles_list]
+                }
+                config_file.write_text(json.dumps(config_data))
+            
             print(f"✓ Config file written: {config_file}")
             return True
         except Exception as e:
@@ -242,9 +260,13 @@ Be concise. Do not explain your reasoning."""
         
         self.protocol = protocol
         self.role = role
+        self.roles_list = [(protocol, role)]
+        
+        # Ask if user wants to add more roles
+        self.roles_list = await self._ask_for_additional_roles(self.roles_list)
         
         # Confirm selection
-        while not self.confirm_selection(self.protocol, self.role):
+        while not self._confirm_all_selections():
             print("\nLet's try a different scenario.\n")
             self.conversation = self.gather_scenario()
             protocol, role = await self.infer_protocol_and_role(self.conversation)
@@ -254,6 +276,8 @@ Be concise. Do not explain your reasoning."""
             
             self.protocol = protocol
             self.role = role
+            self.roles_list = [(protocol, role)]
+            self.roles_list = await self._ask_for_additional_roles(self.roles_list)
         
         # Write files
         print(f"\n{'='*70}")
@@ -267,7 +291,8 @@ Be concise. Do not explain your reasoning."""
             print(f"\n{'='*70}")
             print("✅ Setup complete!")
             print(f"{'='*70}")
-            print(f"\nConfiguration saved for {self.protocol}:{self.role}")
+            roles_str = ", ".join([f"{p}:{r}" for p, r in self.roles_list])
+            print(f"\nConfiguration saved for: {roles_str}")
             print(f"  - Protocol/Role: {Path(tempfile.gettempdir()) / 'maf_chips_config.txt'}")
             print(f"  - Scenario: {PROJECT_ROOT / 'input.txt'}")
             print("\nYou can now run: ./start.ps1 (or ./start.sh on Unix)")
@@ -275,6 +300,48 @@ Be concise. Do not explain your reasoning."""
         else:
             print("\n❌ Setup failed. Some files could not be written.")
             sys.exit(1)
+    
+    async def _ask_for_additional_roles(self, roles_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
+        """Ask user if they want to add more roles for multi-protocol support."""
+        print(f"\n{'='*70}")
+        print("Multi-Protocol Support")
+        print(f"{'='*70}")
+        print(f"\nCurrent roles: {', '.join([f'{p}:{r}' for p, r in roles_list])}")
+        
+        while True:
+            response = input("\nWould you like to add another protocol/role? (yes/no): ").strip().lower()
+            if response in ('no', 'n'):
+                break
+            elif response in ('yes', 'y'):
+                protocol, role = self.show_protocol_options()
+                if (protocol, role) not in roles_list:
+                    roles_list.append((protocol, role))
+                    print(f"✓ Added {protocol}:{role}")
+                    print(f"  Current roles: {', '.join([f'{p}:{r}' for p, r in roles_list])}")
+                else:
+                    print(f"⚠ {protocol}:{role} already in list")
+            else:
+                print("Please enter 'yes' or 'no'.")
+        
+        return roles_list
+    
+    def _confirm_all_selections(self) -> bool:
+        """Confirm all selected roles."""
+        print(f"\n{'='*70}")
+        print("Configuration Summary")
+        print(f"{'='*70}")
+        for i, (protocol, role) in enumerate(self.roles_list, 1):
+            print(f"{i}. {protocol}:{role}")
+        print(f"\nScenario:\n{self.conversation}\n")
+        
+        while True:
+            response = input("Is this correct? (yes/no): ").strip().lower()
+            if response in ('yes', 'y'):
+                return True
+            elif response in ('no', 'n'):
+                return False
+            else:
+                print("Please enter 'yes' or 'no'.")
 
 
 if __name__ == "__main__":

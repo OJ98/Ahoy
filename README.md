@@ -705,7 +705,28 @@ See [LICENSE](LICENSE) file for details.
    $env:ANTHROPIC_API_KEY = "your-key-here"
    ```
 
-3. **Prepare input file** (`input.txt`):
+3. **Configure Protocols and Roles** (New: Multi-Protocol Support)
+   
+   You can now run AHOY as a single role OR as multiple roles simultaneously:
+   
+   ```bash
+   python chips.py
+   ```
+   
+   This launches **CHIPS** (Conversational Interface for Protocol and Input Setup):
+   - Prompts you to describe your scenario
+   - Uses LLM to infer protocol and role(s)
+   - Offers to add additional protocols/roles for multi-protocol scenarios
+   - Generates configuration file automatically
+   
+   Example: Multi-Protocol Setup
+   ```
+   Scenario: "I need to buy a pen and also wrap some packages"
+   → LLM infers: Purchase:Buyer + Logistics:Wrapper
+   → AHOY enacts both roles simultaneously
+   ```
+
+4. **Prepare input file** (`input.txt`):
    
    For **Purchase Protocol**:
    ```
@@ -724,28 +745,55 @@ See [LICENSE](LICENSE) file for details.
 
 ### Running the System
 
-**Option 1: PowerShell Script (Recommended)**
-```powershell
+#### Method 1: Interactive Setup with CHIPS (Recommended)
+
+```bash
+python chips.py
+```
+
+The CHIPS interface will:
+1. Prompt you to describe your scenario
+2. Use LLM to infer protocol(s) and role(s)
+3. Offer to add additional roles for **multi-protocol scenarios** ✨
+4. Generate configuration file automatically
+
+Then run AHOY:
+```bash
+./start.ps1  # Windows
+./start.sh   # Linux/macOS
+```
+
+**Example: Multi-Protocol Scenario**
+```
+Scenario: "I'm a buyer who needs to purchase items AND wrap them for delivery"
+  → LLM infers: Purchase:Buyer
+  → Add another role? Yes → Logistics:Wrapper
+  → AHOY enacts both roles simultaneously
+  → LLM coordinates decisions across both protocols
+```
+
+#### Method 2: Direct Configuration
+
+If you prefer to skip CHIPS:
+
+```bash
 ./start.ps1
 ```
 
 This will:
-1. Start the generic LLM agent with your input.txt
-2. LLM analyzes available protocols and determines which one matches your goal
-3. LLM selects protocol and role, agent writes claimed role to temp file
-4. Start script reads claimed role and launches other agents (skipping claimed role)
-5. All agents participate in the selected protocol
-6. When transaction completes, agent writes stop signal to temp directory
-7. All agents gracefully shut down
+1. Read protocol/role configuration from `maf_chips_config.txt`
+2. Launch AHOY with selected role(s) - single or multiple
+3. LLM coordinates decisions across all active roles
+4. When all roles complete, agents gracefully shut down
 
-**Option 2: Manual Terminal Execution**
+#### Method 3: Manual Terminal Execution
 
-Terminal 1 - Generic LLM Agent (determines protocol/role):
+Terminal 1 - AHOY:
 ```bash
-python agents/generic_llm_agent.py
+python agents/ahoy.py
 ```
 
-Terminal 2+ - Other protocol agents (based on what LLM selected):
+Terminal 2+ - Other agents (as needed):
 ```bash
 # For Purchase Protocol:
 python agents/seller.py
@@ -758,32 +806,79 @@ python agents/labeler.py
 python agents/packer.py
 ```
 
+**Note:** AHOY automatically avoids duplicate role launches via temp file coordination.
+
 ### User Interaction
 
-The system reads requirements from `input.txt`. The LLM will automatically determine which protocol to use based on your description. Include:
+#### Single Protocol Mode (Original)
 
-1. **Clear description of what you want to accomplish:**
-   - Purchase example: "I need to buy a pen for less than $20"
-   - Logistics example: "Wrap and label 3 packages for delivery"
-   - The LLM will understand your intent and select the right protocol
+The system reads requirements from `input.txt`:
 
-2. **Request IDs** (required format for protocol state tracking):
-   - Purchase: `RFQ-2026-001`, `RFQ-2026-002` (for quote requests)
-   - Logistics: `ORD-001`, `ORD-002` (for orders)
+1. **Clear description:**
+   - "I need to buy a pen for less than $20"
+   - "Wrap and label 3 packages for delivery"
+
+2. **Request IDs:**
+   - Purchase: `RFQ-2026-001`, `RFQ-2026-002`
+   - Logistics: `ORD-001`, `ORD-002`
 
 3. **Specific requirements:**
-   - Budget constraints
-   - Delivery locations
-   - Item descriptions
-   - Timeline constraints
+   - Budget constraints, delivery locations
+   - Item descriptions, timeline constraints
 
-The generic agent will automatically:
-1. Parse the input file
-2. Detect the protocol based on keywords
-3. Infer the appropriate role to play
-4. Participate in protocol conversations
-5. Make intelligent decisions using Claude LLM
-6. Signal completion and shutdown all agents
+#### Multi-Protocol Mode (New) ✨
+
+AHOY can now enact multiple roles across different protocols simultaneously:
+
+1. **Use CHIPS to configure:**
+   ```bash
+   python chips.py
+   ```
+   - Describe goal: "I need to buy items AND wrap packages"
+   - LLM infers: Purchase:Buyer and Logistics:Wrapper
+   - CHIPS offers to add more roles
+   - Configuration saved automatically
+
+2. **AHOY will:**
+   - Create separate adapters for each role
+   - Gather state from all active adapters
+   - Use LLM to decide which role acts next
+   - Consider protocol dependencies when making decisions
+   - Coordinate completion across all roles
+
+**Example Multi-Protocol Execution:**
+```
+AHOY enacting: Purchase:Buyer + Logistics:Wrapper
+
+[Buyer] Receives quote from Seller → waits for good price
+[Wrapper] Receives wrap request → packages items
+[Buyer] Quote is good → sends accept to Seller
+[Wrapper] Finishes wrapping → signals completion
+[Buyer] Receives goods → completes transaction
+
+All roles complete → AHOY signals shutdown
+```
+
+### Configuration Format
+
+AHOY supports two configuration formats:
+
+**Single Role (Backward Compatible):**
+```
+Purchase:Buyer
+```
+
+**Multiple Roles (New):**
+```json
+{
+  "roles": [
+    {"protocol": "Purchase", "role": "Buyer"},
+    {"protocol": "Logistics", "role": "Wrapper"}
+  ]
+}
+```
+
+AHOY automatically detects which format and adapts accordingly.
 
 ### Monitoring Execution
 
@@ -828,9 +923,9 @@ AGENTS = {
 }
 ```
 
-**LLM Configuration:** Set in `agents/generic_llm_agent.py`
+**LLM Configuration:** Set in `agents/ahoy.py`
 ```python
-llm_client = AnthropicLLMClient(model="claude-3-5-sonnet-20241022")
+llm_client = AnthropicLLMClient(model="claude-haiku-4-5-20251001")
 ```
 
 **Thresholds:** Configure in `lib/llm_client.py`
@@ -841,21 +936,11 @@ initialize_llm_tracker(
 )
 ```
 
-### Understanding Protocol Selection
+### Understanding Protocol Selection and Multi-Protocol Coordination
 
-The generic agent uses Claude LLM to intelligently determine which protocol and role to use:
+AHOY uses Claude LLM to intelligently determine which protocol(s) and role(s) to use, and coordinates decisions across multiple protocols:
 
-**Initialization Call:**
-The LLM receives:
-1. A list of all available protocols with their roles
-2. A description of each protocol's purpose
-3. The user's goal from `input.txt`
-
-The LLM then responds with:
-```
-PROTOCOL: <ProtocolName>
-ROLE: <RoleName>
-```
+#### Single Protocol Mode
 
 **Example 1: Purchase Protocol**
 ```
@@ -873,11 +958,59 @@ LLM response: PROTOCOL: Logistics
               ROLE: Wrapper
 ```
 
-**Benefits of LLM-Based Selection:**
-- **Natural Language:** User can describe goals in any way
+#### Multi-Protocol Mode (New) ✨
+
+**Interactive Configuration with CHIPS:**
+
+```
+Describe your scenario: "I need to buy a pen and wrap packages"
+↓
+LLM infers: Purchase:Buyer
+↓
+Would you like to add another role? (yes/no)
+↓
+Select additional protocol/role: Logistics:Wrapper
+↓
+Configuration: [Purchase:Buyer, Logistics:Wrapper]
+↓
+AHOY launches with both roles active
+```
+
+**LLM Coordination Across Protocols:**
+
+When AHOY enacts multiple roles, the LLM:
+
+1. **Gathers State:** Extracts social state from all active adapters
+2. **Sees All Options:** Reviews enabled messages from all roles
+3. **Makes Coordinated Decisions:** Chooses which role acts next based on:
+   - Protocol constraints and dependencies
+   - Message availability in each role
+   - Overall transaction progress
+4. **Handles Completion:** Checks if all roles have completed before shutdown
+
+**Decision Example:**
+```
+Current State:
+  Buyer: Can send [SubmitRFQ, AcceptQuote]
+  Wrapper: Can send [SubmitWrap, CompleteWrap]
+
+LLM reasoning:
+  "Buyer's RFQ should be submitted first to get quote"
+  → Buyer submits RFQ
+  
+  Later...
+  "Both Buyer (accept quote) and Wrapper (wrap items) can proceed independently"
+  → Consult ordering priorities and constraints
+  → Execute next high-priority action
+```
+
+**Benefits of LLM-Based Selection and Coordination:**
+- **Natural Language:** Describe goals in any way
 - **Intelligent:** LLM understands context and intent
-- **Extensible:** Add new protocols without changing selection code
-- **Efficient:** Single 100-token API call at startup
+- **Multi-Protocol:** Support simultaneous roles across protocols ✨
+- **Coordinated:** LLM reasons about dependencies and ordering ✨
+- **Extensible:** Add new protocols without code changes
+- **Efficient:** Minimal LLM calls (caches prompts)
 - **Flexible:** Works with complex, multi-step descriptions
 
 ## Project Structure
@@ -885,7 +1018,7 @@ LLM response: PROTOCOL: Logistics
 ```
 MAF/
 ├── agents/
-│   ├── generic_llm_agent.py         # Protocol-agnostic LLM agent
+│   ├── ahoy.py                      # Generic protocol-agnostic LLM agent (NEW: multi-protocol support ✨)
 │   ├── buyer.py                     # Buyer agent (Purchase protocol)
 │   ├── seller.py                    # Seller agent (Purchase protocol)
 │   ├── shipper.py                   # Shipper agent (Purchase protocol)
@@ -894,6 +1027,7 @@ MAF/
 │   ├── labeler.py                   # Labeler agent (Logistics protocol)
 │   └── packer.py                    # Packer agent (Logistics protocol)
 │
+├── chips.py                         # Conversational Interface for Protocol & Role Setup (NEW ✨)
 ├── configuration.py                 # Agent endpoints & protocol loading
 │
 ├── protocols/
