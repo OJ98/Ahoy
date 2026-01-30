@@ -1,0 +1,209 @@
+@ARTICLE{interaction-protocols,
+  author={Desai, N. and Mallya, A.U. and Chopra, A.K. and Singh, M.P.},
+  journal={IEEE Transactions on Software Engineering}, 
+  title={Interaction protocols as design abstractions for business processes}, 
+  year={2005},
+  volume={31},
+  number={12},
+  pages={1015-1027},
+  keywords={Protocols;Skeleton;OWL;Concrete;Process design;Software systems;Software design;Multiagent systems;Mirrors;Business communication;Index Terms- Multiagent systems;software reuse;interaction-based modeling;software design methodologies;rule-based processing;\pi-calculus.},
+  doi={10.1109/TSE.2005.140}}
+
+@inproceedings{singh2011information,
+  title={Information-driven interaction-oriented programming: BSPL, the blindingly simple protocol language},
+  author={Singh, Munindar P},
+  publisher={The 10th International Conference on Autonomous Agents and Multiagent Systems},
+  pages={491--498},
+  year={2011},
+  address = {Taipei, Taiwan},
+  booktitle = {The Proceedings of the 10th International Conference on Autonomous Agents and Multiagent Systems-Volume 2}
+}
+
+@inproceedings{semantics-information-protocol-verification,
+author = {Singh, Munindar P.},
+title = {Semantics and verification of information-based protocols},
+year = {2012},
+isbn = {0981738125},
+publisher = {International Foundation for Autonomous Agents and Multiagent Systems},
+address = {Richland, SC},
+abstract = {Information-Based Interaction-Oriented Programming, specifically as epitomized by the Blindingly Simple Protocol Language (BSPL), is a promising new approach for declaratively expressing multiagent protocols. BSPL eschews traditional control flow operators and instead emphasizes causality and integrity based solely on the information models of the messages exchanged. BSPL has been shown to support a rich variety of practical protocols and can be realized in a distributed asynchronous architecture wherein the agents participating in a protocol act based on local knowledge alone. The flexibility and generality of BSPL mean that it needs a strong formal semantics to ensure correctness as well as automated tools to help develop protocol specifications.We provide a formal semantics for BSPL and formulate important technical properties, namely, enactability, safety, and liveness. We further describe our declarative implementation of the BSPL semantics as well as of verifiers for the above properties using a temporal reasoner. We have validated our implementation by verifying the correctness of several protocols of practical interest.},
+booktitle = {Proceedings of the 11th International Conference on Autonomous Agents and Multiagent Systems - Volume 2},
+pages = {1149–1156},
+numpages = {8},
+keywords = {business protocols, agent communication},
+location = {Valencia, Spain},
+series = {AAMAS '12}
+}
+
+@inproceedings{protocol-specification,
+author = {Yolum, Pinar and Singh, Munindar P.},
+title = {Flexible protocol specification and execution: applying event calculus planning using commitments},
+year = {2002},
+isbn = {1581134800},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/544862.544867},
+doi = {10.1145/544862.544867},
+abstract = {Protocols represent the allowed interactions among communicating agents. Protocols are essential in applications such as electronic commerce where it is necessary to constrain the behaviors of autonomous agents. Traditional approaches, which model protocols in terms of action sequences, limit the flexibility of the agents in executing the protocols. By contrast, we develop an approach for specifying protocols in which we capture the content of the actions through agents' commitments to one another. We formalize commitments in a variant of the event calculus. We provide operations and reasoning rules to capture the evolution of commitments through the agents' actions. Using these rules in addition to the basic event calculus axioms enables agents to reason about their actions explicitly to flexibly accommodate the exceptions and opportunities that arise at run time. This reasoning is implemented using an event calculus planner that helps us determine flexible execution paths that respect the protocol specifications.},
+booktitle = {Proceedings of the First International Joint Conference on Autonomous Agents and Multiagent Systems: Part 2},
+pages = {527–534},
+numpages = {8},
+keywords = {agent communication languages and protocols, commitments, methodologies and tools},
+location = {Bologna, Italy},
+series = {AAMAS '02}
+}
+
+@book{intro-MAS,
+    author = {Wooldridge, Michael},
+    title = {An Introduction to Multiagent Systems},
+    publisher = {John Wiley \& Sons},
+    year = {2002},
+    address = {United Kingdom}
+}
+
+@article{argus-BDI,
+title = {Argus: Programming with communication protocols in a belief-desire-intention architecture},
+journal = {Artificial Intelligence},
+volume = {348},
+pages = {104398},
+year = {2025},
+issn = {0004-3702},
+doi = {https://doi.org/10.1016/j.artint.2025.104398},
+url = {https://www.sciencedirect.com/science/article/pii/S0004370225001171},
+author = {Samuel H. Christie and Munindar P. Singh and Amit K. Chopra},
+abstract = {Protocols model multiagent systems (MAS) by capturing the communications between its agents. Belief-Desire-Intention (BDI) architectures provide an attractive way for organizing an agent in terms of cognitive concepts. Current BDI approaches, however, lack adequate support for engineering protocol-based agents. We describe Argus, an approach that melds recent advances in flexible, declarative communication protocols with BDI architectures. For concreteness, we adopt Jason as an exemplar of the BDI paradigm and show how to support protocol-based reasoning in it. Specifically, Argus contributes(1)a novel architecture and formal operational semantics combining protocols and BDI;(2)a code generation-based programming model that guides the implementation of agents; and(3)integrity checking for incoming and outgoing messages that help ensure that the agents are well-behaved. The Argus conceptual architecture builds quite naturally on top of Jason. Thus, Argus enables building more flexible multiagent systems while using a BDI architecture than is currently possible.}
+}
+
+@inproceedings{azorus-BDI,
+author = {Chopra, Amit K. and Baldoni, Matteo and Christie, Samuel H. and Singh, Munindar P.},
+title = {Azorus: Commitments over Protocols for BDI Agents},
+year = {2025},
+isbn = {9798400714269},
+publisher = {International Foundation for Autonomous Agents and Multiagent Systems},
+address = {Richland, SC},
+abstract = {Commitments support flexible interactions between agents by capturing the meaning of their interactions. However, commitment-based reasoning is not adequately supported in agent programming models. We contribute Azorus, a programming model based on declarative specifications centered on commitments and aligned with information protocols. Azorus supports reasoning about goals and commitments and combines modeling of commitments and protocols, thereby uniting three leading declarative approaches to engineering decentralized multiagent systems. Specifically, we realize Azorus over three existing technology suites: (1) Jason, a popular BDI-based programming model; (2) Cupid, a formal language and query-based model for commitments; and (3) BSPL, a language and its associated tools for information protocols, including Jason programming. We implement Azorus and demonstrate how it enables capturing interesting patterns of business logic.},
+booktitle = {Proceedings of the 24th International Conference on Autonomous Agents and Multiagent Systems},
+pages = {490–499},
+numpages = {10},
+keywords = {agent programming, asynchrony, causality, meaning},
+location = {Detroit, MI, USA},
+series = {AAMAS '25}
+}
+
+@inproceedings{langshaw,
+  title     = {Langshaw: Declarative Interaction Protocols Based on Sayso and Conflict},
+  author    = {Singh, Munindar P. and Christie V., Samuel H. and Chopra, Amit K.},
+  booktitle = {Proceedings of the Thirty-Third International Joint Conference on
+               Artificial Intelligence, {IJCAI-24}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},
+  editor    = {Kate Larson},
+  pages     = {202--210},
+  year      = {2024},
+  month     = {8},
+  note      = {Main Track},
+  doi       = {10.24963/ijcai.2024/23},
+  url       = {https://doi.org/10.24963/ijcai.2024/23},
+  address   = {Jeju, South Korea}
+}
+
+
+@inproceedings{kiko,
+author = {Christie, Samuel H. and Singh, Munindar P. and Chopra, Amit K.},
+title = {Kiko: Programming Agents to Enact Interaction Models},
+year = {2023},
+isbn = {9781450394321},
+publisher = {International Foundation for Autonomous Agents and Multiagent Systems},
+address = {Richland, SC},
+abstract = {Realizing a multiagent system involves implementing member agents who interact based on a protocol while making decisions in a decentralized manner. Current programming models for agents offer poor abstractions for decision making and fail to adequately bridge an agent's internal decision logic with its public decisions.We present Kiko, a protocol-based programming model for agents. To implement an agent, a programmer writes one or more decision makers, each of which chooses from among a set of valid decisions and makes mutually compatible decisions on what messages to send. By completely abstracting away the underlying communication service and by supporting practical decision-making patterns, Kiko enables agent developers to focus on business logic. We provide an operational semantics for Kiko and establish that Kiko agents are protocol compliant and able to realize any protocol enactment.},
+booktitle = {Proceedings of the 2023 International Conference on Autonomous Agents and Multiagent Systems},
+pages = {1154–1163},
+numpages = {10},
+keywords = {asynchrony, causality, decentralization, decision making, multiagent systems, programming model},
+location = {London, United Kingdom},
+series = {AAMAS '23}
+}
+
+@inproceedings{commitment-protocol-verification,
+author = {Baldoni, Matteo and Baroglio, Cristina and Chopra, Amit K. and Singh, Munindar P.},
+title = {Composing and verifying commitment-based multiagent protocols},
+year = {2015},
+isbn = {9781577357384},
+publisher = {AAAI Press},
+abstract = {We consider the design and enactment of multi-agent protocols that describe collaboration using "normative" or "social" abstractions, specifically, commitments. A (multiagent) protocol defines the relevant social states and how they progress; each participant maintains a local projection of these states and acts accordingly. Protocols expose two important challenges: (1) how to compose them in a way that respects commitments and (2) how to verify the compliance of the parties with the social states. Individually, these challenges are inadequately studied and together not at all.We motivate the notion of a social context to capture how a protocol may be enacted. A protocol can be verifiably enacted when its participants can determine each other's compliance. We first show the negative result that even when protocols can be verifiably enacted in respective social contexts, their composition cannot be verifiably enacted in the composition of those social contexts. We next show how to expand such a protocol so that it can be verifiably enacted. Our approach involves design rules to specify composite protocols so they would be verifiably enactable. Our approach demonstrates a use of dialectical commitments, which have previously been overlooked in the protocols literature.},
+booktitle = {Proceedings of the 24th International Conference on Artificial Intelligence},
+pages = {10–17},
+numpages = {8},
+address = {Buenos Aires, Argentina},
+series = {IJCAI'15}
+}
+
+@inproceedings{tango,
+  title     = {Tango: Declarative Semantics for Multiagent Communication Protocols},
+  author    = {Singh, Munindar P. and Christie V., Samuel H.},
+  booktitle = {Proceedings of the Thirtieth International Joint Conference on
+               Artificial Intelligence, {IJCAI-21}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},
+  editor    = {Zhi-Hua Zhou},
+  pages     = {391--397},
+  year      = {2021},
+  month     = {8},
+  note      = {Main Track},
+  doi       = {10.24963/ijcai.2021/55},
+  url       = {https://doi.org/10.24963/ijcai.2021/55},
+  address   = {Montreal, Canada}
+}
+
+@INPROCEEDINGS{FIPA,
+  author={Suguri, H.},
+  booktitle={Proceedings of the 32nd Annual Hawaii International Conference on Systems Sciences. 1999. HICSS-32. Abstracts and CD-ROM of Full Papers}, 
+  title={A standardization effort for agent technologies: The Foundation for Intelligent Physical Agents and its activities}, 
+  year={1999},
+  volume={Track8},
+  number={},
+  pages={10 pp.-},
+  keywords={Standardization;Intelligent agent;Communication standards;Standards development;Databases;Application software;Technology management;Buildings;Logic;Personal digital assistants},
+  doi={10.1109/HICSS.1999.773093}}
+
+@inproceedings{dialogue-protocols,
+author = {McBurney, Peter and Parsons, Simon},
+year = {2003},
+month = {08},
+pages = {269-283},
+title = {Dialogue Game Protocols},
+publisher = {Springer Nature},
+volume = {2650},
+isbn = {978-3-540-40385-2},
+booktitle = {Lecture Notes in Artificial Intelligence (Subseries of Lecture Notes in Computer Science)},
+doi = {10.1007/978-3-540-44972-0_15},
+address={Lincoln, UK}
+}
+
+@ARTICLE{contract-net,
+  author={Smith},
+  journal={IEEE Transactions on Computers}, 
+  title={The Contract Net Protocol: High-Level Communication and Control in a Distributed Problem Solver}, 
+  year={1980},
+  volume={C-29},
+  number={12},
+  pages={1104-1113},
+  keywords={Contracts;Protocols;Resource management;Problem-solving;Sensors;Feature extraction;Computers;Binary sequences;Process control;Hands;Artificial Intelligence (AI);connection;cooperation;distributed problem solving;focus;high-level protocols;negotiation;resource allocation;task-sharing},
+  doi={10.1109/TC.1980.1675516}}
+
+@inproceedings{arganalysis,
+    title = "{A}rg{A}nalysis35{K} : A large-scale dataset for Argument Quality Analysis",
+    author = "Joshi, Omkar  and
+      Pitre, Priya  and
+      Haribhakta, Yashodhara",
+    editor = "Rogers, Anna  and
+      Boyd-Graber, Jordan  and
+      Okazaki, Naoaki",
+    booktitle = "Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+    month = jul,
+    year = "2023",
+    address = "Toronto, Canada",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.acl-long.778/",
+    doi = "10.18653/v1/2023.acl-long.778",
+    pages = "13916--13931",
+    abstract = "Argument Quality Detection is an emerging field in NLP which has seen significant recent development. However, existing datasets in this field suffer from a lack of quality, quantity and diversity of topics and arguments, specifically the presence of vague arguments that are not persuasive in nature. In this paper, we leverage a combined experience of 10+ years of Parliamentary Debating to create a dataset that covers significantly more topics and has a wide range of sources to capture more diversity of opinion. With 34,890 high-quality argument-analysis pairs (a term we introduce in this paper), this is also the largest dataset of its kind to our knowledge. In addition to this contribution, we introduce an innovative argument scoring system based on instance-level annotator reliability and propose a quantitative model of scoring the relevance of arguments to a range of topics."
+}

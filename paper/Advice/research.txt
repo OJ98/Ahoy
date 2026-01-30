@@ -1,0 +1,677 @@
+
+<!---*-buffer-read-only: t;-*--->
+
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head><title>Advice for Research</title></head>
+
+<body>
+
+<!-- begin top link bar-->
+<p align="center">
+<b>
+[
+<a href="http://www.csc.ncsu.edu/faculty/mpsingh/">
+Home</a>
+ | 
+<a href="http://research.csc.ncsu.edu/mas/">
+Lab</a>
+ |
+<a href="http://www.csc.ncsu.edu/faculty/mpsingh/local/student+RA-info.html">
+New Students</a>
+ | 
+Courses
+ | 
+<a href="http://research.csc.ncsu.edu/mas/interests.html">
+Research</a>
+ | 
+<a href="http://www.csc.ncsu.edu/faculty/mpsingh/papers/">
+Publications</a>
+ | 
+<a href="http://www.csc.ncsu.edu/faculty/mpsingh/activities/">
+Activities</a>
+ ]
+</b>
+</p>
+<hr/>
+<!-- end top link bar-->
+
+<div align="center">
+<h2>Research Advice</h2>
+<h5>Munindar P. Singh</h5>
+</div>
+
+<p><i> Things may come to those who wait, but only the things left by those
+who hustle.</i>
+<br/>&mdash;Abraham Lincoln (often attributed to him)</p><br/>
+
+<p> This page is quite incomplete, especially the parts at the top.
+    Please bring up your comments and concerns when we meet and I will
+    try to improve it gradually.</p>
+
+<p> This page is meant for my students.  It enumerates several points
+    that I noticed I repeat for many of my students as I attempt to
+    guide them down a path of research.  These are mostly simple
+    things, obvious in retrospect, but worth paying attention to.</p>
+
+<p> PhD students are the primary targets of this advice, although much
+    of it applies to MS students as well.  I am of the view that
+    research has not been conducted until it has been written up,
+    hence the emphasis on papers in the first part of this
+    document.</p>
+
+<center><h3>Types of Papers</h3></center>
+
+<p> From the point of view of getting to graduation quickly, we are
+    interested primarily in research papers.  There are no good
+    research papers that don't introduce useful concepts, make a
+    technical contribution, and evaluate it.  But there are several
+    variations as to what contributions and evaluations are
+    acceptable.</p>
+
+<ol>
+
+<li> Theoretical, where the main theme is in refining the
+     formal concepts that underlie the domain of interest in which the
+     target problem occurs.  The contribution is the nature of formal
+     results.  The evaluation is in showing that the results obtained
+     correspond to important properties of the domain.  </li>
+
+<li> Systems, where the main theme is in showing how a certain family
+     of systems can be built.  The technical contribution lies in the
+     principles underlying the design and analysis of the targeted
+     systems.  The fact that you built a system is rarely adequate.
+     It is the science underneath the hard-work that matters most.</li>
+
+<li> Experimental, where the main theme is in studying a class of
+     phenomena through experimentation.  The experiments should be
+     controlled.  Frequently they will be based on simulations,
+     although they can be based on running traces of the executions of
+     physical systems where appropriate.  </li>
+
+</ol>
+
+<center><h3>The Story</h3></center>
+
+<p> Every paper tells a story, or should.  Think of what story your
+    paper will tell.  The top-level story should sound familiar to
+    most people.  A good story will include subplots.  It is in these
+    subplots where more and more of your creativity and contributions
+    take shape.</p>
+
+<center><h3>The Structure of a Paper</h3></center>
+
+<p> Here is a simplified outline for a research paper.  This is the
+    way to tell a scientific story.  In this sense, even an MS thesis
+    or PhD dissertation should exhibit a similar structure.  Every
+    paper will be different and almost every paper will deviate from
+    this outline, but the points below can help you get organized.</p>
+
+<ol>
+
+<li> Introduction
+
+<ul>
+
+<li> Motivation: the problem, why it is a problem, and why it is an
+     important problem.</li>
+
+<li> If possible, a short historical perspective.  Short is the
+     keyword here.</li> 
+
+<li> Introduction to the approach and its promise and adequacy
+     (informally).  This is where your story begins to take root.</li>
+
+<li> Technical challenges we must overcome to make the approach a
+     reality.</li>
+
+<li> Contribution: research questions addressed.</li>
+
+<li> How the contribution will be (or has been) evaluated: could
+     involve establishing key theoretical results or simulations or
+     measurements from practical deployments (hard).</li>
+
+<li> Results: a crisp statement of your takeaways.</li>
+
+</ul></li>
+
+<li> Approach
+
+<ul>
+
+<li> Conceptual and technical framework.</li>
+
+<li> Key concepts and terminology.</li>
+
+<li> Formal definitions, if any.</li>
+
+</ul></li>
+
+<li> Implementation.  The purpose of computing research is not so much
+     to build a system that works or works well as to understand how
+     and why it works (well) or fails to work (well).  If your
+     implementation has any nontrivial features and especially if the
+     implementation bears some effect on your results or your
+     evaluation, you include sufficient details that a person "skilled
+     in the art" (using the term as the US Patent and Trademark Office
+     uses it) would be able to reproduce your implementation, and thus
+     to verify your results that depend upon the implementation.  So
+     be clear about how exactly it was carried out and how it may be
+     replicated.</li>
+
+<li> Results.</li>
+
+
+<li> Evaluation.  The purpose of the evaluation is to show how we may
+     place credence in your claimed results?  You don't need to build
+     a complete working system for it to be useful for your
+     research.</li>
+
+<li> In some cases, it helps to evaluate the performance of your
+     system experimentally, especially with regard to its prospective
+     scalability.  Here's a simple pattern for doing so:
+<ul>
+
+<li> Identify what you mean by scale: number of users, number of artifacts,
+     number of states, number of strategies, number of attributes, or
+     whatever else.</li>
+
+<li> Identify a reasonable measure of effort: wall-clock time taken for a
+     decision, number of messages generated, or whatever else.</li>
+
+<li> Relate the target measure of performance with the measure of
+     scale.  To do so, you would fix some of the variables and
+     evaluate performance along some of the dimensions. </li>
+
+</ul></li>
+
+<li> Relevant literature: should be classified into the main areas of
+     relevance.  Don't just say what other people do; relate it to
+     your contribution.  </li>
+
+<li> Discussion 
+
+<ul>
+
+<li> What your study and its evaluation didn't address</li>
+
+<li> Directions of special interest, list a few but don't list too
+     many</li>
+
+</ul></li>
+
+</ol>
+
+<center><h3>Strategy for a Paper</h3></center>
+
+<ol>
+
+<li> Know what you are trying to convey.</li>
+
+<li> Know your audience.</li>
+
+<li> Convey your story with as few distractions as possible to your
+     intended audience.</li>
+
+<li> Choose your battles.
+
+<ul>
+
+<li> Don't open up too many kinds of claims in the same paper,
+     especially too many claims that your audience will not readily
+     understand.</li>
+
+<li> Don't make unnecessary remarks in passing.  Readers often find
+     such remarks manipulative and resist them.  You want the reader
+     coming along with you for the main point of the paper.</li>
+
+</ul></li>
+
+<li> Don't include your solutions in your problem; don't include your
+     answers in your questions.  It makes your work sound contrived.
+     At best, this suggests that you haven't thought your problems or
+     questions through.  At worst, it suggests that you are
+     manipulating your reader into accepting your problem and question
+     statements because you already know the solutions you are going
+     to find.</li>
+
+</ol>
+
+<center><h3>Getting Started</h3></center>
+
+<ol>
+
+<li> Participate in regular group meetings.  Join our discussion group
+     and see the postings therein.  [Aside: would someone please
+     volunteer to set up and maintain a discussion group for our
+     group?]</li>
+
+<li> Talk to other students regularly, especially your seniors working
+     on a topic in an area that appeals to you.</li>
+
+<li> Start thinking early about your dissertation work.  It takes a long
+     time to become sufficiently familiar with everything you will
+     need to know for a dissertation topic.</li>
+
+<li> Begin reading the huge literature and standards pertaining to our
+     broad area of interest (e.g., Web services).  There are good
+     links from recent work in the lab (papers and presentations).
+     This will easily take several weeks.</li>
+
+<li> But don't just read the literature.  Try to relate your own ideas
+     to it.  Research is an interactive process&mdash;between you and
+     the rest of the research community.  Ultimately, your goal is to
+     persuade your community (part of the challenge is selecting the
+     right community) that you identified an interesting problem and
+     solved it in a novel manner.</li>
+
+<li> Think about additional courses that you will need to complete
+     your skill-set&mdash;a relatively easy task but best done well in
+     advance because all the right courses aren't available when you
+     need them.</li>
+
+</ol>
+
+<center><h3>Choosing a Topic</h3></center>
+
+<ol>
+
+<li> Your initial interest may be along the lines of an application
+     area.  However, application areas don't directly and easily lead
+     to the kind of academic research you need to perform in order to
+     obtain a PhD.  In particular, if your emphasis is exclusively on
+     an application, you might end up with a substantial
+     implementation effort and with the resulting challenges of
+     evaluating your implemented artifact.  Yet, it is clear that you
+     must have some applications in mind when you perform your
+     research.  Further, some applications can yield special
+     properties that make a given approach feasible and desirable.
+     For this reason, while you might think in terms of your
+     application area and develop some intimacy with the chosen
+     application, you should attempt to abstract out the technology
+     area underlying the application.  Your dissertation topic will be
+     cast in terms of the technology area, but motivated in terms of
+     the application.</li>
+
+<li> Identify potential interesting dissertation problems.  I
+     generally ask my students to write 1&ndash;2 page descriptions of
+     each problem that they are interested in.  I can then comment on
+     these descriptions and help identify something that will agree
+     with your tastes.</li>
+
+<li> Make some simple throwaway prototypes just to get familiar with
+     interesting ideas.</li>
+
+<li> The topic you choose won't be the last thing you work on.  There
+     will be occasions to change your mind and do other things, so
+     don't waste time searching for the perfect topic.  You will end
+     up changing and refining it anyway.</li>
+
+<li> Don't imagine that you are going to come up with <i>The Unified
+     Theory of Computing<sup><small>TM</small></sup></i> right at the
+     first go.  Most such (purported) theories are bogus anyway.  So
+     keep it simple enough that you can do it and explain it, others
+     can follow it when you describe it to them, and&mdash;most
+     importantly&mdash;that others can build on it in some way.  The
+     only way to achieve scientific impact is to find and persuade
+     people who will develop on your work.</li>
+
+</ol>
+
+<center><h3>Conducting Research</h3></center>
+
+<ol>
+
+<li> Make a schedule.  An aggressive schedule is preferred, but we
+     should be willing to back down from it in the end if the work
+     isn't (sufficiently) completed as quickly as originally planned.
+     Almost all schedules run over, so any realistically optimistic
+     schedule is a good starting point.</li>
+
+<li> In general, for the research questions, it will almost be simpler
+     to do the work (identify and solve the questions) than to plan
+     the necessary steps abstractly :-).</li>
+
+<li> Start a dissertation draft right away.  This will be a
+     working document that you and I will consult many times&mdash;ideally
+     each time we meet.  It will give us both a sense of what is
+     needed to complete a dissertation.</li>
+
+<li> Stay in my attention range.  Come to regular meetings; see me
+     when you come up with something even partially interesting; send
+     email updates frequently.  I will forget about the work of
+     students who fail to keep in touch, which will only delay their
+     graduation.  Not that I am irresponsible, but I always have
+     enough things jostling for my limited cognitive abilities [:-)]
+     that it is easy to put off something which isn't.  Be the squeaky
+     wheel.</li>
+
+<li> Keep your promises.  I know that there will be exceptions, but
+     these should occur not more than once in a while.  If you are
+     running behind, send an email saying you are.  You would be
+     surprised how many students don't contact me or send me drafts of
+     papers or theses or presentations that they promised, and fail
+     even to send an email acknowledging that they are late.  They are
+     the ones who take the longest to graduate, and it is not because
+     they produce the strongest results.</li>
+
+<li> You get most credit (especially from a PhD committee) for
+     answering research questions and very little credit for any
+     implementation you might construct.</li>
+
+<li> You can produce research from carrying out implementational work.
+     In fact, some important questions won't emerge until you get down
+     to implementing the architecture and approach.  However, we won't
+     know exactly what those questions are until later.  The credit you
+     get will be for the questions uncovered and solved, not for the
+     implementation per se.</li>
+
+<li> You get a lot of credit for prestigious publications.  PhD
+     committees will require additional publications for each of your
+     exams&mdash;written prelim (qualifier), oral prelim (proposal), and
+     dissertation defense.  An MS thesis or PhD dissertation should
+     include externally published or submitted work and will be the
+     better for it having been peer-reviewed.  For PhD students
+     heading for an academic career, the de facto requirements for
+     publications are somewhat higher than for industrially-oriented
+     students.</li>
+
+<li> Keep aware of prospective deadlines for publishing research.  The
+     best ones are for the major conferences and special issues of
+     journals.  Of course, non-special issue publications are also
+     welcome, but because there is no hard deadline for such
+     submissions, they always tend to get put off.</li>
+
+</ol>
+
+<center><h3>Collaborating</h3></center>
+
+<ol>
+
+<li> Collaboration between students of equal vintage is helpful to the
+     collaborators as they can learn about more topics than through
+     their individual efforts.</li>
+
+<li> If you are a senior PhD student, you can benefit by having
+     someone else do some of your implementation.  You get the same
+     amount of credit from the committee as if you did the
+     implementation.</li>
+
+<li> If you are a junior PhD student, you can benefit by having
+     someone else lead you along and answer your basic questions about
+     the area and about studies in general.  You can find the senior
+     student's unfinished work as a source for hypotheses and research
+     ideas.</li>
+
+<li> For collaboration, especially where one of the students is senior
+     or farther along than the other, it is best to keep the initial
+     efforts independent or well-modularized so that you can work
+     separately.  Since each of you will have a different agenda,
+     there is a risk of either party inadvertently slowing the other
+     down.</li>
+
+<li> Ultimately, students must make sufficient individual
+     contributions to their dissertations.  However, for large
+     problems, it is OK to collaborate with other students on some
+     publications.</li>
+
+</ol>
+
+<center><h3>Reviewing</h3></center>
+
+<p>Some general points about reviewing.</p>
+
+<ol>
+
+<li> Write the kind of review you would like to receive.  Remember
+     there is a person on the other end too, so be as nice as
+     possible.</li>
+
+<li> Say what you think the paper attempts.  Say what is good with it;
+     then say what its limitations are.  If you love the paper you
+     will still notice some shortcomings; if you hate the paper you
+     will still notice some desirable features.</li>
+
+<li> Spell check and proof read so you don't convey the impression of
+     being careless.</li>
+
+</ol>
+
+<center><h3>Time Management and Commitments</h3></center>
+
+<p> This section is motivated by a conversation I had with a former
+    student.  The student had done quite well but not as well as he
+    himself thought he was capable of.  (I agree with his assessment.)
+    He brought up this topic and mentioned that I hadn't bugged him
+    enough to work and that he will try to "work harder" to improve
+    his record [doesn't help me directly now :-)].  I thought I had to
+    remind him about some work on several occasions, but he didn't
+    listen well.  Maybe I let my managerial duties slip and when I did
+    so he lost focus.  Consequently, there were long periods on low or
+    no productivity, especially when I had some other activity drawing
+    my attention.</p>
+
+<p> I have been mulling this over lately.  It is clear to me that I
+    didn't help by being extra flexible and not enforcing regular
+    deliverables.  So in the spirit of better management and in
+    helping improve everyone's scientific productivity, I propose the
+    following.</p>
+
+<h4>Importance and Urgency</h4>
+
+<p> We all wish to do important tasks, but we are often drawn into
+    spending our time on urgent activities.  All too often, the
+    important and the urgent do not line up.  Quite often, too, the
+    urgent activities are mandated by others.  You must catch this
+    game or this movie or you simply need to turn in your course
+    assignment tonight.  For some, especially the latter, it is
+    sensible to put your research on hold a little.  However, if you
+    find yourself putting the research on hold quite a bit, you know
+    there is a problem.</p>
+
+<p> Since as humans we are inevitably drawn to the urgent, the
+    opportunity that will surely never come again :-), the only way to
+    keep on the important tasks is to make them urgent.  As students,
+    somehow you must acquire a <i>sense of urgency</i> about your
+    research.  In fact, I can attest that you will need this sense of
+    urgency throughout your career if you want to perform even
+    slightly above average.</p>
+
+<p> Public commitments are a good way to go about doing so.  There are
+    of course the major deadlines, but commitments you make to me and
+    to your other colleagues would also yield the desired effect.  But
+    only if you try extremely not to have to cancel them.  If you end
+    up canceling such commitments a lot, then you know you are not
+    assigning enough resources to the corresponding tasks.  So you
+    must make such commitments more urgent.</p>
+
+<h4>Expectations of Effort</h4>
+
+<p> What matters ultimately is just the results, best measured for
+    doctoral research purposes in terms of prestigious publications.
+    This is what I emphasize instead of rules and regulations.
+    However, if we are careless about the rules, the main goal is hurt
+    as well.</p>
+
+<ol>
+
+<li> For a full-time student, 40 hours of studying per week is not a
+     lot&mdash;most times in life you will need to work a lot more
+     unless you vegetate in your profession.  As a student, you have
+     far fewer responsibilities than you will have later in your
+     career.  It is in your own interest to graduate quickly and get
+     ahead professionally while you are still a student.</li>
+
+<li> For those on an RAship, the RAship is only half-time, but you are
+     a full-time student.  The RAship is meant merely to support you.
+     Sponsors who really want just 20 hours of work from a half-time
+     RAship usually offer work that isn't academic research.</li>
+
+<li> For those on a fellowship, there are no formal job duties, but
+     you are still a full-time student.  I would make no distinction
+     between an RAship and a fellowship for these purposes.</li>
+
+<li> For those on a TAship or on other kind of support, you do indeed
+     have other responsibilities.  Please keep me posted if there will
+     be conflicts with your teaching work.  When my students need a
+     TAship, I try to get them to be my TAs, so I can help manage the
+     conflicts between their TA work and research.</li>
+
+<li> In research, you won't always (usually) get results at a uniform
+     rate, but you should contribute your effort at as uniform a rate
+     as possible.  Determine to have something to say about what you
+     did on a given day, week, or month.  Mostly you should just think
+     these over and correct your direction, but we can discuss this
+     too.</li>
+
+<li> If you are not making progress on a particular line, let me know
+     early.  Experienced researchers manage their risk by not going
+     down a deep unproductive path&mdash;as a computer scientist, you
+     know the risk of depth-first search.</li>
+
+<li> Beginning students will usually need to juggle just a few
+     constraints&mdash;maybe courses and your research paper.  As your
+     work stabilizes, there will be fewer courses, but the number of
+     urgent constraints will increase.  For example, you will often
+     need to prepare multiple submissions concurrently.  In such
+     cases, it will help immensely if the early work on a paper is
+     well-organized and you take on a challenge that you are more
+     likely to succeed with.  Most submission deadlines are announced
+     well in advance.  So why not be thinking of what papers you
+     imagine yourself submitting?  Continually tracking your own
+     progress is crucial to success.</li>
+
+<li> Please don't cancel your meetings with me or scheduled
+     presentations except if it is a true emergency.  We should have a
+     regular time&mdash;if we don't yet, make sure we do.  Even a
+     brief meeting can yield some advantages.  First, I might give you
+     some quick suggestions.  Second, you might find that since I
+     "consumed" your results, you are under pressure to think up some
+     additional results in time for the next meeting.  This is the Le
+     Chatelier Principle at work.  In consideration of the
+     distractions points below, don't look for this on the Web
+     :-).</li>
+
+<li> I don't at all mind you having downtime and going on personal
+     trips, but a couple of considerations apply.  One, discuss
+     absences with me early enough so we know if there will be any
+     conflicts and how to resolve them&mdash;most cases will cause no
+     problems.  Two, choose your trips wisely.  I know when I go on a
+     trip, there is a considerable overhead in preparation and
+     recovery.  There is a lot of work to catch up on, especially when
+     you return from a long trip.  In this case, perhaps you shouldn't
+     take further fun trips till the work is back under control after
+     the first such trip :-).</li>
+
+<li> A strategy is to take charge of the scheduling of such ventures.
+     Just because a bunch of students is dropping everything to go
+     catch a concert, you don't have to.  If it were of high
+     importance to you, you would have known and would have been able
+     to plan.  Btw, this continues even after you
+     graduate&mdash;people will try to draw you into various
+     activities, which aren't&mdash;or shouldn't be&mdash;top priority
+     for you.</li>
+
+</ol>
+
+
+<h4>Distractions</h4>
+
+<p> In Greek mythology, the sirens are creatures (part women, part
+    birds) who distract sailors.  They sing enchanting songs causing
+    the sailors to run their boats into the rocks.  In modern times,
+    the Web must be most powerful siren for knowledge workers!</p>
+
+<ol>
+
+<li> There is a classical distinction between what is urgent and what
+     is important.  Some tasks are both; most are neither; and several
+     are urgent but not important.  Those of the last category have a
+     tendency to distract us from our important goals.  If you can
+     learn to avoid the merely urgent and focus on the truly
+     important, you can be a lot more effective.  This is not easy.  I
+     can't say I have learned to do so myself :-).</li>
+
+<li> The Web can be extremely distracting.  I too often fall into a
+     search that leads nowhere but consumes a lot of time.  One thing
+     I have taken to doing is that I set my browsers to open on a
+     blank page.  It used to be that whenever I opened a new browser
+     window, it would show me a page (in my case, usually a news
+     page), and I would end up reading it.  Now I get distracted a lot
+     less on this account.</li>
+
+<li> Email too can be distracting, especially if it beeps every minute
+     or so.  Set the polling period high enough for your mail reader
+     that you can get some work done between beeps.  I disable the
+     beeps, tray icons, and popups for my email reader.</li>
+
+<li> When you need a break, take a break.  Go take a walk or get
+     coffee.  It is usually better than trudging along at low
+     efficiency or finding oneself distracted repeatedly.</li>
+
+<li> When you quit work for the day (or night), leave some easy task
+     with which to begin work the next time.  Some people find this
+     helps them get back in the flow more easily than would having to
+     open with a daunting task.</li>
+
+<li> If you are finding yourself unable to concentrate on a paper (and
+     you have reason to believe the paper is important to your goals),
+     try to write something about it.  As you force yourself to find
+     something to say, you might find that your thoughts begin to
+     become better organized.</li>
+
+</ol>
+
+
+<p> I don't want to be overly rigid.  Because it might sound
+    unfriendly if you asked for some waiver and I refused, it is best
+    if you ask for only those that are somehow exceptional.  The
+    number of exceptions should be small (0&ndash;5%).  You earn
+    increasing flexibility as you establish your credentials through
+    publishing papers.</p>
+
+<center><h3>Attending Conferences</h3></center>
+
+<p> Attending a conference is expensive.  The time you spend
+    physically traveling to a conference and the time you spend there
+    are significant.  Add to that the financial expense and the
+    considerable effort of preparing a submission and you would
+    realize that conference trips are not to be taken lightly.  In
+    particular, you are not there to sightsee, though you might add a
+    day or two to your trip to sightsee after the conference.</p>
+
+<p> Conferences are also great opportunities to learn about your
+    field.  There only a few major conferences and they come around
+    once a year at best, so you should be careful not to lose the
+    opportunity when it does show up.</p>
+
+<ol>
+
+<li> Prepare your presentations well in advance.  Practice!</li>
+
+<li> Don't be shy.  Ask questions where appropriate (make sure to
+     phrase them politely).  Talk to speakers after their
+     presentations.  Talk to people during coffee breaks.</li>
+
+<li> Don't stick in a clump with your university gang&mdash;you can see
+     enough of them when you are back.</li>
+
+<li> Do look up other people that you know, especially those who
+     graduated from our department.</li>
+
+<li> Ask me to introduce you to any people that I know whose research
+     interests might overlap with yours.  I will make several
+     introductions on my own as well.  Feel free to join me when I am
+     talking to someone.  It is rarely anything secret.</li>
+
+<li> You can expect the above from my former students (and, after you
+     graduate, be equally helpful to those who come later).</li>
+
+</ol>
+
+
+
+</body>
+</html>
+

@@ -1,0 +1,125 @@
+\documentclass[tikz]{standalone}
+%
+\usepackage{xcolor}%
+\begin{document}%
+\colorlet{brightlightbluegray}{red!9!green!8!blue!6}%
+\colorlet{redgb}{red!91!green!92!blue!94}%
+\colorlet{rgreenb}{green!70!black}%
+\colorlet{rgblue}{red!20!green!20!blue!94}%
+% \colorlet{darkbluegray}{blue!20!gray!80}%
+\colorlet{mediumbluegray}{blue!20!gray!40}%
+% \colorlet{lightbluegray}{blue!20!gray!10}%
+\begin{tikzpicture}
+\usetikzlibrary{arrows}
+\usetikzlibrary{backgrounds}
+\pgfdeclarelayer{middle}
+\pgfsetlayers{middle,main}
+\usetikzlibrary{calc}
+\usetikzlibrary{fit}
+\usetikzlibrary{shapes}
+\usetikzlibrary{decorations.pathmorphing, decorations.text}
+
+
+\tikzstyle{box}=[draw=none,sharp corners,align=center,font=\sffamily,fill=none,rectangle,anchor=center,minimum height=3.5ex,text width=35ex,inner sep=0] %,text width=13ex
+
+%\tikzstyle{pbox}=[box,fill=mediumbluegray]
+
+\tikzstyle{dbox}=[box,fill=white,thin]
+\tikzstyle{redbox}=[dbox,draw=redgb]
+\tikzstyle{bluebox}=[dbox,draw=rgblue]
+
+\tikzstyle{cbox}=[box,fill=brightlightbluegray]
+
+\tikzstyle{ebox}=[draw=none,fill=none,inner sep=0,font=\sffamily]
+\tikzstyle{sbox}=[box,text width=22ex,fill=white,inner sep=2,font=\sffamily]
+
+\tikzstyle{edge_label}=[draw=none, fill=white,inner sep=2,font=\sffamily,align=center]
+\tikzstyle{cumulus}=[ellipse, aspect=5, draw=none, fill=mediumbluegray,inner sep=2,font=\sffamily,text width=60, text centered, align=center]
+
+\tikzstyle{every text node part/.style}=[align=center,font=\sffamily]
+
+\matrix (swiml) [matrix,row sep=2] {
+%
+\node[ebox] (illbox) {}; \\[8]
+\node[dbox,text=rgreenb] (ill) {LLM Prompts}; \\[7]
+%\node[ebox] (quebox) {}; \\[8]
+\node[redbox] (queries) {Compute Enabled Messages}; \\
+%\node[ebox] (matbox) {}; \\[8]
+% \node[redbox] (mat) {Update Commitment Events}; \\
+\node[redbox] (commql) {Update Local State: Emission}; \\
+\node[redbox] (basel) {Update Local State: Reception}; \\
+\node[redbox] (stubl) {Attempt Emission}; \\[9]
+\node[ebox] (bpl) {}; \\[6]
+\node[bluebox] (comml) {Internal Agent Memory (RAG)}; \\
+\node[bluebox] (locall) {Local State (MCP Source)}; \\[12]
+%
+\node[ebox] (epl) {}; \\
+};
+
+\node[ebox,anchor=north west] (reasonl) at (illbox.north west-|locall.north west) {Internal Logic};
+%\node[ebox,anchor=north west] (queriesl) at (quebox.north west-|locall.north west) {Queries};
+%\node[ebox,anchor=north west] (plans) at (matbox.north west-|locall.north west) {Plans};
+
+\node[ebox,anchor=north west] (beliefsl) at (bpl.north west-|locall.north west) {State};
+\node[box,text=rgblue] (lag) at ($(illbox.north)+(0,0.35)$) {Agent Implemented via iJosh};
+
+\coordinate (epr) at ($(epl)+(6,0)$);
+\coordinate (toolSpot) at ($(basel.east)!0.5!(commql.east)+(2.5,0)$);
+\coordinate (toolLineSpot) at ($(toolSpot)+(-1.75,0)$);
+\coordinate (protocolSpot) at ($(ill.north east)+(2.5,0)$);
+%\coordinate (commitmentSpot) at ($(protocolSpot)+(0,0.35)$);
+\coordinate (socialSpot) at ($(toolSpot|-comml.south east)$);
+
+\node[cumulus] at (socialSpot) (social) {Decentralized Social State};
+\node[ebox,rgblue,font=\small\sffamily,yshift=-2] at (social.south|-locall.south) (projected) {projected to each agent};
+
+\node[edge_label,text=redgb] at (toolSpot) (tool) {iJosh Compiler \\into Adapter};
+
+\draw[->,>=stealth',redgb, thin] (tool.west) -- (toolLineSpot) |- (commql.east);
+\draw[->,>=stealth',redgb, thin] (tool.west) -- (toolLineSpot) |- (basel.east);
+\draw[->,>=stealth',redgb, thin] (tool.west) -- (toolLineSpot) |- (stubl.east);
+% \draw[->,>=stealth',redgb, thin] (tool.west) -- (toolLineSpot) |- (mat.east);
+\draw[->,>=stealth',redgb, thin] (tool.west) -- (toolLineSpot) |- (queries.east);
+
+\node[sbox,text=rgreenb,anchor=north] (protocol) at (protocolSpot) {Protocol in BSPL};
+% \node[sbox,text=rgreenb] (commitments) at (commitmentSpot) {};
+\draw[->,>=stealth',rgreenb,dashed,thick] (protocol.south) -- (tool);
+
+\coordinate (masSpot) at (protocol.north west|-illbox.north);
+\node[ebox,align=left,anchor=north west] (mas) at (masSpot) {MAS Specification};
+
+\draw[rgblue, thin] (projected.west) -- (toolLineSpot|-projected.west) |- (locall.east);
+% \draw[rgblue, thin] (projected.west) -- (toolLineSpot|-projected.west) |- (comml.east);
+
+\coordinate (specNW) at ($(protocol.west|-mas.north)+(-0.2,0.15)$);
+\coordinate (specSE) at ($(protocol.south east)+(0.2,-0.15)$);
+
+\coordinate (reasonlnw) at ($(reasonl.north west)+(-0.2,0.15)$);
+\coordinate (stubllse) at ($(stubl.south east)+(0.2,-0.15)$);
+\coordinate (beliefslnw) at ($(beliefsl.north west)+(-0.2,0.15)$);
+\coordinate (locallse) at ($(locall.south east)+(0.2,-0.15)$);
+
+\begin{pgfonlayer}{middle}
+\draw[draw=none,fill=mediumbluegray] (reasonlnw) rectangle (stubllse);
+\draw[draw=none,fill=mediumbluegray] (beliefslnw) rectangle (locallse);
+\draw[draw=none,fill=mediumbluegray, inner sep=2] (specNW) rectangle (specSE);
+\end{pgfonlayer}
+
+\node[cbox,fit=(beliefslnw|-epl.south)(social.east|-epr.south)(projected.east|-epr.south)(protocol.east|-epr.south)(specSE|-epr.south)] (cic) {}; % Fitting multiple to get the max
+\node[ebox] (infra) at (cic.center) {Asynchronous Communication Service};
+
+\begin{scope}
+\clip[draw=none] (cic.south east-|specSE) rectangle (beliefslnw);
+\node[ellipse, aspect=5, draw=none, fit=(social), rotate=0, postaction={decorate,
+    decoration={
+      raise=-1em,
+      text along path, reverse path,
+%      text={|\color{rgblue}\small\sffamily|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~no central store}, % use this to create PDF
+      % text={|\color{rgblue}\small\sffamily|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~no central store}, % use this to embed in paper
+      text={|\color{rgblue}\small\sffamily|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~no central store}, % use this to embed in slides
+      text align=center}},] {};
+\end{scope}
+
+
+\end{tikzpicture}
+\end{document}

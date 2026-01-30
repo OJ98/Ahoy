@@ -1,2 +1,2 @@
-I need to buy a pen for less than $20.
-Delivery location: Raleigh, NC 27606
+I want to buy a pen and ship it to Raleigh NC 27606. Assume a reasonable budget for the task.
+done

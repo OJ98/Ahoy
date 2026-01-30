@@ -1,0 +1,106 @@
+2026-01-29 20:54:22,843 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:22,858 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:22,874 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:22,897 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:54:22,911 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:54:22,931 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:54:22,942 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:54:22,953 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:54:22,967 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:22,981 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,003 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,019 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,038 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,050 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,067 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:54:23,076 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: 'goal'
+2026-01-29 20:54:23,092 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:54:23,092 - demo3_concurrent_multiprotocol - INFO - Starting Demo 3: Concurrent Multiprotocol Participation
+2026-01-29 20:54:23,094 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:54:23,104 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:54:23,104 - demo3_concurrent_multiprotocol - INFO - Starting Demo 3: Concurrent Multiprotocol Participation
+2026-01-29 20:54:23,104 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:54:23,105 - demo3_concurrent_multiprotocol - INFO - Saved summary report to C:\PhD\Research\MultiAgents\Code\MAF\experiments\results\demo3_concurrent_multiprotocol_summary.txt
+2026-01-29 20:54:23,105 - demo3_concurrent_multiprotocol - INFO - 
+======================================================================
+2026-01-29 20:54:23,105 - demo3_concurrent_multiprotocol - INFO - Demo 3 Complete - 2 protocols, 10 steps
+2026-01-29 20:54:23,105 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:54:23,130 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Purchase_Buyer: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:54:23,140 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Purchase_Seller: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:54:23,152 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Logistics_Merchant: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:54:23,162 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Logistics_Wrapper: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:54:23,176 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,191 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,203 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:54:23,218 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Adapter' object has no attribute 'enabled_store'
+2026-01-29 20:57:01,575 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,587 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,598 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,618 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:01,628 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:01,646 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:01,657 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:01,666 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:01,677 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,688 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,706 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,717 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,730 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,740 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,756 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:01,765 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: 'goal'
+2026-01-29 20:57:01,779 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:01,780 - demo3_concurrent_multiprotocol - INFO - Starting Demo 3: Concurrent Multiprotocol Participation
+2026-01-29 20:57:01,780 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:01,790 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:01,790 - demo3_concurrent_multiprotocol - INFO - Starting Demo 3: Concurrent Multiprotocol Participation
+2026-01-29 20:57:01,790 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:01,790 - demo3_concurrent_multiprotocol - INFO - Saved summary report to C:\PhD\Research\MultiAgents\Code\MAF\experiments\results\demo3_concurrent_multiprotocol_summary.txt
+2026-01-29 20:57:01,790 - demo3_concurrent_multiprotocol - INFO - 
+======================================================================
+2026-01-29 20:57:01,790 - demo3_concurrent_multiprotocol - INFO - Demo 3 Complete - 2 protocols, 10 steps
+2026-01-29 20:57:01,790 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:01,812 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Purchase_Buyer: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:01,821 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Purchase_Seller: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:01,831 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Logistics_Merchant: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:01,841 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Logistics_Wrapper: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:01,851 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,863 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,873 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:01,885 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,214 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,230 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,246 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,266 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:40,277 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:40,299 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:40,310 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:40,322 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:40,342 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,356 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,380 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,394 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,417 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,431 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,440 - demo3_concurrent_multiprotocol - ERROR - Failed to execute message decision in purchase: 'in <string>' requires string as left operand, not MagicMock
+2026-01-29 20:57:40,449 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in purchase: 'goal'
+2026-01-29 20:57:40,466 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:40,466 - demo3_concurrent_multiprotocol - INFO - Starting Demo 3: Concurrent Multiprotocol Participation
+2026-01-29 20:57:40,466 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:40,477 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:40,477 - demo3_concurrent_multiprotocol - INFO - Starting Demo 3: Concurrent Multiprotocol Participation
+2026-01-29 20:57:40,477 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:40,478 - demo3_concurrent_multiprotocol - INFO - Saved summary report to C:\PhD\Research\MultiAgents\Code\MAF\experiments\results\demo3_concurrent_multiprotocol_summary.txt
+2026-01-29 20:57:40,478 - demo3_concurrent_multiprotocol - INFO - 
+======================================================================
+2026-01-29 20:57:40,478 - demo3_concurrent_multiprotocol - INFO - Demo 3 Complete - 2 protocols, 10 steps
+2026-01-29 20:57:40,478 - demo3_concurrent_multiprotocol - INFO - ======================================================================
+2026-01-29 20:57:40,500 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Purchase_Buyer: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:40,511 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Purchase_Seller: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:40,521 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Logistics_Merchant: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:40,537 - demo3_concurrent_multiprotocol - ERROR - LLM decision error in Logistics_Wrapper: sequence item 0: expected str instance, MagicMock found
+2026-01-29 20:57:40,551 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,565 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,579 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:57:40,594 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not callable
+2026-01-29 20:58:01,801 - demo3_concurrent_multiprotocol - ERROR - Error in concurrent execution: 'Store' object is not iterable

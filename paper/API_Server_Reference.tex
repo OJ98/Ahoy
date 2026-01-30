@@ -1,0 +1,810 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+
+\usepackage{xcolor}
+\definecolor{listbackgroundcolorlight}{rgb}{0.91,0.92,0.94}
+\definecolor{keywordColor}{HTML}{800080}
+\definecolor{commentColor}{HTML}{008000}
+\definecolor{colorEntityBack}{rgb}{0.01,0.01,0.4}
+\definecolor{colorAbstractionLayer}{rgb}{0.01,0.3,0.7}
+\definecolor{colorPolicyBack}{rgb}{0.91,0.94,0.94}
+\definecolor{labelcolor}{cmyk}{0.22,0.10,0.10,0.10}
+\definecolor{colorProtocol}{rgb}{0.6,0.2,0.4}
+%% \usepackage{crayola}
+\definecolor{colorOrg}{gray}{0.85}
+
+\usepackage[formats]{listings}
+\lstdefineformat{BSPLformat}{->=$\textcolor{keywordColor}{\mapsto}$}
+\lstset{format=BSPLformat}
+\lstdefinelanguage{BSPL}
+{
+  morekeywords={roles, parameters, private, out, in, nil, key},
+  otherkeywords={->,:,],[},
+  morecomment=[l]{//}
+}
+
+% Code listing style
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{gray},
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+\lstset{showspaces=false}
+\lstset{keepspaces=true}
+
+\title{\textbf{BSPL FastAPI Server \& Wrapper} \\ 
+\large Quickstart Guide \& API Reference}
+\author{LLM BSPL Adapter Project}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document provides a comprehensive guide to the BSPL FastAPI server and wrapper functions. It serves as both a quickstart tutorial and a complete API reference, covering server setup, configuration, core concepts, and detailed endpoint documentation with practical examples.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%========================================
+\section{Introduction}
+%========================================
+
+The BSPL FastAPI Server provides a REST API interface to the Business Protocol Specification Language (BSPL) adapter, enabling protocol-driven multi-agent systems to interact via HTTP endpoints. The system consists of:
+
+\begin{itemize}
+    \item \textbf{FastAPI Server} (\texttt{server.py}): HTTP REST API exposing protocol operations
+    \item \textbf{BSPLConcreteWrapper} (\texttt{bspl\_concrete\_wrapper.py}): Bridge layer between API and core adapter
+    \item \textbf{Core Adapter} (\texttt{core.py}): BSPL protocol execution engine
+\end{itemize}
+
+\subsection{Key Features}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Stateful Protocol Management}: Maintain protocol state across API calls
+    \item \textbf{Message Simulation}: Preview message effects without state mutation (dry-run mode)
+    \item \textbf{Idempotency Support}: Safe message retries with idempotency keys
+    \item \textbf{Policy-Based Authorization}: Pluggable validators for role-based access control
+    \item \textbf{LLM-Ready}: OpenAI-style function definitions for AI agent integration
+    \item \textbf{Cross-Platform}: Windows (PowerShell) and Linux (Bash) support
+\end{itemize}
+
+%========================================
+\section{Quickstart Guide}
+%========================================
+
+\subsection{Prerequisites}
+
+\begin{lstlisting}[language=bash]
+# Install dependencies
+pip install fastapi uvicorn pydantic
+
+# Ensure BSPL package is installed
+pip install -e .
+\end{lstlisting}
+
+\subsection{Starting the Server}
+
+\begin{lstlisting}[language=bash]
+# Start server on default port 8000
+python -m uvicorn bspl.adapter.server:app --host 0.0.0.0 --port 8000
+
+# With auto-reload for development
+python -m uvicorn bspl.adapter.server:app --reload
+\end{lstlisting}
+
+\subsection{Verifying Server Status}
+
+\begin{lstlisting}[language=bash]
+# Check server health
+curl http://localhost:8000/health
+
+# View server info and available endpoints
+curl http://localhost:8000/
+\end{lstlisting}
+
+%========================================
+\section{Exposed Functions}
+%========================================
+
+\subsection{Configure the Adapter}
+
+Before using protocol operations, configure the adapter with your protocol definition and agent mappings.
+
+\begin{tcolorbox}[colback=blue!5,colframe=blue!40!black,title=Configuration Requirements]
+\textbf{Important:} For now, protocol objects cannot be serialized to JSON. Configuration must be done programmatically via the Python API, not through the HTTP endpoint. I'm putting this on the long to-do if I get time as that would make the LLM-adapter interface cleaner.
+\end{tcolorbox}
+
+\begin{lstlisting}[language=Python]
+# In your application code
+from bspl.adapter.server import configure_adapter
+import bspl
+
+# Load protocol
+purchase_protocol = bspl.load_file(
+    "scenarios/purchase/purchase.bspl"
+).protocols["Purchase"]
+
+# Define agent network topology
+agents = {
+    "Buyer": [("127.0.0.1", 9000)],
+    "Seller": [("127.0.0.1", 9001)],
+    "Shipper": [("127.0.0.1", 9002)],
+    "my_adapter": [("127.0.0.1", 8000)]
+}
+
+# Map protocol roles to agents
+systems = {
+    "purchase_system": {
+        "protocol": purchase_protocol,
+        "roles": {
+            purchase_protocol.roles["Buyer"]: "my_adapter",
+            purchase_protocol.roles["Seller"]: "Seller",
+            purchase_protocol.roles["Shipper"]: "Shipper"
+        }
+    }
+}
+
+# Configure the adapter
+configure_adapter(
+    systems=systems,
+    agents=agents,
+    name="my_adapter"
+)
+\end{lstlisting}
+
+\subsection{Query Available Functions}
+
+For LLM integration, retrieve function definitions:
+
+\begin{lstlisting}[language=bash]
+curl http://localhost:8000/llm_functions
+\end{lstlisting}
+
+\textbf{Response:} Returns OpenAI-style function schemas for all available operations.
+
+\subsection{Check Role State}
+
+Query the current state for a specific role:
+
+\begin{lstlisting}[language=bash]
+curl -X POST http://localhost:8000/get_role_state \
+  -H "Content-Type: application/json" \
+  -d '{"role_id": "Buyer"}'
+\end{lstlisting}
+
+\textbf{Response includes:}
+\begin{itemize}
+    \item Message history per protocol system
+    \item Variable bindings in each context
+    \item Enabled (pending) messages
+    \item Active protocols and roles
+\end{itemize}
+
+\subsection{Step 4: List Enabled Messages}
+
+See what messages can currently be sent:
+
+\begin{lstlisting}[language=python]
+curl -X POST http://localhost:8000/list_enabled_messages \
+  -H "Content-Type: application/json" \
+  -d '{"role_id": "Buyer"}'
+\end{lstlisting}
+
+\subsection{Step 5: Simulate a Message (Dry Run)}
+
+This can be used for few-shot training. Basically can preview message effects without committing:
+
+\begin{lstlisting}[language=bash,showspaces=false]
+curl -X POST http://localhost:8000/simulate_message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schema": "Purchase.rfq",
+    "payload": {
+      "ID": "order-123",
+      "item": "laptop",
+      "quantity": 5
+    },
+    "system": "purchase_system"
+  }'
+\end{lstlisting}
+
+\textbf{Response shows:}
+\begin{itemize}
+    \item Messages that would be enabled
+    \item Messages that would be disabled
+    \item Potential state observations
+\end{itemize}
+
+\subsection{Step 6: Send a Real Message}
+
+Execute the protocol transition:
+
+\begin{lstlisting}[language=bash]
+curl -X POST http://localhost:8000/send_message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schema": "Purchase.rfq",
+    "payload": {
+      "ID": "order-123",
+      "item": "laptop",
+      "quantity": 5
+    },
+    "system": "purchase_system",
+    "dry_run": false,
+    "idempotency_key": "rfq-order-123-attempt-1"
+  }'
+\end{lstlisting}
+
+\textbf{Idempotency:} Using the same \texttt{idempotency\_key} will return the cached result instead of re-sending.
+
+\subsection{Step 7: Receive External Messages}
+
+Ingest messages from other agents:
+
+\begin{lstlisting}[language=bash]
+curl -X POST http://localhost:8000/receive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "schema": "Purchase.quote",
+    "payload": {
+      "ID": "order-123",
+      "price": 5000,
+      "delivery_date": "2025-11-01"
+    },
+    "from": "Seller"
+  }'
+\end{lstlisting}
+
+\subsection{Step 8: Update Local State (Advanced)}
+
+Manually inject state updates (dangerous!):
+
+\begin{lstlisting}[language=bash]
+curl -X POST http://localhost:8000/update_local_state \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role_id": "Buyer",
+    "updates": {
+      "inventory_level": 10,
+      "last_order_id": "order-123"
+    }
+  }'
+\end{lstlisting}
+
+\subsection{Step 9: Abort Protocol (Emergency)}
+
+Stop protocol execution for a role:
+
+\begin{lstlisting}[language=bash]
+curl -X POST http://localhost:8000/abort_protocol \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role_id": "Buyer",
+    "reason": "Emergency shutdown requested"
+  }'
+\end{lstlisting}
+
+%========================================
+\section{API Reference}
+%========================================
+
+\subsection{Informational Endpoints}
+
+\subsubsection{GET /}
+\textbf{Description:} Server status and endpoint listing
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "service": "BSPL Adapter Wrapper API",
+  "version": "1.0",
+  "status": "running",
+  "adapter_configured": true,
+  "endpoints": { ... }
+}
+\end{lstlisting}
+
+\subsubsection{GET /health}
+\textbf{Description:} Health check endpoint
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "status": "healthy",
+  "adapter_configured": true
+}
+\end{lstlisting}
+
+\subsubsection{GET /llm\_functions}
+\textbf{Description:} OpenAI-style function definitions for LLM integration
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "functions": [
+    {
+      "name": "send_message",
+      "description": "Send a BSPL message...",
+      "parameters": { ... }
+    },
+    ...
+  ]
+}
+\end{lstlisting}
+
+\subsection{Configuration Endpoints}
+
+\subsubsection{POST /configure}
+\textbf{Description:} Configure adapter with systems and agents
+
+\textbf{Note:} Limited to simple configurations without protocol objects. For full setup, use programmatic configuration.
+
+\textbf{Request Body:}
+\begin{lstlisting}[language=python]
+{
+  "systems": { ... },
+  "agents": { ... },
+  "name": "adapter_name"
+}
+\end{lstlisting}
+
+\subsection{State Query Endpoints}
+
+\subsubsection{POST /get\_role\_state}
+\textbf{Description:} Retrieve complete state for a role
+
+\textbf{Request:}
+\begin{lstlisting}[language=python]
+{
+  "role_id": "Buyer"
+}
+\end{lstlisting}
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "role_id": "Buyer",
+  "state": {
+    "history": {
+      "system_id": {
+        "bindings": { ... },
+        "messages": [ ... ],
+        "subcontexts": [ ... ]
+      }
+    },
+    "enabled_messages": [ ... ],
+    "roles": ["Buyer", "Seller"],
+    "protocols": ["Purchase"]
+  }
+}
+\end{lstlisting}
+
+\subsubsection{POST /list\_pending\_messages}
+\textbf{Description:} List currently enabled messages
+
+\textbf{Request:}
+\begin{lstlisting}[language=python]
+{
+  "role_id": "Buyer"
+}
+\end{lstlisting}
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "pending": [
+    {
+      "schema": "Purchase.rfq",
+      "payload": { ... },
+      "sender": "Buyer",
+      "system": "purchase_system",
+      "key": "..."
+    }
+  ]
+}
+\end{lstlisting}
+
+\subsection{Message Operation Endpoints}
+
+\subsubsection{POST /simulate\_message}
+\textbf{Description:} Preview message effects without state mutation
+
+\textbf{Request:}
+\begin{lstlisting}[language=python]
+{
+  "schema": "Purchase.rfq",
+  "payload": {
+    "ID": "order-123",
+    "item": "laptop",
+    "quantity": 5
+  },
+  "system": "purchase_system"
+}
+\end{lstlisting}
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "predicted": {
+    "added": [ ... ],
+    "removed": [ ... ],
+    "observations": { ... }
+  },
+  "warnings": null
+}
+\end{lstlisting}
+
+\subsubsection{POST /send\_message}
+\textbf{Description:} Send a protocol message
+
+\textbf{Request:}
+\begin{lstlisting}[language=python]
+{
+  "schema": "Purchase.rfq",
+  "payload": {
+    "ID": "order-123",
+    "item": "laptop",
+    "quantity": 5
+  },
+  "system": "purchase_system",
+  "dry_run": false,
+  "idempotency_key": "optional-unique-key"
+}
+\end{lstlisting}
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "message_id": "uuid-here",
+  "status": "sent",
+  "details": {
+    "schema": "Purchase.rfq"
+  },
+  "simulated": false
+}
+\end{lstlisting}
+
+\textbf{Parameters:}
+\begin{itemize}
+    \item \texttt{schema} (string, required): Qualified message schema name
+    \item \texttt{payload} (object, required): Message content
+    \item \texttt{system} (string, optional): System identifier
+    \item \texttt{dry\_run} (boolean, default: false): Simulate only
+    \item \texttt{idempotency\_key} (string, optional): Prevent duplicate sends
+\end{itemize}
+
+\subsubsection{POST /receive}
+\textbf{Description:} Ingest external message into adapter
+
+\textbf{Request:} Accepts arbitrary JSON representing received message
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "status": "ok"
+}
+\end{lstlisting}
+
+\subsection{Advanced Control Endpoints}
+
+\subsubsection{POST /update\_local\_state}
+\textbf{Description:} Manually update role state (powerful operation)
+
+\textbf{Warning:} Should be policy-protected in production
+
+\textbf{Request:}
+\begin{lstlisting}[language=python]
+{
+  "role_id": "Buyer",
+  "updates": {
+    "custom_key": "custom_value"
+  }
+}
+\end{lstlisting}
+
+\subsubsection{POST /abort\_protocol}
+\textbf{Description:} Stop protocol execution for a role
+
+\textbf{Request:}
+\begin{lstlisting}[language=python]
+{
+  "role_id": "Buyer",
+  "reason": "Emergency shutdown"
+}
+\end{lstlisting}
+
+\textbf{Response:}
+\begin{lstlisting}[language=python]
+{
+  "aborted": true,
+  "reason": "Emergency shutdown"
+}
+\end{lstlisting}
+
+%========================================
+\section{Wrapper API Reference}
+%========================================
+
+\subsection{BSPLConcreteWrapper Class}
+
+The wrapper provides a synchronous interface to the asynchronous adapter.
+
+\subsubsection{Constructor}
+
+\begin{lstlisting}[language=Python]
+BSPLConcreteWrapper(
+    adapter_instance: Adapter,
+    policy_validator: Optional[Callable] = None,
+    idempotency_store: Optional[Dict] = None
+)
+\end{lstlisting}
+
+\textbf{Parameters:}
+\begin{itemize}
+    \item \texttt{adapter\_instance}: Core BSPL adapter instance
+    \item \texttt{policy\_validator}: Function \texttt{(role\_id, action, params) -> bool}
+    \item \texttt{idempotency\_store}: Optional external cache for idempotency
+\end{itemize}
+
+\subsection{Public Methods}
+
+\subsubsection{simulate\_message()}
+
+\begin{lstlisting}[language=Python]
+def simulate_message(
+    self,
+    payload: SendMessageInput
+) -> SimulationResult
+\end{lstlisting}
+
+\textbf{Description:} Non-destructive message effect prediction
+
+\textbf{Returns:} \texttt{SimulationResult} with predicted state changes
+
+\subsubsection{send\_message()}
+
+\begin{lstlisting}[language=Python]
+def send_message(
+    self,
+    payload: SendMessageInput
+) -> SendMessageResult
+\end{lstlisting}
+
+\textbf{Description:} Execute protocol message send
+
+\textbf{Features:}
+\begin{itemize}
+    \item Idempotency key checking
+    \item Dry-run mode support
+    \item Policy validation
+\end{itemize}
+
+\subsubsection{receive()}
+
+\begin{lstlisting}[language=Python]
+def receive(
+    self,
+    data: Dict[str, Any]
+) -> None
+\end{lstlisting}
+
+\textbf{Description:} Ingest external message into adapter
+
+\subsubsection{get\_role\_state()}
+
+\begin{lstlisting}[language=Python]
+def get_role_state(
+    self,
+    role_id: str
+) -> RoleState
+\end{lstlisting}
+
+\textbf{Description:} Extract complete state view for role
+
+\textbf{Returns:}
+\begin{itemize}
+    \item Message history per system
+    \item Variable bindings
+    \item Enabled messages
+    \item Active protocols and roles
+\end{itemize}
+
+\subsubsection{list\_pending\_messages()}
+
+\begin{lstlisting}[language=Python]
+def list_pending_messages(
+    self,
+    role_id: str
+) -> ListPendingMessagesResult
+\end{lstlisting}
+
+\textbf{Description:} Get currently enabled messages
+
+\subsubsection{update\_local\_state()}
+
+\begin{lstlisting}[language=Python]
+def update_local_state(
+    self,
+    payload: UpdateLocalStateInput
+) -> Dict[str, Any]
+\end{lstlisting}
+
+\textbf{Description:} Apply manual state updates (policy-protected)
+
+\subsubsection{abort\_protocol()}
+
+\begin{lstlisting}[language=Python]
+def abort_protocol(
+    self,
+    role_id: str,
+    reason: Optional[str] = None
+) -> AbortResult
+\end{lstlisting}
+
+\textbf{Description:} Emergency protocol termination
+
+%========================================
+\section{Error Handling}
+%========================================
+
+\subsection{Exception Hierarchy}
+
+\begin{itemize}
+    \item \texttt{AdapterError} (base class)
+    \begin{itemize}
+        \item \texttt{TransientError} (HTTP 502): Temporary failures, retry possible
+        \item \texttt{SemanticError} (HTTP 400): Protocol/semantic violations
+        \item \texttt{PolicyError} (HTTP 403): Authorization failures
+    \end{itemize}
+\end{itemize}
+
+\subsection{HTTP Status Codes}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Code} & \textbf{Meaning} \\
+\midrule
+200 & Success \\
+400 & Bad request (semantic error) \\
+403 & Forbidden (policy violation) \\
+422 & Validation error (malformed request) \\
+500 & Internal server error \\
+502 & Transient error (retry possible) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%========================================
+\section{Integration Examples}
+%========================================
+
+\subsection{Python Client Example}
+
+\begin{lstlisting}[language=Python]
+import requests
+
+BASE_URL = "http://localhost:8000"
+
+# Check health
+response = requests.get(f"{BASE_URL}/health")
+print(response.json())
+
+# Send a message
+payload = {
+    "schema": "Purchase.rfq",
+    "payload": {
+        "ID": "order-456",
+        "item": "smartphone",
+        "quantity": 10
+    },
+    "system": "purchase_system",
+    "idempotency_key": "rfq-order-456"
+}
+response = requests.post(
+    f"{BASE_URL}/send_message",
+    json=payload
+)
+print(response.json())
+\end{lstlisting}
+
+\subsection{LLM Integration (Claude/Anthropic)}
+
+\begin{lstlisting}[language=Python]
+import anthropic
+import requests
+import json
+
+# Get function definitions
+functions = requests.get(
+    "http://localhost:8000/llm_functions"
+).json()["functions"]
+
+# Convert to Anthropic tool format
+tools = [
+    {
+        "name": f["name"],
+        "description": f["description"],
+        "input_schema": f["parameters"]
+    }
+    for f in functions
+]
+
+# Use with Claude API
+client = anthropic.Anthropic(api_key="your-api-key")
+
+message = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=1024,
+    tools=tools,
+    messages=[{
+        "role": "user",
+        "content": "Send an RFQ for 5 laptops"
+    }]
+)
+
+# Execute tool calls
+for content_block in message.content:
+    if content_block.type == "tool_use":
+        tool_name = content_block.name
+        tool_input = content_block.input
+        
+        # Call FastAPI endpoint
+        result = requests.post(
+            f"http://localhost:8000/{tool_name}",
+            json=tool_input
+        )
+        
+        print(f"Tool {tool_name} result: {result.json()}")
+\end{lstlisting}
+
+%========================================
+\section{Troubleshooting}
+%========================================
+
+\subsection{Common Issues}
+
+\subsubsection{Server Not Starting}
+
+\textbf{Symptom:} \texttt{ModuleNotFoundError} or import errors
+
+\textbf{Solution:}
+\begin{lstlisting}[language=bash]
+# Ensure BSPL package is installed
+pip install -e .
+
+# Check Python path
+export PYTHONPATH="${PYTHONPATH}:/path/to/bspl/src"
+\end{lstlisting}
+
+\subsubsection{Adapter Not Configured Error}
+
+\textbf{Symptom:} HTTP 500 with "Adapter not configured" message
+
+\textbf{Solution:} Must configure adapter programmatically before using protocol endpoints. See Section 3.1.
+
+\subsubsection{Circular Reference in State}
+
+\textbf{Symptom:} State query returns simplified response with error message
+
+\textbf{Solution:} This is expected for complex protocol states. Use specific endpoints like \texttt{list\_pending\_messages} for targeted queries.
+
+\subsubsection{Message Schema Not Found}
+
+\textbf{Symptom:} \texttt{SemanticError: Schema 'X' not found}
+
+\textbf{Solution:} Check protocol is loaded and schema name uses qualified format: \texttt{ProtocolName.messageName}
+
+\end{document}

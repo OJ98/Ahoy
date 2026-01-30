@@ -1,0 +1,20 @@
+# Test dependencies for Demo 6 and other demos
+
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-timeout>=2.1.0
+pytest-mock>=3.10.0
+
+# Optional testing enhancements
+pytest-cov>=4.0.0          # For coverage reports
+pytest-xdist>=3.0.0        # For parallel test execution
+pytest-randomly>=3.12.0    # For randomized test execution
+
+# Project dependencies (should already be installed)
+anthropic>=0.7.0
+bspl>=0.1.0
+
+# Development tools
+black>=23.0.0              # Code formatting (optional)
+flake8>=5.0.0             # Linting (optional)
