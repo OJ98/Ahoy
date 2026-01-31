@@ -1,0 +1,702 @@
+2026-01-30 23:41:11 [INFO] [demo] ======================================================================
+2026-01-30 23:41:11 [INFO] [demo] DEMO 1: Sequential Multi-Protocol Execution with LLM (ahoy.py)
+2026-01-30 23:41:11 [INFO] [demo] ======================================================================
+2026-01-30 23:41:11 [INFO] [demo] Start Time: 2026-01-30 23:41:11
+2026-01-30 23:41:11 [INFO] [demo] Results Directory: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo1\results
+2026-01-30 23:41:11 [INFO] [demo] Log File: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo1\results\demo1_20260130_234111.log
+2026-01-30 23:41:11 [DEBUG] [demo_debug] Project Root: C:\PhD\Research\MultiAgents\Code\MAF
+2026-01-30 23:41:11 [INFO] [demo] 
+======================================================================
+2026-01-30 23:41:11 [INFO] [demo] Protocol 1/2: Purchase
+2026-01-30 23:41:11 [INFO] [demo] ======================================================================
+
+2026-01-30 23:41:11 [INFO] [demo] 
+======================================================================
+2026-01-30 23:41:11 [INFO] [demo] Executing Protocol: Purchase (ahoy.py Role: Buyer)
+2026-01-30 23:41:11 [INFO] [demo] ======================================================================
+
+2026-01-30 23:41:11 [INFO] [demo] Starting other agents for Purchase...
+2026-01-30 23:41:11 [DEBUG] [demo_debug] Agent scripts: ['seller.py', 'shipper.py']
+2026-01-30 23:41:11 [DEBUG] [demo_debug] Started agent process: seller.py (PID: 384132)
+2026-01-30 23:41:11 [INFO] [demo]   [OK] seller.py started (PID: 384132)
+2026-01-30 23:41:11 [DEBUG] [demo_debug] Started agent process: shipper.py (PID: 386380)
+2026-01-30 23:41:11 [INFO] [demo]   [OK] shipper.py started (PID: 386380)
+2026-01-30 23:41:12 [DEBUG] [demo_debug] Wrote ahoy config: C:\Users\Omkar\AppData\Local\Temp\maf_chips_config.txt = Purchase:Buyer
+2026-01-30 23:41:12 [INFO] [demo] Starting ahoy.py for Purchase:Buyer...
+2026-01-30 23:41:12 [DEBUG] [demo_debug] ahoy.py path: C:\PhD\Research\MultiAgents\Code\MAF\agents\ahoy.py
+2026-01-30 23:41:12 [INFO] [demo]   [OK] ahoy.py started (PID: 379440) for Purchase:Buyer
+2026-01-30 23:41:12 [DEBUG] [demo_debug] ahoy.py process PID: 379440
+2026-01-30 23:41:14 [INFO] [demo] Waiting for Purchase protocol to complete...
+2026-01-30 23:41:14 [DEBUG] [demo_debug] Monitoring with timeout: 60s
+2026-01-30 23:41:35 [INFO] [demo] Protocol Purchase completed (process exited).
+2026-01-30 23:41:35 [DEBUG] [demo_debug] Appended agent log: C:\PhD\Research\MultiAgents\Code\MAF\logs\generic_agent_debug_20260130_234113.log
+2026-01-30 23:41:35 [INFO] [demo] 
+Protocol Metrics for Purchase:
+2026-01-30 23:41:35 [INFO] [demo]   Execution Time: 23.21s
+2026-01-30 23:41:35 [INFO] [demo]   LLM Calls: 0
+2026-01-30 23:41:35 [INFO] [demo]   LLM Duration: 23.21s
+2026-01-30 23:41:35 [INFO] [demo]   Success: True
+2026-01-30 23:41:35 [DEBUG] [demo_debug] Terminated process 379440
+2026-01-30 23:41:35 [DEBUG] [demo_debug] Terminated process 384132
+2026-01-30 23:41:35 [DEBUG] [demo_debug] Terminated process 386380
+2026-01-30 23:41:35 [DEBUG] [demo_debug] Set stop signal: C:\Users\Omkar\AppData\Local\Temp\maf_stop_signal.txt
+2026-01-30 23:41:35 [DEBUG] [demo_debug] Cleared config file: C:\Users\Omkar\AppData\Local\Temp\maf_chips_config.txt
+2026-01-30 23:41:35 [INFO] [demo] 
+Pausing for cleanup before next protocol...
+2026-01-30 23:41:37 [INFO] [demo] 
+======================================================================
+2026-01-30 23:41:37 [INFO] [demo] Protocol 2/2: Logistics
+2026-01-30 23:41:37 [INFO] [demo] ======================================================================
+
+2026-01-30 23:41:37 [INFO] [demo] 
+======================================================================
+2026-01-30 23:41:37 [INFO] [demo] Executing Protocol: Logistics (ahoy.py Role: Merchant)
+2026-01-30 23:41:37 [INFO] [demo] ======================================================================
+
+2026-01-30 23:41:37 [DEBUG] [demo_debug] Cleared stop signal: C:\Users\Omkar\AppData\Local\Temp\maf_stop_signal.txt
+2026-01-30 23:41:37 [INFO] [demo] Starting other agents for Logistics...
+2026-01-30 23:41:37 [DEBUG] [demo_debug] Agent scripts: ['packer.py', 'labeler.py', 'wrapper.py']
+2026-01-30 23:41:37 [DEBUG] [demo_debug] Started agent process: packer.py (PID: 377704)
+2026-01-30 23:41:37 [INFO] [demo]   [OK] packer.py started (PID: 377704)
+2026-01-30 23:41:37 [DEBUG] [demo_debug] Started agent process: labeler.py (PID: 386564)
+2026-01-30 23:41:37 [INFO] [demo]   [OK] labeler.py started (PID: 386564)
+2026-01-30 23:41:37 [DEBUG] [demo_debug] Started agent process: wrapper.py (PID: 382456)
+2026-01-30 23:41:37 [INFO] [demo]   [OK] wrapper.py started (PID: 382456)
+2026-01-30 23:41:38 [DEBUG] [demo_debug] Wrote ahoy config: C:\Users\Omkar\AppData\Local\Temp\maf_chips_config.txt = Logistics:Merchant
+2026-01-30 23:41:38 [INFO] [demo] Starting ahoy.py for Logistics:Merchant...
+2026-01-30 23:41:38 [DEBUG] [demo_debug] ahoy.py path: C:\PhD\Research\MultiAgents\Code\MAF\agents\ahoy.py
+2026-01-30 23:41:38 [INFO] [demo]   [OK] ahoy.py started (PID: 376276) for Logistics:Merchant
+2026-01-30 23:41:38 [DEBUG] [demo_debug] ahoy.py process PID: 376276
+2026-01-30 23:41:40 [INFO] [demo] Waiting for Logistics protocol to complete...
+2026-01-30 23:41:40 [DEBUG] [demo_debug] Monitoring with timeout: 60s
+2026-01-30 23:42:40 [WARNING] [demo] Protocol Logistics did not complete within 60s, terminating...
+2026-01-30 23:42:40 [DEBUG] [demo_debug] Set stop signal: C:\Users\Omkar\AppData\Local\Temp\maf_stop_signal.txt
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Appended agent log: C:\PhD\Research\MultiAgents\Code\MAF\logs\generic_agent_debug_20260130_234139.log
+2026-01-30 23:42:41 [INFO] [demo] 
+Protocol Metrics for Logistics:
+2026-01-30 23:42:41 [INFO] [demo]   Execution Time: 63.53s
+2026-01-30 23:42:41 [INFO] [demo]   LLM Calls: 0
+2026-01-30 23:42:41 [INFO] [demo]   LLM Duration: 64.53s
+2026-01-30 23:42:41 [INFO] [demo]   Success: True
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Terminated process 376276
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Terminated process 377704
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Terminated process 386564
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Terminated process 382456
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Set stop signal: C:\Users\Omkar\AppData\Local\Temp\maf_stop_signal.txt
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Cleared config file: C:\Users\Omkar\AppData\Local\Temp\maf_chips_config.txt
+2026-01-30 23:42:41 [INFO] [demo] 
+======================================================================
+2026-01-30 23:42:41 [INFO] [demo] Saving Results
+2026-01-30 23:42:41 [INFO] [demo] ======================================================================
+
+2026-01-30 23:42:41 [INFO] [demo] Aggregated log saved to: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo1\results\demo1_20260130_234111.log
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Log file size: 42.3 KB
+2026-01-30 23:42:41 [INFO] [demo] 
+======================================================================
+2026-01-30 23:42:41 [INFO] [demo] DEMO 1 SUMMARY
+2026-01-30 23:42:41 [INFO] [demo] ======================================================================
+
+2026-01-30 23:42:41 [INFO] [demo] Protocols Executed: 2
+2026-01-30 23:42:41 [INFO] [demo] Protocols Successful: 2/2
+2026-01-30 23:42:41 [INFO] [demo] Total Execution Time: 86.74s
+2026-01-30 23:42:41 [INFO] [demo] Total LLM Calls: 0
+2026-01-30 23:42:41 [INFO] [demo] Total LLM Duration: 87.75s
+2026-01-30 23:42:41 [INFO] [demo] 
+Per-Protocol Details:
+2026-01-30 23:42:41 [INFO] [demo]   Purchase (Buyer): SUCCESS
+2026-01-30 23:42:41 [INFO] [demo]     Time: 23.21s, LLM: 0 calls
+2026-01-30 23:42:41 [INFO] [demo]   Logistics (Merchant): SUCCESS
+2026-01-30 23:42:41 [INFO] [demo]     Time: 63.53s, LLM: 0 calls
+2026-01-30 23:42:41 [INFO] [demo] 
+======================================================================
+2026-01-30 23:42:41 [INFO] [demo] Running Post-Execution Analysis...
+2026-01-30 23:42:41 [INFO] [demo] ======================================================================
+
+2026-01-30 23:42:41 [INFO] [demo] Executing: demo1_analysis.py
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Full path: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo1\demo1_analysis.py
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Analyzing log file: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo1\results\demo1_20260130_234111.log
+2026-01-30 23:42:41 [INFO] [demo]   ======================================================================
+2026-01-30 23:42:41 [INFO] [demo]   DEMO 1 ANALYSIS REPORT
+2026-01-30 23:42:41 [INFO] [demo]   ======================================================================
+2026-01-30 23:42:41 [INFO] [demo]   Execution Summary:
+2026-01-30 23:42:41 [INFO] [demo]     Run Timestamp: 20260130_234111
+2026-01-30 23:42:41 [INFO] [demo]     Protocols Executed: 2
+2026-01-30 23:42:41 [INFO] [demo]     Successful: 2/2
+2026-01-30 23:42:41 [INFO] [demo]     Success Rate: 100.0%
+2026-01-30 23:42:41 [INFO] [demo]   Timing Metrics:
+2026-01-30 23:42:41 [INFO] [demo]     Total Execution Time: 86.74s
+2026-01-30 23:42:41 [INFO] [demo]     Avg per Protocol: 43.37s
+2026-01-30 23:42:41 [INFO] [demo]   LLM Metrics:
+2026-01-30 23:42:41 [INFO] [demo]     Total LLM Calls: 0
+2026-01-30 23:42:41 [INFO] [demo]     Avg Calls per Protocol: 0.0
+2026-01-30 23:42:41 [INFO] [demo]     Total LLM Duration: 87.75s
+2026-01-30 23:42:41 [INFO] [demo]   Per-Protocol Details:
+2026-01-30 23:42:41 [INFO] [demo]     Purchase [SUCCESS]
+2026-01-30 23:42:41 [INFO] [demo]       Execution Time: 23.21s
+2026-01-30 23:42:41 [INFO] [demo]       LLM Calls: 0
+2026-01-30 23:42:41 [INFO] [demo]       LLM Duration: 23.21s
+2026-01-30 23:42:41 [INFO] [demo]     Logistics [SUCCESS]
+2026-01-30 23:42:41 [INFO] [demo]       Execution Time: 63.53s
+2026-01-30 23:42:41 [INFO] [demo]       LLM Calls: 0
+2026-01-30 23:42:41 [INFO] [demo]       LLM Duration: 64.53s
+2026-01-30 23:42:41 [INFO] [demo]   ======================================================================
+2026-01-30 23:42:41 [INFO] [demo]   Analysis report saved to: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo1\results\tmpimuolhuo_analysis.json
+2026-01-30 23:42:41 [INFO] [demo] 
+======================================================================
+2026-01-30 23:42:41 [INFO] [demo] Demo 1 Complete!
+2026-01-30 23:42:41 [INFO] [demo] ======================================================================
+
+2026-01-30 23:42:41 [DEBUG] [demo_debug] Demo harness shutdown
+ed, enabled messages available.
+2026-01-30 23:41:18,132 - DEBUG - Consulting LLM for decision...
+2026-01-30 23:41:18,132 - DEBUG - 
+=== CHOOSE_AND_BIND INVOKED ===
+2026-01-30 23:41:18,132 - DEBUG - Adapter: Buyer
+2026-01-30 23:41:18,132 - DEBUG - Using cached system prompt from previous call
+
+2026-01-30 23:41:18,132 - DEBUG - Option 0: Purchase/rfq - Missing: ['ID', 'item']
+2026-01-30 23:41:18,132 - DEBUG - 
+================================================================================
+2026-01-30 23:41:18,133 - DEBUG - USER PROMPT FOR MESSAGE CHOICE
+2026-01-30 23:41:18,133 - DEBUG - ================================================================================
+2026-01-30 23:41:18,133 - DEBUG - You are agent 'Buyer'. Choose at most one option, or return null.
+Your role requires making decisions. When choosing an option, always provide values for all required parameters.
+
+Roles: {'__object_type__': 'Role', 'name': 'Buyer'}
+
+=== MESSAGE HISTORY ===
+
+No message history available.
+
+=== END HISTORY (0 messages) ===
+
+Options:
+0) Purchase/rfq - FILL ONLY: ['ID', 'item']
+
+AVAILABLE TOOLS:
+1. **save_state_to_memory** - Saves agent state/notes for later retrieval
+   - Input: {"agent_name": "Agent", "key": "key_name", "value": "state_value"}
+
+NOTE ON ID PARAMETERS:
+- The system automatically generates and binds unique IDs for 'key' parameters
+- You do NOT need to provide IDs - they will be created automatically
+- Simply select your desired option and the system handles ID generation
+
+
+Response format JSON:
+- To choose an option WITH parameters: {"choice": 0, "params": {"ID": "value", "item": "value"}, "tool_requests": []}
+- To decline all options: {"choice": null, "params": {}, "tool_requests": []}
+- To request tools: include tool_requests array with {"tool": "name", "args": {...}}
+
+DECISION RULE: Always choose an option if you have viable parameters.
+Use values from the user input, protocol history, or reasonable defaults.
+Return null only if there is NO viable option at all.
+
+
+Examples:
+{"choice": null, "params": {}}
+{"choice": 0, "params": {}}
+2026-01-30 23:41:18,133 - DEBUG - ================================================================================
+2026-01-30 23:41:23,990 - DEBUG - 
+================================================================================
+2026-01-30 23:41:23,990 - DEBUG - RAW LLM RESPONSE
+2026-01-30 23:41:23,990 - DEBUG - ================================================================================
+2026-01-30 23:41:23,990 - DEBUG - I need to analyze this situation and make a decision as the Buyer agent.
+
+**Current State Analysis:**
+- I'm a Buyer who needs to purchase a pen and ship it to Raleigh NC 27606
+- I have a reasonable budget available
+- This is the start of the protocol (no message history)
+- I have one available option: Purchase/rfq with parameters ID and item
+
+**Decision Logic:**
+- The protocol is asking me to initiate a Purchase Request for Quotation (RFQ)
+- I have the item (pen) and can provide the necessary information
+- This is the natural first step in a purchase protocol
+- I should record my decision intent before proceeding
+
+Let me save my decision intent and then proceed:
+
+```json
+{
+  "choice": 0,
+  "params": {
+    "item": "pen"
+  },
+  "tool_requests": [
+    {
+      "tool": "save_state_to_memory",
+      "args": {
+        "agent_name": "Buyer",
+        "key": "enactment_decision_intent",
+        "value": "{\"choice_made\": \"Option 0: Purchase/rfq\", \"reason\": \"Initiating purchase request for pen with delivery to Raleigh NC 27606. This is the required first step in the purchase protocol.\", \"will_affect\": \"Merchant will receive RFQ and can provide quote. Buyer will proceed toward completing pen purchase and shipment.\"}"
+      }
+    }
+  ]
+}
+```
+
+**Rationale:**
+- Choosing Option 0 (Purchase/rfq) is the appropriate first step to begin the buying process
+- Item parameter: "pen" (as specified in requirements)
+- ID parameter: Will be auto-generated by the system (I don't provide it)
+- Shipping details (Raleigh NC 27606) and budget can be communicated in subsequent protocol messages
+- Recording my intent creates an audit trail of this decision
+2026-01-30 23:41:23,990 - DEBUG - ================================================================================
+2026-01-30 23:41:23,990 - DEBUG - 
+================================================================================
+2026-01-30 23:41:23,991 - DEBUG - EXECUTING TOOL REQUESTS
+2026-01-30 23:41:23,991 - DEBUG - ================================================================================
+2026-01-30 23:41:23,991 - DEBUG - Executing tool: save_state_to_memory with args: {'agent_name': 'Buyer', 'key': 'enactment_decision_intent', 'value': '{"choice_made": "Option 0: Purchase/rfq", "reason": "Initiating purchase request for pen with delivery to Raleigh NC 27606. This is the required first step in the purchase protocol.", "will_affect": "Merchant will receive RFQ and can provide quote. Buyer will proceed toward completing pen purchase and shipment."}'}
+2026-01-30 23:41:23,999 - DEBUG -   Result: {"tool": "save_state_to_memory", "result": {"status": "saved", "key": "enactment_decision_intent", "value": "{\"choice_made\": \"Option 0: Purchase/rfq\", \"reason\": \"Initiating purchase request for pen with delivery to Raleigh NC 27606. This is the required first step in the purchase protocol.\", \"will_affect\": \"Merchant will receive RFQ and can provide quote. Buyer will proceed toward completing pen purchase and shipment.\"}"}}
+2026-01-30 23:41:23,999 - DEBUG - ================================================================================
+2026-01-30 23:41:23,999 - DEBUG - ================================================================================
+2026-01-30 23:41:23,999 - DEBUG - PARSED LLM RESPONSE
+2026-01-30 23:41:23,999 - DEBUG - ================================================================================
+2026-01-30 23:41:23,999 - DEBUG - {
+  "choice": 0,
+  "params": {
+    "item": "pen"
+  }
+}
+2026-01-30 23:41:23,999 - DEBUG - ================================================================================
+2026-01-30 23:41:23,999 - DEBUG - Auto-generated ID for parameter 'ID': b6e22457-413b-46bf-9502-fd04e189ec48
+2026-01-30 23:41:23,999 - DEBUG - Status: 2 messages, 10s elapsed
+2026-01-30 23:41:23,999 - DEBUG - DEBUG: choose_and_bind returned: rfq(ID='b6e22457-413b-46bf-9502-fd04e189ec48',item='pen'){system='Purchase'}
+2026-01-30 23:41:23,999 - DEBUG - DEBUG: Sending message: rfq(ID='b6e22457-413b-46bf-9502-fd04e189ec48',item='pen'){system='Purchase'}
+2026-01-30 23:41:24,001 - DEBUG - DEBUG: llm_decision called for Purchase.Buyer
+2026-01-30 23:41:24,001 - DEBUG -   - enabled_store type: <class 'bspl.adapter.store.Store'>
+2026-01-30 23:41:24,001 - DEBUG -   - event type: <class 'dict'>
+2026-01-30 23:41:24,001 - DEBUG - DEBUG: Found 4 enabled messages
+2026-01-30 23:41:24,001 - DEBUG - LLM decision invoked, enabled messages available.
+2026-01-30 23:41:24,001 - DEBUG - Consulting LLM for decision...
+2026-01-30 23:41:24,001 - DEBUG - 
+=== CHOOSE_AND_BIND INVOKED ===
+2026-01-30 23:41:24,001 - DEBUG - Adapter: Buyer
+2026-01-30 23:41:24,001 - DEBUG - Using cached system prompt from previous call
+
+2026-01-30 23:41:24,001 - DEBUG - Option 0: Purchase/rfq - Missing: ['ID', 'item']
+2026-01-30 23:41:24,001 - DEBUG - Option 1: Purchase/completed - Missing: ['satisfaction']
+2026-01-30 23:41:24,001 - DEBUG - Option 2: Purchase/accept - Missing: ['address', 'resp']
+2026-01-30 23:41:24,001 - DEBUG - Option 3: Purchase/reject - Missing: ['outcome', 'resp']
+2026-01-30 23:41:24,001 - DEBUG - 
+================================================================================
+2026-01-30 23:41:24,001 - DEBUG - USER PROMPT FOR MESSAGE CHOICE
+2026-01-30 23:41:24,002 - DEBUG - ================================================================================
+2026-01-30 23:41:24,002 - DEBUG - You are agent 'Buyer'. Choose at most one option, or return null.
+Your role requires making decisions. When choosing an option, always provide values for all required parameters.
+
+Roles: {'__object_type__': 'Role', 'name': 'Buyer'}
+
+=== MESSAGE HISTORY ===
+
+1. quote (from Seller to Buyer)
+   ID: e7e22fa4-d736-43d6-8a3c-73eb0b9903cc
+   item: pen
+   price: 13
+
+=== END HISTORY (1 messages) ===
+
+Options:
+0) Purchase/rfq - FILL ONLY: ['ID', 'item']
+1) Purchase/completed [BOUND: ID=e7e22fa4-d736-43d6-8a3c-73eb0b9903cc, item=pen, price=13] - FILL ONLY: ['satisfaction']
+2) Purchase/accept [BOUND: ID=e7e22fa4-d736-43d6-8a3c-73eb0b9903cc, item=pen, price=13] - FILL ONLY: ['address', 'resp']
+3) Purchase/reject [BOUND: ID=e7e22fa4-d736-43d6-8a3c-73eb0b9903cc, item=pen, price=13] - FILL ONLY: ['outcome', 'resp']
+
+AVAILABLE TOOLS:
+1. **save_state_to_memory** - Saves agent state/notes for later retrieval
+   - Input: {"agent_name": "Agent", "key": "key_name", "value": "state_value"}
+
+NOTE ON ID PARAMETERS:
+- The system automatically generates and binds unique IDs for 'key' parameters
+- You do NOT need to provide IDs - they will be created automatically
+- Simply select your desired option and the system handles ID generation
+
+
+Response format JSON:
+- To choose an option WITH parameters: {"choice": 0, "params": {"ID": "value", "item": "value"}, "tool_requests": []}
+- To decline all options: {"choice": null, "params": {}, "tool_requests": []}
+- To request tools: include tool_requests array with {"tool": "name", "args": {...}}
+
+DECISION RULE: Always choose an option if you have viable parameters.
+Use values from the user input, protocol history, or reasonable defaults.
+Return null only if there is NO viable option at all.
+
+
+Examples:
+{"choice": null, "params": {}}
+{"choice": 0, "params": {}}
+2026-01-30 23:41:24,002 - DEBUG - ================================================================================
+2026-01-30 23:41:29,365 - DEBUG - 
+================================================================================
+2026-01-30 23:41:29,365 - DEBUG - RAW LLM RESPONSE
+2026-01-30 23:41:29,365 - DEBUG - ================================================================================
+2026-01-30 23:41:29,365 - DEBUG - I need to analyze this situation carefully.
+
+**Current State:**
+- I received a quote from Seller: pen for $13
+- User requirements: buy a pen, ship to Raleigh NC 27606, reasonable budget
+- $13 for a pen is reasonable
+
+**Available Options Analysis:**
+- Option 0: Send RFQ (rfq) - This would request a quote, but I already have one
+- Option 1: Mark as completed - Premature, purchase not yet accepted
+- Option 2: Accept the quote - This is the logical next step with address and response
+- Option 3: Reject the quote - Not justified given reasonable price
+
+**Decision:**
+I should accept the quote (Option 2) since:
+1. The price ($13) is reasonable for a pen
+2. I have the required parameters (address from user: Raleigh NC 27606)
+3. The quote is binding and I should proceed with the purchase
+
+Let me save my decision intent and then proceed:
+
+```json
+{
+  "choice": 2,
+  "params": {
+    "address": "Raleigh NC 27606",
+    "resp": "accept"
+  },
+  "tool_requests": [
+    {
+      "tool": "save_state_to_memory",
+      "args": {
+        "agent_name": "Buyer",
+        "key": "enactment_decision_intent",
+        "value": "{\"choice_made\": \"Option 2: Purchase/accept\", \"reason\": \"Quote price of $13 is reasonable for a pen and within budget. Ready to proceed with purchase and shipment to Raleigh NC 27606.\", \"will_affect\": \"Seller will receive acceptance and should proceed with fulfillment. Shipper will be notified for delivery to specified address.\"}"
+      }
+    }
+  ]
+}
+```
+2026-01-30 23:41:29,365 - DEBUG - ================================================================================
+2026-01-30 23:41:29,365 - DEBUG - 
+================================================================================
+2026-01-30 23:41:29,365 - DEBUG - EXECUTING TOOL REQUESTS
+2026-01-30 23:41:29,365 - DEBUG - ================================================================================
+2026-01-30 23:41:29,365 - DEBUG - Executing tool: save_state_to_memory with args: {'agent_name': 'Buyer', 'key': 'enactment_decision_intent', 'value': '{"choice_made": "Option 2: Purchase/accept", "reason": "Quote price of $13 is reasonable for a pen and within budget. Ready to proceed with purchase and shipment to Raleigh NC 27606.", "will_affect": "Seller will receive acceptance and should proceed with fulfillment. Shipper will be notified for delivery to specified address."}'}
+2026-01-30 23:41:29,372 - DEBUG -   Result: {"tool": "save_state_to_memory", "result": {"status": "saved", "key": "enactment_decision_intent", "value": "{\"choice_made\": \"Option 2: Purchase/accept\", \"reason\": \"Quote price of $13 is reasonable for a pen and within budget. Ready to proceed with purchase and shipment to Raleigh NC 27606.\", \"will_affect\": \"Seller will receive acceptance and should proceed with fulfillment. Shipper will be notified for delivery to specified address.\"}"}}
+2026-01-30 23:41:29,372 - DEBUG - ================================================================================
+2026-01-30 23:41:29,372 - DEBUG - ================================================================================
+2026-01-30 23:41:29,372 - DEBUG - PARSED LLM RESPONSE
+2026-01-30 23:41:29,372 - DEBUG - ================================================================================
+2026-01-30 23:41:29,372 - DEBUG - {
+  "choice": 2,
+  "params": {
+    "address": "Raleigh NC 27606",
+    "resp": "accept"
+  }
+}
+2026-01-30 23:41:29,372 - DEBUG - ================================================================================
+2026-01-30 23:41:29,372 - DEBUG - Status: 3 messages, 15s elapsed
+2026-01-30 23:41:29,372 - DEBUG - DEBUG: choose_and_bind returned: accept(ID='e7e22fa4-d736-43d6-8a3c-73eb0b9903cc',item='pen',price=13,address='Raleigh NC 27606',resp='accept'){system='Purchase'}
+2026-01-30 23:41:29,372 - DEBUG - DEBUG: Sending message: accept(ID='e7e22fa4-d736-43d6-8a3c-73eb0b9903cc',item='pen',price=13,address='Raleigh NC 27606',resp='accept'){system='Purchase'}
+2026-01-30 23:41:29,373 - DEBUG - DEBUG: llm_decision called for Purchase.Buyer
+2026-01-30 23:41:29,373 - DEBUG -   - enabled_store type: <class 'bspl.adapter.store.Store'>
+2026-01-30 23:41:29,373 - DEBUG -   - event type: <class 'dict'>
+2026-01-30 23:41:29,373 - DEBUG - DEBUG: Found 7 enabled messages
+2026-01-30 23:41:29,373 - DEBUG - LLM decision invoked, enabled messages available.
+2026-01-30 23:41:29,373 - DEBUG - Consulting LLM for decision...
+2026-01-30 23:41:29,373 - DEBUG - 
+=== CHOOSE_AND_BIND INVOKED ===
+2026-01-30 23:41:29,373 - DEBUG - Adapter: Buyer
+2026-01-30 23:41:29,373 - DEBUG - Using cached system prompt from previous call
+
+2026-01-30 23:41:29,373 - DEBUG - Option 0: Purchase/rfq - Missing: ['ID', 'item']
+2026-01-30 23:41:29,373 - DEBUG - Option 1: Purchase/completed - Missing: ['satisfaction']
+2026-01-30 23:41:29,373 - DEBUG - Option 2: Purchase/accept - Missing: ['address', 'resp']
+2026-01-30 23:41:29,373 - DEBUG - Option 3: Purchase/reject - Missing: ['outcome', 'resp']
+2026-01-30 23:41:29,373 - DEBUG - Option 4: Purchase/completed - Missing: ['satisfaction']
+2026-01-30 23:41:29,373 - DEBUG - Option 5: Purchase/reject - Missing: ['outcome', 'resp']
+2026-01-30 23:41:29,373 - DEBUG - Option 6: Purchase/accept - Missing: ['address', 'resp']
+2026-01-30 23:41:29,374 - DEBUG - 
+================================================================================
+2026-01-30 23:41:29,374 - DEBUG - USER PROMPT FOR MESSAGE CHOICE
+2026-01-30 23:41:29,374 - DEBUG - ================================================================================
+2026-01-30 23:41:29,374 - DEBUG - You are agent 'Buyer'. Choose at most one option, or return null.
+Your role requires making decisions. When choosing an option, always provide values for all required parameters.
+
+Roles: {'__object_type__': 'Role', 'name': 'Buyer'}
+
+=== MESSAGE HISTORY ===
+
+1. quote (from Seller to Buyer)
+   ID: e7e22fa4-d736-43d6-8a3c-73eb0b9903cc
+   item: pen
+   price: 13
+
+2. quote (from Seller to Buyer)
+   ID: b6e22457-413b-46bf-9502-fd04e189ec48
+   item: pen
+   price: 11
+
+=== END HISTORY (2 messages) ===
+
+Options:
+0) Purchase/rfq - FILL ONLY: ['ID', 'item']
+1) Purchase/completed [BOUND: ID=e7e22fa4-d736-43d6-8a3c-73eb0b9903cc, item=pen, price=13] - FILL ONLY: ['satisfaction']
+2) Purchase/accept [BOUND: ID=e7e22fa4-d736-43d6-8a3c-73eb0b9903cc, item=pen, price=13] - FILL ONLY: ['address', 'resp']
+3) Purchase/reject [BOUND: ID=e7e22fa4-d736-43d6-8a3c-73eb0b9903cc, item=pen, price=13] - FILL ONLY: ['outcome', 'resp']
+4) Purchase/completed [BOUND: ID=b6e22457-413b-46bf-9502-fd04e189ec48, item=pen, price=11] - FILL ONLY: ['satisfaction']
+5) Purchase/reject [BOUND: ID=b6e22457-413b-46bf-9502-fd04e189ec48, item=pen, price=11] - FILL ONLY: ['outcome', 'resp']
+6) Purchase/accept [BOUND: ID=b6e22457-413b-46bf-9502-fd04e189ec48, item=pen, price=11] - FILL ONLY: ['address', 'resp']
+
+AVAILABLE TOOLS:
+1. **save_state_to_memory** - Saves agent state/notes for later retrieval
+   - Input: {"agent_name": "Agent", "key": "key_name", "value": "state_value"}
+
+NOTE ON ID PARAMETERS:
+- The system automatically generates and binds unique IDs for 'key' parameters
+- You do NOT need to provide IDs - they will be created automatically
+- Simply select your desired option and the system handles ID generation
+
+
+Response format JSON:
+- To choose an option WITH parameters: {"choice": 0, "params": {"ID": "value", "item": "value"}, "tool_requests": []}
+- To decline all options: {"choice": null, "params": {}, "tool_requests": []}
+- To request tools: include tool_requests array with {"tool": "name", "args": {...}}
+
+DECISION RULE: Always choose an option if you have viable parameters.
+Use values from the user input, protocol history, or reasonable defaults.
+Return null only if there is NO viable option at all.
+
+
+Examples:
+{"choice": null, "params": {}}
+{"choice": 0, "params": {}}
+2026-01-30 23:41:29,374 - DEBUG - ================================================================================
+2026-01-30 23:41:34,301 - DEBUG - 
+================================================================================
+2026-01-30 23:41:34,301 - DEBUG - RAW LLM RESPONSE
+2026-01-30 23:41:34,301 - DEBUG - ================================================================================
+2026-01-30 23:41:34,301 - DEBUG - I need to analyze this purchase protocol carefully.
+
+**Situation Analysis:**
+- I have received 2 quotes for a pen:
+  - Quote 1: $13 (ID: e7e22fa4-d736-43d6-8a3c-73eb0b9903cc)
+  - Quote 2: $11 (ID: b6e22457-413b-46bf-9502-fd04e189ec48)
+- User requirements: Buy a pen, ship to Raleigh NC 27606, reasonable budget
+- Budget constraint: Not explicitly stated but "reasonable budget" for a pen suggests both prices are acceptable, with $11 being better value
+
+**Decision Logic:**
+The $11 quote (Option 6) is the better choice:
+- Lower price ($11 vs $13) 
+- Still within reasonable budget for a pen
+- I should accept this quote and proceed with shipping to the specified address
+
+Let me log this decision and proceed:
+
+```json
+{
+  "choice": 6,
+  "params": {
+    "address": "Raleigh NC 27606",
+    "resp": "accept"
+  },
+  "tool_requests": [
+    {
+      "tool": "save_state_to_memory",
+      "args": {
+        "agent_name": "Buyer",
+        "key": "enactment_decision_intent",
+        "value": "{\"choice_made\": \"Option 6: Purchase/accept\", \"reason\": \"Selected lower-priced quote at $11 vs $13 for pen purchase. Price is reasonable and within budget.\", \"will_affect\": \"Seller will receive acceptance, shipping will be arranged to Raleigh NC 27606\"}"
+      }
+    }
+  ]
+}
+```
+2026-01-30 23:41:34,301 - DEBUG - ================================================================================
+2026-01-30 23:41:34,301 - DEBUG - 
+================================================================================
+2026-01-30 23:41:34,301 - DEBUG - EXECUTING TOOL REQUESTS
+2026-01-30 23:41:34,301 - DEBUG - ================================================================================
+2026-01-30 23:41:34,301 - DEBUG - Executing tool: save_state_to_memory with args: {'agent_name': 'Buyer', 'key': 'enactment_decision_intent', 'value': '{"choice_made": "Option 6: Purchase/accept", "reason": "Selected lower-priced quote at $11 vs $13 for pen purchase. Price is reasonable and within budget.", "will_affect": "Seller will receive acceptance, shipping will be arranged to Raleigh NC 27606"}'}
+2026-01-30 23:41:34,308 - DEBUG -   Result: {"tool": "save_state_to_memory", "result": {"status": "saved", "key": "enactment_decision_intent", "value": "{\"choice_made\": \"Option 6: Purchase/accept\", \"reason\": \"Selected lower-priced quote at $11 vs $13 for pen purchase. Price is reasonable and within budget.\", \"will_affect\": \"Seller will receive acceptance, shipping will be arranged to Raleigh NC 27606\"}"}}
+2026-01-30 23:41:34,308 - DEBUG - ================================================================================
+2026-01-30 23:41:34,308 - DEBUG - ================================================================================
+2026-01-30 23:41:34,308 - DEBUG - PARSED LLM RESPONSE
+2026-01-30 23:41:34,308 - DEBUG - ================================================================================
+2026-01-30 23:41:34,308 - DEBUG - {
+  "choice": 6,
+  "params": {
+    "address": "Raleigh NC 27606",
+    "resp": "accept"
+  }
+}
+2026-01-30 23:41:34,308 - DEBUG - ================================================================================
+2026-01-30 23:41:34,308 - DEBUG - Status: 4 messages, 20s elapsed
+2026-01-30 23:41:34,308 - DEBUG - DEBUG: choose_and_bind returned: accept(ID='b6e22457-413b-46bf-9502-fd04e189ec48',item='pen',price=11,address='Raleigh NC 27606',resp='accept'){system='Purchase'}
+2026-01-30 23:41:34,308 - DEBUG - DEBUG: Sending message: accept(ID='b6e22457-413b-46bf-9502-fd04e189ec48',item='pen',price=11,address='Raleigh NC 27606',resp='accept'){system='Purchase'}
+2026-01-30 23:41:34,309 - DEBUG - Error occurred: [WinError 10038] An operation was attempted on something that is not a socket
+2026-01-30 23:41:34,311 - DEBUG - Full traceback:
+Traceback (most recent call last):
+  File "C:\PhD\Research\MultiAgents\Code\MAF\agents\ahoy.py", line 460, in <module>
+    adapter.start(main())
+  File "C:\Users\Omkar\miniconda3\envs\maf-py\Lib\site-packages\bspl\adapter\core.py", line 478, in start
+    aiorun.run(main(), stop_on_unhandled_errors=True, use_uvloop=use_uvloop)
+  File "C:\Users\Omkar\miniconda3\envs\maf-py\Lib\site-packages\aiorun\__init__.py", line 374, in run
+    raise pending_exception_to_raise
+  File "C:\Users\Omkar\miniconda3\envs\maf-py\Lib\site-packages\bspl\adapter\core.py", line 503, in update_loop
+    await self.update()
+  File "C:\Users\Omkar\miniconda3\envs\maf-py\Lib\site-packages\bspl\adapter\core.py", line 499, in update
+    await self.send(*emissions)
+  File "C:\Users\Omkar\miniconda3\envs\maf-py\Lib\site-packages\bspl\adapter\core.py", line 258, in send
+    await self.emitter.send(m)
+  File "C:\Users\Omkar\miniconda3\envs\maf-py\Lib\site-packages\bspl\adapter\emitter.py", line 35, in send
+    self.transmit(b"[" + packet + b"]", message.dest)
+  File "C:\Users\Omkar\miniconda3\envs\maf-py\Lib\site-packages\bspl\adapter\emitter.py", line 65, in transmit
+    self.socket.sendto(packet, dest)
+OSError: [WinError 10038] An operation was attempted on something that is not a socket
+
+2026-01-30 23:41:34,311 - DEBUG - Logs written to: C:\PhD\Research\MultiAgents\Code\MAF\logs\generic_agent_debug_20260130_234113.log
+
+======================================================================
+END AHOY.PY LOG
+======================================================================
+
+
+======================================================================
+AHOY.PY DETAILED LOG (Logistics:Merchant)
+======================================================================
+
+2026-01-30 23:41:39,223 - DEBUG - LLM tracker initialized: max 20 calls or 3 minutes
+2026-01-30 23:41:39,224 - DEBUG - INITIALIZATION PHASE: Reading protocol and role from CHIPS config
+2026-01-30 23:41:39,225 - DEBUG - Read config: Logistics:Merchant
+2026-01-30 23:41:39,225 - DEBUG - CHIPS config (simple): Logistics:Merchant
+2026-01-30 23:41:39,225 - DEBUG - Agent assigned to: [('Logistics', 'Merchant')]
+2026-01-30 23:41:39,225 - DEBUG - Adapter created successfully for Logistics:Merchant
+2026-01-30 23:41:39,225 - DEBUG - Claimed roles written to temp file: C:\Users\Omkar\AppData\Local\Temp\maf_claimed_role_376276.txt
+2026-01-30 23:41:39,230 - DEBUG - DEBUG: llm_decision called for Logistics.Merchant
+2026-01-30 23:41:39,230 - DEBUG -   - enabled_store type: <class 'bspl.adapter.store.Store'>
+2026-01-30 23:41:39,230 - DEBUG -   - event type: <class 'bspl.adapter.event.InitEvent'>
+2026-01-30 23:41:39,230 - DEBUG - DEBUG: Found 1 enabled messages
+2026-01-30 23:41:39,230 - DEBUG - LLM decision invoked, enabled messages available.
+2026-01-30 23:41:39,230 - DEBUG - Consulting LLM for decision...
+2026-01-30 23:41:39,230 - DEBUG - 
+=== CHOOSE_AND_BIND INVOKED ===
+2026-01-30 23:41:39,230 - DEBUG - Adapter: Merchant
+2026-01-30 23:41:39,230 - DEBUG - First call detected - building and caching system prompt...
+2026-01-30 23:41:39,230 - DEBUG - System prompt cached (length: 4440)
+
+2026-01-30 23:41:39,230 - DEBUG - Option 0: Logistics/RequestLabel - Missing: ['orderID', 'address']
+2026-01-30 23:41:39,230 - DEBUG - 
+================================================================================
+2026-01-30 23:41:39,230 - DEBUG - USER PROMPT FOR MESSAGE CHOICE
+2026-01-30 23:41:39,230 - DEBUG - ================================================================================
+2026-01-30 23:41:39,230 - DEBUG - You are agent 'Merchant'. Choose at most one option, or return null.
+Your role requires making decisions. When choosing an option, always provide values for all required parameters.
+
+Roles: {'__object_type__': 'Role', 'name': 'Merchant'}
+
+=== MESSAGE HISTORY ===
+
+No message history available.
+
+=== END HISTORY (0 messages) ===
+
+Options:
+0) Logistics/RequestLabel - FILL ONLY: ['orderID', 'address']
+
+AVAILABLE TOOLS:
+1. **save_state_to_memory** - Saves agent state/notes for later retrieval
+   - Input: {"agent_name": "Agent", "key": "key_name", "value": "state_value"}
+
+NOTE ON ID PARAMETERS:
+- The system automatically generates and binds unique IDs for 'key' parameters
+- You do NOT need to provide IDs - they will be created automatically
+- Simply select your desired option and the system handles ID generation
+
+
+Response format JSON:
+- To choose an option WITH parameters: {"choice": 0, "params": {"ID": "value", "item": "value"}, "tool_requests": []}
+- To decline all options: {"choice": null, "params": {}, "tool_requests": []}
+- To request tools: include tool_requests array with {"tool": "name", "args": {...}}
+
+DECISION RULE: Always choose an option if you have viable parameters.
+Use values from the user input, protocol history, or reasonable defaults.
+Return null only if there is NO viable option at all.
+
+
+Examples:
+{"choice": null, "params": {}}
+{"choice": 0, "params": {}}
+2026-01-30 23:41:39,231 - DEBUG - ================================================================================
+2026-01-30 23:41:39,231 - DEBUG - Generic agent ready for Logistics.Merchant. Waiting for protocol events...
+2026-01-30 23:41:45,098 - DEBUG - 
+================================================================================
+2026-01-30 23:41:45,098 - DEBUG - RAW LLM RESPONSE
+2026-01-30 23:41:45,098 - DEBUG - ================================================================================
+2026-01-30 23:41:45,098 - DEBUG - I need to analyze this decision carefully.
+
+**Situation Analysis:**
+- I'm the Merchant agent
+- The user wants to buy a pen and ship it to Raleigh NC 27606
+- No message history exists yet - this is the start of the protocol
+- Option 0 is `Logistics/RequestLabel` which requires `orderID` and `address`
+
+**Problem:** 
+The `Logistics/RequestLabel` message requires an `orderID`, but there's no prior message history showing that an order has been created yet. In a typical e-commerce protocol flow, the sequence would be:
+1. Buyer initiates a purchase request
+2. Merchant creates/confirms an order (generating an orderID)
+3. Merchant then requests a shipping label for that order
+
+Since I'm the Merchant and there's no prior communication from a Buyer, I don't have a valid `orderID` to provide. The protocol appears to be in an incomplete state - I'm missing the prerequisite messages that would bind the `orderID` parameter.
+
+**Decision:**
+I cannot reasonably proceed with this option because I lack the necessary bound parameters (`orderID`) that should come from prior protocol messages. This appears to be an initialization issue rather than a decision point where I can take action.
+
+Let me save this state for the record:
+
+```json
+{
+  "choice": null,
+  "params": {},
+  "tool_requests": [
+    {
+      "tool": "save_state_to_memory",
+      "args": {
+        "agent_name": "Merchant",
+        "key": "enactment_decision_intent",
+        "value": "{\"choice_made\": \"Option null: No viable action\", \"reason\": \"Logistics/RequestLabel requires orderID which has not been bound by prior protocol messages. No Buyer has initiated an order yet.\", \"will_affect\": \"Merchant cannot proceed until Buyer sends initial purchase/order request\"}"
+      }
+    }
+  ]
+}
+```
+2026-01-30 23:41:45,098 - DEBUG - ================================================================================
+2026-01-30 23:41:45,098 - DEBUG - 
+================================================================================
+2026-01-30 23:41:45,098 - DEBUG - EXECUTING TOOL REQUESTS
+2026-01-30 23:41:45,098 - DEBUG - ================================================================================
+2026-01-30 23:41:45,098 - DEBUG - Executing tool: save_state_to_memory with args: {'agent_name': 'Merchant', 'key': 'enactment_decision_intent', 'value': '{"choice_made": "Option null: No viable action", "reason": "Logistics/RequestLabel requires orderID which has not been bound by prior protocol messages. No Buyer has initiated an order yet.", "will_affect": "Merchant cannot proceed until Buyer sends initial purchase/order request"}'}
+2026-01-30 23:41:45,106 - DEBUG -   Result: {"tool": "save_state_to_memory", "result": {"status": "saved", "key": "enactment_decision_intent", "value": "{\"choice_made\": \"Option null: No viable action\", \"reason\": \"Logistics/RequestLabel requires orderID which has not been bound by prior protocol messages. No Buyer has initiated an order yet.\", \"will_affect\": \"Merchant cannot proceed until Buyer sends initial purchase/order request\"}"}}
+2026-01-30 23:41:45,106 - DEBUG - ================================================================================
+2026-01-30 23:41:45,106 - DEBUG - ================================================================================
+2026-01-30 23:41:45,106 - DEBUG - PARSED LLM RESPONSE
+2026-01-30 23:41:45,106 - DEBUG - ================================================================================
+2026-01-30 23:41:45,106 - DEBUG - {
+  "choice": null,
+  "params": {}
+}
+2026-01-30 23:41:45,106 - DEBUG - ================================================================================
+2026-01-30 23:41:45,106 - DEBUG - LLM declined to make a choice
+2026-01-30 23:41:45,106 - DEBUG - Status: 1 messages, 6s elapsed
+2026-01-30 23:41:45,106 - DEBUG - DEBUG: choose_and_bind returned: None
+2026-01-30 23:41:45,106 - DEBUG - DEBUG: No instance returned from LLM, skipping
+
+======================================================================
+END AHOY.PY LOG
+======================================================================
+
+
+
+======================================================================
+DEMO 1 EXECUTION COMPLETE
+Run Timestamp: 20260130_234111
+Total Protocols: 2
+Successful: 2
+Total Execution Time: 86.74s
+======================================================================
+

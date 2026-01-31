@@ -14,9 +14,55 @@ from typing import Any, Dict, Optional, Union, List
 # PROMPT CONTENT STRINGS
 # ============================================================================
 
-
-
-
+def _generate_protocol_aware_guidance(agent_names: List[str]) -> str:
+    """
+    Generate protocol-aware guidance based on the agent's role(s).
+    
+    This function extracts the protocol structure to understand what messages
+    a role is responsible for sending, and guides the LLM accordingly.
+    
+    Args:
+        agent_names: List of agent role names (e.g., ["Merchant"] or ["Merchant", "Buyer"])
+    
+    Returns:
+        String with protocol-aware guidance for the LLM
+    """
+    try:
+        from lib.protocol_discovery import get_all_protocols
+        
+        protocols = get_all_protocols()
+        guidance = "\n\nPROTOCOL-SPECIFIC GUIDANCE FOR YOUR ROLE(S):\n"
+        guidance += "=" * 70 + "\n"
+        
+        for protocol_name, protocol in protocols.items():
+            for agent_name in agent_names:
+                # Find this agent's role in the protocol
+                if hasattr(protocol, 'roles') and agent_name in protocol.roles.keys():
+                    role = protocol.roles[agent_name]
+                    guidance += f"\nIn {protocol_name} protocol, your role ({agent_name}) is responsible for:\n"
+                    
+                    # Analyze messages this role can send
+                    messages_to_send = []
+                    if hasattr(protocol, 'messages'):
+                        for msg in protocol.messages:
+                            # Check if this role is the sender (source) of this message
+                            if hasattr(msg, 'source') and hasattr(msg.source, 'name'):
+                                if msg.source.name == agent_name:
+                                    msg_name = msg.name if hasattr(msg, 'name') else str(msg)
+                                    messages_to_send.append(msg_name)
+                    
+                    if messages_to_send:
+                        # Remove duplicates and sort
+                        messages_to_send = sorted(list(set(messages_to_send)))
+                        guidance += f"  - SENDING these message types: {', '.join(messages_to_send)}\n"
+                        guidance += f"    → You may need to send MULTIPLE different message types as the protocol progresses\n"
+                        guidance += f"    → Do not assume you only send one type of message\n"
+                        guidance += f"    → Coordinate sending all required message types to advance the protocol\n"
+        
+        return guidance
+    except Exception as e:
+        # If protocol analysis fails, return empty string (graceful degradation)
+        return ""
 
 
 # ============================================================================
@@ -105,13 +151,24 @@ def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: s
             - When multiple messages are enabled, choose based on domain reasoning and the protocol's intended flow"""
             
             enhanced_prompt = enhanced_prompt + bspl_highlevel_explanation
+            
+            # Add protocol-aware guidance
+            protocol_guidance = _generate_protocol_aware_guidance(agent_names_list)
+            if protocol_guidance:
+                enhanced_prompt = enhanced_prompt + protocol_guidance
  
             # Option Selection
             option_selection = """
             Your choice will directly determine what message gets SENT and what happens next:
             - The BOUND parameters shown above (in [BOUND: ...]) are already set and will be used
             - You only need to provide values for parameters marked in FILL ONLY
-            - Your selection will trigger protocol actions based on the message type and parameters"""
+            - Your selection will trigger protocol actions based on the message type and parameters
+            
+            IMPORTANT: When multiple message options are available, carefully consider which ones you need to send:
+            - Do NOT assume you only need to send one message type
+            - Some protocols require sending multiple different message types to make progress
+            - If the protocol needs both message A and message B to be sent by your role, send BOTH (in separate decisions)
+            - Only return null if NO viable messages are available right now"""
             enhanced_prompt = enhanced_prompt + option_selection
 
             # Critical Parameter Rules

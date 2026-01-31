@@ -32,7 +32,7 @@ from lib import (
 )
 from lib.llm_client import initialize_llm_tracker, get_llm_tracker
 from lib.agent_notes import get_agent_notes, reset_agent_notes
-from lib.protocol_completion_detector import is_completion_message
+from lib.protocol_completion_detector import is_completion_message, get_completion_message
 from lib.dynamic_adapter_manager import create_adapter_for_role, get_color_for_protocol_role
 
 # Set global timeout
@@ -159,6 +159,52 @@ async def main():
         raise
 
 
+def _check_for_received_completion_message(adapter_ref):
+    """
+    Check if the role has received a completion message.
+    
+    For some protocols (like Logistics), completion is determined by RECEIVING
+    a specific message type rather than sending it.
+    
+    Args:
+        adapter_ref: The BSPL adapter instance
+    
+    Returns:
+        tuple: (is_completed, message_info) where message_info is the completion message details
+    """
+    try:
+        from lib.state_manager import extract_social_state
+        
+        social_state = extract_social_state(adapter_ref)
+        all_messages = social_state.get("all_messages", [])
+        
+        log_debug(f"DEBUG: Checking {len(all_messages)} messages for completion signal")
+        log_debug(f"DEBUG: Looking for completion message type: {get_completion_message(assigned_protocol, assigned_role)}")
+        
+        completion_msg_type = get_completion_message(assigned_protocol, assigned_role)
+        if not completion_msg_type:
+            log_debug(f"DEBUG: No completion message defined for {assigned_protocol}/{assigned_role}")
+            return False, None
+        
+        # Check if any received messages match the completion criteria
+        for msg in all_messages:
+            msg_name = msg.get("schema_name", "")
+            log_debug(f"DEBUG: Checking message: {msg_name} == {completion_msg_type}?")
+            # Check if this is a completion message for the current role
+            if msg_name == completion_msg_type:
+                # This is a completion message
+                log_debug(f"DEBUG: ✓ Found received completion message: {msg_name}")
+                return True, msg
+        
+        log_debug(f"DEBUG: No completion message found in history")
+        return False, None
+    except Exception as e:
+        log_debug(f"Error checking for received completion: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return False, None
+
+
 async def _get_llm_decision_handler():
     """
     Return the LLM decision handler as an async function.
@@ -207,6 +253,12 @@ async def _get_llm_decision_handler():
         
         if instance is None:
             log_debug("DEBUG: No instance returned from LLM, skipping")
+            # Before giving up, check if we've received a completion message
+            is_completed, completion_msg = _check_for_received_completion_message(adapter)
+            if is_completed:
+                log_debug(f"DEBUG: Role completed by receiving: {completion_msg}")
+                _handle_role_completion(completion_msg)
+            
             # If LLM deferred choice for tools, we need to retry the decision
             # This allows the LLM to make a message choice on the next call with tool results available
             # Return None to skip this event, and adapter will check again
@@ -214,7 +266,7 @@ async def _get_llm_decision_handler():
 
         log_debug(f"DEBUG: Sending message: {instance}")
         
-        # Check if this message completes the role
+        # Check if this message completes the role (sent messages)
         if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
             msg_type = instance.schema.name
             if is_completion_message(assigned_protocol, assigned_role, msg_type):

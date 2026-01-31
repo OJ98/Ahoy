@@ -38,12 +38,27 @@ adapter = Adapter(Labeler, systems, agents)
 logger = logging.getLogger("labeler")
 logger.setLevel(logging.INFO)
 
+# Statistics tracking
+labels_generated = 0
+orders_processed = set()
+
 @adapter.reaction(RequestLabel)
 async def label(msg):
     """Handles label requests by generating a unique UUID-based label."""
-    label = str(uuid.uuid4())
-    logger.info(f"Generated label {label} for order {msg['orderID']}")
-    await adapter.send(Labeled(label=label, **msg.payload))
+    global labels_generated, orders_processed
+    
+    order_id = msg['orderID']
+    address = msg['address'] if 'address' in msg else 'N/A'
+    label_text = str(uuid.uuid4())
+    
+    labels_generated += 1
+    orders_processed.add(order_id)
+    
+    logger.info(f"[{labels_generated}] Generated label {label_text[:8]}... for order {order_id[:8]}... (address: {address})")
+    log_debug(f"Full details: Order={order_id}, Address={address}, Label={label_text}")
+    
+    await adapter.send(Labeled(label=label_text, **msg.payload))
+    logger.debug(f"Sent Labeled message for order {order_id[:8]}... | Total labels generated: {labels_generated}")
     return msg
 
 if __name__ == "__main__":

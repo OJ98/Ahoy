@@ -1,0 +1,31 @@
+{
+  "demo_summary": {
+    "run_timestamp": "20260130_234111",
+    "total_protocols_executed": 2,
+    "protocols_successful": 2,
+    "success_rate": "100.0%",
+    "total_execution_time_seconds": 86.74,
+    "total_llm_calls": 0,
+    "total_llm_duration_seconds": 87.75,
+    "average_llm_calls_per_protocol": 0.0,
+    "average_execution_time_per_protocol": 43.37
+  },
+  "protocol_metrics": [
+    {
+      "protocol": "Purchase",
+      "success": true,
+      "execution_time_seconds": 23.21,
+      "llm_calls": 0,
+      "llm_duration_seconds": 23.21,
+      "error": null
+    },
+    {
+      "protocol": "Logistics",
+      "success": true,
+      "execution_time_seconds": 63.53,
+      "llm_calls": 0,
+      "llm_duration_seconds": 64.53,
+      "error": null
+    }
+  ]
+}

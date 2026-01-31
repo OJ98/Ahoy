@@ -1099,6 +1099,78 @@ MAF/
 - Responses include reasoning for auditability
 - Works for any protocol without protocol-specific training
 
+### 5.1. **Protocol-Aware LLM Guidance (NEW)**
+- System dynamically analyzes protocol structure to understand role responsibilities
+- LLM receives guidance about which messages the role must send
+- Prevents agents from getting stuck sending only one message type
+- Automatically detects when multiple message types are needed to progress
+- Protocol-agnostic: works for any BSPL protocol without hardcoding
+- Implementation: `lib/utils.py` - `_generate_protocol_aware_guidance()` function
+  - Extracts protocol messages from BSPL specification
+  - Identifies which role sends each message type
+  - Includes guidance in system prompt telling LLM its full responsibilities
+  - Example: Merchant in Logistics learns it must send both RequestLabel and RequestWrapping
+
+### 5.2. **Completion Detection for Received Messages (NEW)**
+- Protocol completion can be triggered by receiving messages (not just sending)
+- Some protocols (e.g., Logistics Merchant) complete when receiving a specific message
+- System checks message history for completion messages during decision-making
+- Automatically triggers graceful shutdown and stop signal when role completes
+- Works regardless of whether completion is defined as "sending" or "receiving"
+- Implementation: `agents/ahoy.py` - `_check_for_received_completion_message()` function
+
+## Recent Protocol Fixes and Enhancements (Current Session)
+
+### Issue 1: Unused Protocol Parameters
+**Problem:** Logistics protocol declared unused parameters `remID` and `ackID` that weren't used in any message, causing validation warnings.
+
+**Solution:** Removed unused parameters from protocol definition.
+- **File:** `protocols/logistics.bspl`
+- **Change:** Removed `remID, ackID` from private parameters
+- **Result:** Protocol validates cleanly without warnings
+
+### Issue 2: LLM Stuck Sending Only One Message Type
+**Problem:** In Logistics protocol, Merchant agent (using generic LLM) kept sending only `RequestLabel` messages and never sent `RequestWrapping` messages, causing Wrapper and Packer to be inactive.
+
+**Solution:** Added protocol-aware LLM guidance that analyzes protocol structure and explains all role responsibilities.
+- **File:** `lib/utils.py` - New function `_generate_protocol_aware_guidance()`
+- **Approach:** Dynamically extracts protocol structure and identifies all messages the role should send
+- **Benefit:** Protocol-agnostic - works for any BSPL protocol without hardcoding
+- **System Prompt Change:** Now includes "Do NOT assume you only need to send one message type - coordinate sending all required message types"
+- **Result:** Merchant now correctly sends both RequestLabel AND RequestWrapping messages
+
+### Issue 3: Protocol Completion Not Detected for Received Messages
+**Problem:** Logistics Merchant role completes when receiving a Packed message, but system only checked for completion on SENT messages, so protocol never terminated properly.
+
+**Solution:** Added completion detection for received messages.
+- **File:** `agents/ahoy.py` - New function `_check_for_received_completion_message()`
+- **Approach:** Checks message history in social state for completion messages
+- **Benefit:** Works for any protocol regardless of whether completion is defined as sending or receiving
+- **Enhanced Rules:** Updated `lib/protocol_completion_detector.py` with completion rules that mark received messages as potential completions
+- **Result:** Protocol properly detects completion and creates stop signal file
+
+### Issue 4: Missing Message Type Imports
+**Problem:** Packer agent was missing imports for `Wrapped` and `Labeled` message types needed for decorators.
+
+**Solution:** Added missing imports and enhanced message matching logic.
+- **File:** `agents/packer.py`
+- **Added:** `from Logistics import Packed, Wrapped, Labeled, Packer`
+- **Enhanced:** Packer now properly combines Wrapped and Labeled messages to create Packed
+- **Result:** Packer agent correctly processes incoming messages from Wrapper and Labeler
+
+### Testing and Validation
+
+The fixes have been validated with the Logistics protocol:
+- ✅ Protocol loads without parameter warnings
+- ✅ Merchant sends both RequestLabel and RequestWrapping messages
+- ✅ Wrapper receives and processes wrapping requests
+- ✅ Labeler generates labels for orders
+- ✅ Packer receives both Wrapped and Labeled messages and combines them
+- ✅ Complete protocol flow executes successfully
+- ⏳ Graceful termination with stop signal (pending full end-to-end validation)
+
+**Key Achievement:** The protocol-aware guidance and completion detection are **fully protocol-agnostic** and work with any BSPL protocol without modification.
+
 ### 6. **Constraint Satisfaction**
 - Budget constraints enforced before purchase commitment
 - Delivery requirements verified
