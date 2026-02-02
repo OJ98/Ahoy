@@ -11,3 +11,5 @@ Orders to process (up to 5 initially):
 3. Order ID: ORD-003, Address: Warehouse 1, Items: 2 plates (fragile)
 
 Ensure each item is properly wrapped and labeled before packing.
+
+The address is Raleigh NC 27606.

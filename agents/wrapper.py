@@ -40,15 +40,26 @@ logger.setLevel(logging.INFO)
 @adapter.reaction(RequestWrapping)
 async def wrap(msg):
     """Handles wrapping requests by selecting appropriate material (bubblewrap for fragile items)."""
-    wrapping = "bubblewrap" if msg["item"] in ["plate", "glass"] else "paper"
-    logger.info(f"Order {msg['orderID']} item {msg['itemID']} ({msg['item']}) wrapped with {wrapping}")
-    await adapter.send(
-        Wrapped(
-            wrapping=wrapping,
-            **msg.payload
+    try:
+        log_debug(f"DEBUG: Received RequestWrapping message: {msg}")
+        log_debug(f"DEBUG: Message type: {type(msg)}")
+        
+        wrapping = "bubblewrap" if msg["item"] in ["plate", "glass"] else "paper"
+        logger.info(f"Order {msg['orderID']} item {msg['itemID']} ({msg['item']}) wrapped with {wrapping}")
+        await adapter.send(
+            Wrapped(
+                wrapping=wrapping,
+                **msg.payload
+            )
         )
-    )
-    return msg
+        return msg
+    except Exception as e:
+        logger.error(f"Error in wrap handler: {type(e).__name__}: {e}")
+        log_debug(f"Error in wrap handler: {type(e).__name__}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        log_debug(traceback.format_exc())
+        raise
 
 if __name__ == "__main__":
     logger.info("Starting Wrapper...")
@@ -56,7 +67,11 @@ if __name__ == "__main__":
         adapter.start(shutdown_watcher(adapter, stop_path=str(STOP_SIGNAL_PATH)))
     except KeyboardInterrupt:
         print("\n⏹ Wrapper interrupted by user")
-    except SystemExit:
+    except SystemExit as e:
+        logger.info(f"✅ Wrapper shutting down gracefully: {e}")
         print("✅ Wrapper shutting down gracefully")
     except Exception as e:
-        print(f"❌ Wrapper error: {e}")
+        logger.error(f"❌ Wrapper error: {type(e).__name__}: {e}")
+        print(f"❌ Wrapper error: {type(e).__name__}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
