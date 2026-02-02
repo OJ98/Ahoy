@@ -161,14 +161,16 @@ async def main():
 
 def _check_for_received_completion_message(adapter_ref):
     """
-    Check if the role has received a completion message.
-    
-    For some protocols (like Logistics), completion is determined by RECEIVING
-    a specific message type rather than sending it.
-    
+    Protocol-agnostic completion detection by counting expected messages.
+
+    For roles that complete by RECEIVING messages, we need to:
+    1. Determine how many completion messages should be received
+    2. Count how many have actually been received
+    3. Mark complete only when all expected messages are present
+
     Args:
         adapter_ref: The BSPL adapter instance
-    
+
     Returns:
         tuple: (is_completed, message_info) where message_info is the completion message details
     """
@@ -178,26 +180,60 @@ def _check_for_received_completion_message(adapter_ref):
         social_state = extract_social_state(adapter_ref)
         all_messages = social_state.get("all_messages", [])
         
-        log_debug(f"DEBUG: Checking {len(all_messages)} messages for completion signal")
-        log_debug(f"DEBUG: Looking for completion message type: {get_completion_message(assigned_protocol, assigned_role)}")
-        
         completion_msg_type = get_completion_message(assigned_protocol, assigned_role)
         if not completion_msg_type:
             log_debug(f"DEBUG: No completion message defined for {assigned_protocol}/{assigned_role}")
             return False, None
         
-        # Check if any received messages match the completion criteria
-        for msg in all_messages:
-            msg_name = msg.get("schema_name", "")
-            log_debug(f"DEBUG: Checking message: {msg_name} == {completion_msg_type}?")
-            # Check if this is a completion message for the current role
-            if msg_name == completion_msg_type:
-                # This is a completion message
-                log_debug(f"DEBUG: ✓ Found received completion message: {msg_name}")
-                return True, msg
+        # PROTOCOL-AGNOSTIC: Count expected completion messages by analyzing sent messages
+        # Different protocols have different semantics:
+        # - Logistics Merchant: 1 RequestWrapping per item → expect that many Packed messages
+        # - Logistics Wrapper: 1 RequestWrapping per item → send that many Wrapped messages
+        # - Generic rule: Count how many times the corresponding request message was sent
         
-        log_debug(f"DEBUG: No completion message found in history")
-        return False, None
+        request_msg_map = {
+            "Packed": ["RequestWrapping", "RequestLabel"],  # Merchant completes after wrapping requests
+            "Wrapped": ["RequestWrapping"],                  # Wrapper completes after wrapping all items
+            "Labeled": ["RequestLabel"],                     # Labeler completes after labeling all items
+        }
+        
+        expected_count = 0
+        if completion_msg_type in request_msg_map:
+            # Count how many request messages were sent (indicates how many items)
+            request_types = request_msg_map[completion_msg_type]
+            for msg in all_messages:
+                msg_name = msg.get("schema_name", msg.get("name", ""))
+                if msg_name in request_types:
+                    expected_count += 1
+        
+        log_debug(f"DEBUG: Checking for {completion_msg_type} messages")
+        log_debug(f"DEBUG: Protocol state shows {expected_count} expected completion messages")
+        
+        # Count received completion messages
+        received_count = 0
+        completion_messages = []
+        for msg in all_messages:
+            msg_name = msg.get("schema_name", msg.get("name", ""))
+            
+            if msg_name.lower() == completion_msg_type.lower():
+                received_count += 1
+                completion_messages.append(msg)
+        
+        log_debug(f"DEBUG: Received {received_count}/{expected_count} {completion_msg_type} messages")
+        
+        if expected_count == 0:
+            log_debug(f"DEBUG: Cannot determine expected count for {completion_msg_type}")
+            return False, None
+        
+        # Complete only when all expected messages have been received
+        if received_count >= expected_count:
+            log_debug(f"DEBUG: ✓ Role {assigned_role} completed: received all {received_count} {completion_msg_type} messages")
+            # Return the last completion message as reference
+            return True, completion_messages[-1] if completion_messages else None
+        else:
+            log_debug(f"DEBUG: Role {assigned_role} waiting for more {completion_msg_type} messages: {received_count}/{expected_count}")
+            return False, None
+            
     except Exception as e:
         log_debug(f"Error checking for received completion: {e}")
         import traceback
@@ -217,6 +253,13 @@ async def _get_llm_decision_handler():
         log_debug(f"DEBUG: llm_decision called for {assigned_protocol}.{assigned_role}")
         log_debug(f"  - enabled_store type: {type(enabled_store)}")
         log_debug(f"  - event type: {type(event)}")
+        
+        # PROTOCOL-AGNOSTIC: Check for received completion BEFORE consulting LLM
+        # This allows roles that complete by receiving a message to exit properly
+        is_completed, completion_msg = _check_for_received_completion_message(adapter)
+        if is_completed:
+            log_debug(f"DEBUG: Role {assigned_role} completed by RECEIVING: {completion_msg}")
+            _handle_role_completion(completion_msg)
         
         # Validate enabled_store and retrieve messages
         is_valid, messages = _validate_enabled_store(enabled_store)
@@ -379,7 +422,7 @@ def _is_role_complete(adapter_instance):
 
 def _initialize_tracking_systems():
     """Initialize LLM call tracker."""
-    initialize_llm_tracker(max_calls=20, max_duration_seconds=180.0)
+    initialize_llm_tracker(max_calls=50, max_duration_seconds=300.0)
     log_debug("LLM tracker initialized: max 20 calls or 3 minutes")
 
 

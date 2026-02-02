@@ -38,17 +38,17 @@ class CHIPS:
     
     def print_welcome(self):
         """Display welcome message."""
-        print("\n" + "="*70)
-        print("CHIPS - Conversational Interface for Protocol & Role Setup")
-        print("="*70)
-        print("\nHello! I'm CHIPS. I'll help you set up ahoy for a multi-agent scenario.")
-        print("Tell me what you'd like to accomplish, and I'll infer the right")
-        print("protocol and role for ahoy to play.\n")
+        print("\n" + "="*70, flush=True)
+        print("CHIPS - Conversational Interface for Protocol & Role Setup", flush=True)
+        print("="*70, flush=True)
+        print("\nHello! I'm CHIPS. I'll help you set up ahoy for a multi-agent scenario.", flush=True)
+        print("Tell me what you'd like to accomplish, and I'll infer the right", flush=True)
+        print("protocol and role for ahoy to play.\n", flush=True)
     
     def gather_scenario(self) -> str:
         """Gather user's scenario description through conversation."""
-        print("Describe the scenario or goal you'd like ahoy to participate in.")
-        print("(Enter multiple lines. Type 'END' on a new line to finish)\n")
+        print("Describe the scenario or goal you'd like ahoy to participate in.", flush=True)
+        print("(Enter multiple lines. Type 'END' on a new line to finish)\n", flush=True)
         
         lines = []
         try:
@@ -58,7 +58,7 @@ class CHIPS:
                     break
                 lines.append(line)
         except KeyboardInterrupt:
-            print("\nSetup cancelled.")
+            print("\nSetup cancelled.", flush=True)
             sys.exit(0)
         
         scenario = "\n".join(lines).strip()
@@ -74,9 +74,9 @@ class CHIPS:
         Returns:
             Tuple of (protocol_name, role_name) or (None, None) on failure
         """
-        print("\n" + "="*70)
-        print("Analyzing scenario with LLM...")
-        print("="*70 + "\n")
+        print("\n" + "="*70, flush=True)
+        print("Analyzing scenario with LLM...", flush=True)
+        print("="*70 + "\n", flush=True)
         
         try:
             # Get protocol summary for LLM context
@@ -114,27 +114,27 @@ Be concise. Do not explain your reasoning."""
             if protocol_name and role_name:
                 is_valid, error_msg = validate_protocol_and_role(protocol_name, role_name)
                 if is_valid:
-                    print(f"✓ LLM inferred: {protocol_name}:{role_name}\n")
+                    print(f"✓ LLM inferred: {protocol_name}:{role_name}\n", flush=True)
                     return protocol_name, role_name
                 else:
-                    print(f"✗ LLM selection invalid: {error_msg}")
+                    print(f"✗ LLM selection invalid: {error_msg}", flush=True)
                     return None, None
             
-            print("✗ Could not parse LLM response")
+            print("✗ Could not parse LLM response", flush=True)
             return None, None
             
         except Exception as e:
-            print(f"✗ Error during LLM inference: {e}")
+            print(f"✗ Error during LLM inference: {e}", flush=True)
             return None, None
     
     def confirm_selection(self, protocol: str, role: str) -> bool:
         """Confirm the LLM's protocol and role selection."""
-        print(f"{'='*70}")
-        print("LLM Inference Result")
-        print(f"{'='*70}")
-        print(f"Protocol: {protocol}")
-        print(f"Role: {role}")
-        print(f"Scenario:\n{self.conversation}\n")
+        print(f"{'='*70}", flush=True)
+        print("LLM Inference Result", flush=True)
+        print(f"{'='*70}", flush=True)
+        print(f"Protocol: {protocol}", flush=True)
+        print(f"Role: {role}", flush=True)
+        print(f"Scenario:\n{self.conversation}\n", flush=True)
         
         while True:
             response = input("Does this look correct? (yes/no): ").strip().lower()
@@ -143,19 +143,19 @@ Be concise. Do not explain your reasoning."""
             elif response in ('no', 'n'):
                 return False
             else:
-                print("Please enter 'yes' or 'no'.")
+                print("Please enter 'yes' or 'no'.", flush=True)
     
     def show_protocol_options(self) -> Tuple[Optional[str], Optional[str]]:
         """Show available protocols for manual selection."""
-        print(f"\n{'='*70}")
-        print("Available Protocols")
-        print(f"{'='*70}\n")
+        print(f"\n{'='*70}", flush=True)
+        print("Available Protocols", flush=True)
+        print(f"{'='*70}\n", flush=True)
         
         protocol_list = list(self.protocols.keys())
         for i, proto in enumerate(protocol_list, 1):
             structure = get_protocol_structure(proto)
             roles_str = ", ".join(structure["roles"]) if structure else ""
-            print(f"{i}. {proto}: [{roles_str}]")
+            print(f"{i}. {proto}: [{roles_str}]", flush=True)
         
         while True:
             try:
@@ -172,17 +172,17 @@ Be concise. Do not explain your reasoning."""
                     protocol = choice
                     break
                 else:
-                    print(f"Invalid choice. Enter 1-{len(protocol_list)} or a protocol name.")
+                    print(f"Invalid choice. Enter 1-{len(protocol_list)} or a protocol name.", flush=True)
                     continue
             except (KeyboardInterrupt, ValueError):
-                print("\nSetup cancelled.")
+                print("\nSetup cancelled.", flush=True)
                 sys.exit(0)
         
         # Select role
         structure = get_protocol_structure(protocol)
         roles = structure["roles"] if structure else []
         
-        print(f"\nAvailable roles in {protocol}: {', '.join(roles)}")
+        print(f"\nAvailable roles in {protocol}: {', '.join(roles)}", flush=True)
         while True:
             try:
                 role = input(f"Select a role (number or name): ").strip()
@@ -197,7 +197,7 @@ Be concise. Do not explain your reasoning."""
                 elif role in roles:
                     break
                 else:
-                    print(f"Invalid choice. Enter 1-{len(roles)} or a role name.")
+                    print(f"Invalid choice. Enter 1-{len(roles)} or a role name.", flush=True)
                     continue
             except KeyboardInterrupt:
                 print("\nSetup cancelled.")
@@ -255,7 +255,7 @@ Be concise. Do not explain your reasoning."""
         
         # If inference failed, offer manual selection
         if not protocol or not role:
-            print("\n⚠ LLM inference didn't work. Let's try manual selection.\n")
+            print("\n⚠ LLM inference didn't work. Let's try manual selection.\n", flush=True)
             protocol, role = self.show_protocol_options()
         
         self.protocol = protocol
@@ -267,7 +267,7 @@ Be concise. Do not explain your reasoning."""
         
         # Confirm selection
         while not self._confirm_all_selections():
-            print("\nLet's try a different scenario.\n")
+            print("\nLet's try a different scenario.\n", flush=True)
             self.conversation = self.gather_scenario()
             protocol, role = await self.infer_protocol_and_role(self.conversation)
             
@@ -280,33 +280,33 @@ Be concise. Do not explain your reasoning."""
             self.roles_list = await self._ask_for_additional_roles(self.roles_list)
         
         # Write files
-        print(f"\n{'='*70}")
-        print("Writing configuration files...")
-        print(f"{'='*70}\n")
+        print(f"\n{'='*70}", flush=True)
+        print("Writing configuration files...", flush=True)
+        print(f"{'='*70}\n", flush=True)
         
         config_ok = self.write_config_file()
         input_ok = self.write_input_file()
         
         if config_ok and input_ok:
-            print(f"\n{'='*70}")
-            print("✅ Setup complete!")
-            print(f"{'='*70}")
+            print(f"\n{'='*70}", flush=True)
+            print("✅ Setup complete!", flush=True)
+            print(f"{'='*70}", flush=True)
             roles_str = ", ".join([f"{p}:{r}" for p, r in self.roles_list])
-            print(f"\nConfiguration saved for: {roles_str}")
-            print(f"  - Protocol/Role: {Path(tempfile.gettempdir()) / 'maf_chips_config.txt'}")
-            print(f"  - Scenario: {PROJECT_ROOT / 'input.txt'}")
-            print("\nYou can now run: ./start.ps1 (or ./start.sh on Unix)")
-            print("to start ahoy and the other agents.\n")
+            print(f"\nConfiguration saved for: {roles_str}", flush=True)
+            print(f"  - Protocol/Role: {Path(tempfile.gettempdir()) / 'maf_chips_config.txt'}", flush=True)
+            print(f"  - Scenario: {PROJECT_ROOT / 'input.txt'}", flush=True)
+            print("\nYou can now run: ./start.ps1 (or ./start.sh on Unix)", flush=True)
+            print("to start ahoy and the other agents.\n", flush=True)
         else:
-            print("\n❌ Setup failed. Some files could not be written.")
+            print("\n❌ Setup failed. Some files could not be written.", flush=True)
             sys.exit(1)
     
     async def _ask_for_additional_roles(self, roles_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
         """Ask user if they want to add more roles for multi-protocol support."""
-        print(f"\n{'='*70}")
-        print("Multi-Protocol Support")
-        print(f"{'='*70}")
-        print(f"\nCurrent roles: {', '.join([f'{p}:{r}' for p, r in roles_list])}")
+        print(f"\n{'='*70}", flush=True)
+        print("Multi-Protocol Support", flush=True)
+        print(f"{'='*70}", flush=True)
+        print(f"\nCurrent roles: {', '.join([f'{p}:{r}' for p, r in roles_list])}", flush=True)
         
         while True:
             response = input("\nWould you like to add another protocol/role? (yes/no): ").strip().lower()
@@ -316,23 +316,23 @@ Be concise. Do not explain your reasoning."""
                 protocol, role = self.show_protocol_options()
                 if (protocol, role) not in roles_list:
                     roles_list.append((protocol, role))
-                    print(f"✓ Added {protocol}:{role}")
-                    print(f"  Current roles: {', '.join([f'{p}:{r}' for p, r in roles_list])}")
+                    print(f"✓ Added {protocol}:{role}", flush=True)
+                    print(f"  Current roles: {', '.join([f'{p}:{r}' for p, r in roles_list])}", flush=True)
                 else:
-                    print(f"⚠ {protocol}:{role} already in list")
+                    print(f"⚠ {protocol}:{role} already in list", flush=True)
             else:
-                print("Please enter 'yes' or 'no'.")
+                print("Please enter 'yes' or 'no'.", flush=True)
         
         return roles_list
     
     def _confirm_all_selections(self) -> bool:
         """Confirm all selected roles."""
-        print(f"\n{'='*70}")
-        print("Configuration Summary")
-        print(f"{'='*70}")
+        print(f"\n{'='*70}", flush=True)
+        print("Configuration Summary", flush=True)
+        print(f"{'='*70}", flush=True)
         for i, (protocol, role) in enumerate(self.roles_list, 1):
-            print(f"{i}. {protocol}:{role}")
-        print(f"\nScenario:\n{self.conversation}\n")
+            print(f"{i}. {protocol}:{role}", flush=True)
+        print(f"\nScenario:\n{self.conversation}\n", flush=True)
         
         while True:
             response = input("Is this correct? (yes/no): ").strip().lower()
@@ -341,7 +341,7 @@ Be concise. Do not explain your reasoning."""
             elif response in ('no', 'n'):
                 return False
             else:
-                print("Please enter 'yes' or 'no'.")
+                print("Please enter 'yes' or 'no'.", flush=True)
 
 
 if __name__ == "__main__":
