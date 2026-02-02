@@ -214,74 +214,87 @@ def parse_llm_json_reply(text: str) -> Optional[Dict[str, Any]]:
     
     import re
     
-    # Try to extract JSON from markdown code blocks first
-    code_block_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
-    if code_block_match:
-        json_candidate = code_block_match.group(1).strip()
+    # Try to extract JSON from markdown code blocks - find ALL blocks and use the one with "choice"
+    code_blocks = list(re.finditer(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL))
+    
+    json_candidates = []
+    if code_blocks:
+        # Try each code block, preferring ones that contain "choice"
+        for match in code_blocks:
+            json_candidates.append(match.group(1).strip())
     else:
-        json_candidate = text
+        # No markdown blocks found, use the whole text
+        json_candidates = [text]
     
-    # Find valid JSON by finding opening brace and matching closing brace
-    start_idx = json_candidate.find('{')
-    if start_idx == -1:
-        return None
+    # Try each candidate, starting with ones that look like they have "choice"
+    candidates_with_choice = [c for c in json_candidates if '"choice"' in c or "'choice'" in c]
+    candidates_without_choice = [c for c in json_candidates if c not in candidates_with_choice]
     
-    brace_count = 0
-    bracket_count = 0
-    end_idx = -1
-    in_string = False
-    escape_next = False
-    
-    for i in range(start_idx, len(json_candidate)):
-        char = json_candidate[i]
-        
-        if escape_next:
-            escape_next = False
+    for json_candidate in candidates_with_choice + candidates_without_choice:
+        # Find valid JSON by finding opening brace and matching closing brace
+        start_idx = json_candidate.find('{')
+        if start_idx == -1:
             continue
         
-        if char == '\\':
-            escape_next = True
+        brace_count = 0
+        bracket_count = 0
+        end_idx = -1
+        in_string = False
+        escape_next = False
+        
+        for i in range(start_idx, len(json_candidate)):
+            char = json_candidate[i]
+            
+            if escape_next:
+                escape_next = False
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                continue
+            
+            if char == '"' and not in_string:
+                in_string = True
+                continue
+            elif char == '"' and in_string:
+                in_string = False
+                continue
+            
+            if not in_string:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end_idx = i + 1
+                        break
+                elif char == '[':
+                    bracket_count += 1
+                elif char == ']':
+                    bracket_count -= 1
+        
+        if end_idx == -1:
             continue
         
-        if char == '"' and not in_string:
-            in_string = True
-            continue
-        elif char == '"' and in_string:
-            in_string = False
+        json_str = json_candidate[start_idx:end_idx]
+        
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
             continue
         
-        if not in_string:
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_idx = i + 1
-                    break
-            elif char == '[':
-                bracket_count += 1
-            elif char == ']':
-                bracket_count -= 1
+        # Ensure required fields
+        if "choice" not in data:
+            data["choice"] = None
+        if "params" not in data:
+            data["params"] = {}
+        if "tool_requests" not in data:
+            data["tool_requests"] = []
+        
+        return data
     
-    if end_idx == -1:
-        return None
-    
-    json_str = json_candidate[start_idx:end_idx]
-    
-    try:
-        data = json.loads(json_str)
-    except json.JSONDecodeError:
-        return None
-    
-    # Ensure required fields
-    if "choice" not in data:
-        data["choice"] = None
-    if "params" not in data:
-        data["params"] = {}
-    if "tool_requests" not in data:
-        data["tool_requests"] = []
-    
-    return data
+    # If we get here, no valid JSON was found
+    return None
 
 
 async def choose_option_from_llm(
@@ -369,6 +382,11 @@ async def choose_and_bind(
     from .utils import build_user_prompt, build_system_prompt
 
     global _system_prompt_cache
+    
+    # Track decision cycles for prompt optimization (e.g., show examples only on first decision)
+    if not hasattr(choose_and_bind, '_decision_count'):
+        choose_and_bind._decision_count = 0
+    choose_and_bind._decision_count += 1
 
     def log_msg(msg):
         """Helper to log messages if callback provided."""
@@ -434,13 +452,13 @@ async def choose_and_bind(
             if key != adapter_name  # Don't duplicate current adapter info
         }
 
-    # Build user prompt
+    # Build user prompt with decision count for optimization
     user_prompt = build_user_prompt(
         adapter_name,
         social_state,
         options,
         recent_event=event,
-
+        decision_count=choose_and_bind._decision_count,
         examples=[
             {"choice": None, "params": {}},
             {"choice": 0, "params": {}},
@@ -448,7 +466,7 @@ async def choose_and_bind(
     )
 
     log_msg(f"\n{'='*80}")
-    log_msg(f"USER PROMPT FOR MESSAGE CHOICE")
+    log_msg(f"USER PROMPT FOR MESSAGE CHOICE (Decision #{choose_and_bind._decision_count})")
     log_msg(f"{'='*80}")
     log_msg(user_prompt)
     log_msg(f"{'='*80}")
@@ -722,6 +740,20 @@ def reset_system_prompt_cache():
     """Reset the cached system prompt (useful for testing)."""
     global _system_prompt_cache
     _system_prompt_cache = None
+
+
+def reset_optimization_caches():
+    """Reset all optimization caches (system prompt and message history)."""
+    from .utils import _message_history_cache, _protocol_guidance_cache
+    global _system_prompt_cache
+    
+    _system_prompt_cache = None
+    _message_history_cache.clear()
+    _protocol_guidance_cache.clear()
+    
+    # Reset decision counter
+    if hasattr(choose_and_bind, '_decision_count'):
+        choose_and_bind._decision_count = 0
 
 
 def reset_agent_notes_storage():

@@ -11,7 +11,7 @@ from .llm_client import (
     choose_and_bind,
     call_llm_with_timeout,
     parse_llm_json_reply,
-
+    reset_optimization_caches,
     save_state_to_memory,
     declare_protocol_and_role,
     get_agent_memory,
@@ -69,6 +69,7 @@ __all__ = [
     "choose_and_bind",
     "call_llm_with_timeout",
     "parse_llm_json_reply",
+    "reset_optimization_caches",
     "MODEL_ID",
     # Tool calling for UID generation and state management
     "generate_unique_id",

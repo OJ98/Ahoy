@@ -29,10 +29,16 @@ from lib import (
     setup_logging,
     log_debug,
     shutdown_watcher,
+    reset_optimization_caches,
 )
 from lib.llm_client import initialize_llm_tracker, get_llm_tracker
 from lib.agent_notes import get_agent_notes, reset_agent_notes
-from lib.protocol_completion_detector import is_completion_message, get_completion_message
+from lib.protocol_completion_detector import (
+    is_completion_message, 
+    get_completion_message, 
+    get_request_message_for_completion,
+    extract_completion_rule_from_protocol
+)
 from lib.dynamic_adapter_manager import create_adapter_for_role, get_color_for_protocol_role
 
 # Set global timeout
@@ -48,12 +54,16 @@ log_filename = str(LOG_DIR / f"generic_agent_debug_{timestamp}.log")
 
 debug_logger, console_logger = setup_logging(log_filename, mode='a')
 
+# Reset optimization caches at session start for fresh state
+reset_optimization_caches()
+
 # Adapters will be created dynamically after protocol/role decision
 adapters = {}  # Dict of {adapter_key: adapter} where adapter_key = "Protocol:Role"
 adapter = None  # For backward compatibility, keep reference to first adapter
 assigned_protocol = None
 assigned_role = None
 assigned_roles_list = []  # List of (protocol, role) tuples
+protocol_completion_rule = None  # Cached completion rule from protocol analysis (message_type, direction, count)
 
 # Suppress adapter's internal logging to console
 adapter_logger = logging.getLogger("bspl")
@@ -68,6 +78,35 @@ llm_client = AnthropicLLMClient()
 
 # Global counters for transaction statistics
 transactions = 0
+
+
+def _initialize_protocol_analysis(protocol_name: str, role_name: str):
+    """
+    Initialize protocol analysis by extracting completion rule using LLM.
+    This is called once at agent startup to make completion detection protocol-agnostic.
+    
+    Completion rule format: (message_type, direction, count)
+    Example: ("Packed", "receive", 4) = complete when 4 Packed messages received
+    
+    Args:
+        protocol_name: Name of the protocol to analyze
+        role_name: Name of the role to complete
+    """
+    global protocol_completion_rule
+    
+    try:
+        log_debug(f"Extracting completion rule for {protocol_name}/{role_name} using LLM...")
+        rule = extract_completion_rule_from_protocol(protocol_name, role_name)
+        
+        if rule:
+            protocol_completion_rule = rule
+            msg_type, direction, count = rule
+            log_debug(f"Successfully extracted completion rule: {msg_type} {direction} x{count}")
+        else:
+            log_debug(f"LLM extraction failed, will use hardcoded rules")
+    except Exception as e:
+        log_debug(f"Error during protocol analysis: {e}")
+        log_debug(f"Will use hardcoded rules as fallback")
 
 
 def _validate_enabled_store(enabled_store):
@@ -161,12 +200,15 @@ async def main():
 
 def _check_for_received_completion_message(adapter_ref):
     """
-    Protocol-agnostic completion detection by counting expected messages.
+    Protocol-agnostic completion detection using LLM-determined rule.
 
-    For roles that complete by RECEIVING messages, we need to:
-    1. Determine how many completion messages should be received
-    2. Count how many have actually been received
-    3. Mark complete only when all expected messages are present
+    The LLM analyzes the protocol and determines:
+    - What message type indicates completion
+    - Whether to count sent or received instances
+    - How many are needed for completion
+
+    Rule format: (message_type, "send"|"receive", count)
+    Example: ("Packed", "receive", 4) = complete when 4 Packed messages received
 
     Args:
         adapter_ref: The BSPL adapter instance
@@ -177,61 +219,83 @@ def _check_for_received_completion_message(adapter_ref):
     try:
         from lib.state_manager import extract_social_state
         
-        social_state = extract_social_state(adapter_ref)
-        all_messages = social_state.get("all_messages", [])
-        
-        completion_msg_type = get_completion_message(assigned_protocol, assigned_role)
-        if not completion_msg_type:
-            log_debug(f"DEBUG: No completion message defined for {assigned_protocol}/{assigned_role}")
-            return False, None
-        
-        # PROTOCOL-AGNOSTIC: Count expected completion messages by analyzing sent messages
-        # Different protocols have different semantics:
-        # - Logistics Merchant: 1 RequestWrapping per item → expect that many Packed messages
-        # - Logistics Wrapper: 1 RequestWrapping per item → send that many Wrapped messages
-        # - Generic rule: Count how many times the corresponding request message was sent
-        
-        request_msg_map = {
-            "Packed": ["RequestWrapping", "RequestLabel"],  # Merchant completes after wrapping requests
-            "Wrapped": ["RequestWrapping"],                  # Wrapper completes after wrapping all items
-            "Labeled": ["RequestLabel"],                     # Labeler completes after labeling all items
-        }
-        
-        expected_count = 0
-        if completion_msg_type in request_msg_map:
-            # Count how many request messages were sent (indicates how many items)
-            request_types = request_msg_map[completion_msg_type]
-            for msg in all_messages:
-                msg_name = msg.get("schema_name", msg.get("name", ""))
-                if msg_name in request_types:
-                    expected_count += 1
-        
-        log_debug(f"DEBUG: Checking for {completion_msg_type} messages")
-        log_debug(f"DEBUG: Protocol state shows {expected_count} expected completion messages")
-        
-        # Count received completion messages
-        received_count = 0
-        completion_messages = []
-        for msg in all_messages:
-            msg_name = msg.get("schema_name", msg.get("name", ""))
+        # Use dynamically extracted rule if available, otherwise use hardcoded
+        rule = protocol_completion_rule
+        if not rule:
+            # Fallback to hardcoded rules - but we need to determine the counter manually
+            completion_msg_type = get_completion_message(assigned_protocol, assigned_role)
+            if not completion_msg_type:
+                log_debug(f"DEBUG: No completion rule defined for {assigned_protocol}/{assigned_role}")
+                return False, None
             
-            if msg_name.lower() == completion_msg_type.lower():
-                received_count += 1
-                completion_messages.append(msg)
+            # Try to infer from hardcoded mapping
+            request_msg_type = get_request_message_for_completion(assigned_protocol, completion_msg_type)
+            if request_msg_type:
+                rule = (completion_msg_type, "receive", None)  # Count-based on requests
+            else:
+                log_debug(f"DEBUG: Cannot determine completion rule for {completion_msg_type}")
+                return False, None
         
-        log_debug(f"DEBUG: Received {received_count}/{expected_count} {completion_msg_type} messages")
+        message_type, direction, target_count = rule
         
-        if expected_count == 0:
-            log_debug(f"DEBUG: Cannot determine expected count for {completion_msg_type}")
-            return False, None
+        social_state = extract_social_state(adapter_ref)
         
-        # Complete only when all expected messages have been received
-        if received_count >= expected_count:
-            log_debug(f"DEBUG: ✓ Role {assigned_role} completed: received all {received_count} {completion_msg_type} messages")
-            # Return the last completion message as reference
-            return True, completion_messages[-1] if completion_messages else None
+        # Get all messages from all systems
+        all_messages = []
+        for system_id, system_data in social_state.get("systems", {}).items():
+            all_messages.extend(system_data.get("all_messages", []))
+        
+        log_debug(f"DEBUG: Checking for completion: {message_type} ({direction}) x{target_count}")
+        log_debug(f"DEBUG: Total messages in history: {len(all_messages)}")
+        
+        # Get our role name for comparison
+        our_role_name = adapter_ref.name if hasattr(adapter_ref, 'name') else str(assigned_role)
+        if hasattr(our_role_name, 'name'):
+            our_role_name = our_role_name.name
+        
+        log_debug(f"DEBUG: Our role: {our_role_name}, looking for message_type: {message_type}")
+        
+        # Count messages based on direction
+        if direction == "send":
+            # Count messages SENT BY our role
+            sent_count = 0
+            for msg in all_messages:
+                if msg.get("schema_name", "").lower() == message_type.lower():
+                    sender = msg.get("sender")
+                    if sender and str(sender).lower() == str(our_role_name).lower():
+                        sent_count += 1
+                        log_debug(f"DEBUG:   → Found sent {message_type} from {sender}")
+            
+            log_debug(f"DEBUG: {message_type} sent by us: {sent_count}, need {target_count}")
+            
+            if sent_count >= target_count:
+                log_debug(f"DEBUG: ✓ Role {assigned_role} completed: sent {sent_count} {message_type} messages")
+                return True, None
+            else:
+                log_debug(f"DEBUG: Role {assigned_role} waiting: {sent_count}/{target_count} {message_type} messages sent")
+                return False, None
+        
+        elif direction == "receive":
+            # Count messages RECEIVED BY our role (sender is NOT our role)
+            received_count = 0
+            for msg in all_messages:
+                if msg.get("schema_name", "").lower() == message_type.lower():
+                    sender = msg.get("sender")
+                    # Message is "received" if sender is NOT us
+                    if not sender or str(sender).lower() != str(our_role_name).lower():
+                        received_count += 1
+                        log_debug(f"DEBUG:   → Found received {message_type} from {sender}")
+            
+            log_debug(f"DEBUG: {message_type} received by us: {received_count}, need {target_count}")
+            
+            if received_count >= target_count:
+                log_debug(f"DEBUG: ✓ Role {assigned_role} completed: received {received_count} {message_type} messages")
+                return True, None
+            else:
+                log_debug(f"DEBUG: Role {assigned_role} waiting: {received_count}/{target_count} {message_type} messages received")
+                return False, None
         else:
-            log_debug(f"DEBUG: Role {assigned_role} waiting for more {completion_msg_type} messages: {received_count}/{expected_count}")
+            log_debug(f"DEBUG: Unknown direction: {direction}")
             return False, None
             
     except Exception as e:
@@ -530,6 +594,9 @@ if __name__ == "__main__":
         adapter = adapters[f"{assigned_roles_list[0][0]}:{assigned_roles_list[0][1]}"]
         assigned_protocol = assigned_roles_list[0][0]
         assigned_role = assigned_roles_list[0][1]
+        
+        # Initialize protocol analysis (extract request-response mappings using LLM)
+        _initialize_protocol_analysis(assigned_protocol, assigned_role)
         
         # Write claimed roles to file so start script knows not to start these agents
         try:

@@ -5,11 +5,9 @@ Items to process: balls, bats, plates, and glasses.
 Some items are fragile (plates and glasses) and need bubblewrap.
 All items need unique labels for tracking.
 
-Orders to process (up to 5 initially):
-1. Order ID: ORD-001, Address: Warehouse 1, Items: 1 balls
-2. Order ID: ORD-002, Address: Warehouse 2, Items: 1 bat  
-3. Order ID: ORD-003, Address: Warehouse 1, Items: 2 plates (fragile)
+Orders to process:
+1. Address: Warehouse 1, Items: 1 balls
+2. Address: Warehouse 2, Items: 1 bat  
+3. Address: Warehouse 1, Items: 2 plates (fragile)
 
 Ensure each item is properly wrapped and labeled before packing.
-
-The address is Raleigh NC 27606.

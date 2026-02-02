@@ -51,56 +51,31 @@ async def receive_wrapped(msg):
     """Handles wrapped items by storing them and checking if we can pack."""
     global items_wrapped
     
-    try:
-        log_debug(f"DEBUG: Received Wrapped message: {msg}")
-        log_debug(f"DEBUG: Message type: {type(msg)}")
-        log_debug(f"DEBUG: Message payload: {msg.payload if hasattr(msg, 'payload') else msg}")
-        
-        key = (msg["orderID"], msg["itemID"])
-        received_wrapped[key] = msg
-        items_wrapped += 1
-        
-        item_name = msg["item"]
-        wrapping = msg["wrapping"]
-        logger.info(f"[W{items_wrapped}] Received Wrapped: order {msg['orderID'][:8]}... item {msg['itemID'][:8]}... ({item_name}, {wrapping})")
-        log_debug(f"Full: orderID={msg['orderID']}, itemID={msg['itemID']}, item={item_name}, wrapping={wrapping}")
-        
-        await try_pack()
-        return msg
-    except Exception as e:
-        logger.error(f"Error in receive_wrapped handler: {type(e).__name__}: {e}")
-        log_debug(f"Error in receive_wrapped handler: {type(e).__name__}: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        log_debug(traceback.format_exc())
-        raise
+    key = (msg["orderID"], msg["itemID"])
+    received_wrapped[key] = msg
+    items_wrapped += 1
+    
+    item_name = msg["item"]
+    wrapping = msg["wrapping"]
+    logger.info(f"[W{items_wrapped}] Received Wrapped: order {msg['orderID'][:8]}... item {msg['itemID'][:8]}... ({item_name}, {wrapping})")
+    
+    await try_pack()
+    return msg
 
 @adapter.reaction(Labeled)
 async def receive_labeled(msg):
     """Handles labeled items by storing them and checking if we can pack."""
     global items_labeled
     
-    try:
-        log_debug(f"DEBUG: Received Labeled message: {msg}")
-        log_debug(f"DEBUG: Message type: {type(msg)}")
-        
-        order_id = msg["orderID"]
-        received_labeled[order_id] = msg
-        items_labeled += 1
-        
-        label = msg["label"]
-        logger.info(f"[L{items_labeled}] Received Labeled: order {order_id[:8]}... label {label[:8]}...")
-        log_debug(f"Full: orderID={order_id}, label={label}")
-        
-        await try_pack()
-        return msg
-    except Exception as e:
-        logger.error(f"Error in receive_labeled handler: {type(e).__name__}: {e}")
-        log_debug(f"Error in receive_labeled handler: {type(e).__name__}: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        log_debug(traceback.format_exc())
-        raise
+    order_id = msg["orderID"]
+    received_labeled[order_id] = msg
+    items_labeled += 1
+    
+    label = msg["label"]
+    logger.info(f"[L{items_labeled}] Received Labeled: order {order_id[:8]}... label {label[:8]}...")
+    
+    await try_pack()
+    return msg
 
 async def try_pack():
     """Attempt to pack if we have both Wrapped and Labeled for an order/item."""
@@ -147,6 +122,13 @@ if __name__ == "__main__":
     except SystemExit as e:
         logger.info(f"✅ Packer shutting down gracefully: {e}")
         print("✅ Packer shutting down gracefully")
+    except NameError as e:
+        # Expected error during BSPL shutdown - connection_lost callback tries to access adapter
+        # This happens after protocol completion and doesn't affect functionality
+        if "adapter" in str(e):
+            logger.debug(f"Expected cleanup error during shutdown: {e}")
+        else:
+            raise
     except Exception as e:
         logger.error(f"❌ Packer error: {type(e).__name__}: {e}")
         print(f"❌ Packer error: {type(e).__name__}: {e}")
