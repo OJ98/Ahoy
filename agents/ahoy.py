@@ -39,7 +39,7 @@ from lib.protocol_completion_detector import (
     get_request_message_for_completion,
     extract_completion_rule_from_protocol
 )
-from lib.dynamic_adapter_manager import create_adapter_for_role, get_color_for_protocol_role
+from lib.dynamic_adapter_manager import create_adapter_for_role, create_adapter_for_agent, get_color_for_protocol_role
 
 # Set global timeout
 TIMEOUT = 30.0
@@ -500,22 +500,35 @@ def _cleanup_logging():
 
 async def _initialize_protocol_and_role():
     """
-    Read protocol and role from CHIPS config file written by CHIPS interface.
+    Read protocol and role from CHIPS config file, then determine agent identity.
+    
+    The CHIPS config provides protocol:role pairs. This function determines which
+    agent(s) should be instantiated to play those roles.
     
     Returns:
-        tuple: (protocol_name, role_name) or (None, None) on failure
+        tuple: (agent_identity, roles_list) where roles_list is [(protocol, role), ...]
+               or (None, []) on failure
     """
     global assigned_protocol, assigned_role, adapter
     
-    log_debug("INITIALIZATION PHASE: Reading protocol and role from CHIPS config")
+    log_debug("INITIALIZATION PHASE: Reading CHIPS config and determining agent identity")
     
     try:
         # Read CHIPS config file from temp directory
         config_file = Path(tempfile.gettempdir()) / "maf_chips_config.txt"
         
+        # DEBUG: Print temp directory and check if file exists
+        log_debug(f"DEBUG: Temp directory = {Path(tempfile.gettempdir())}")
+        log_debug(f"DEBUG: Looking for config file at: {config_file}")
+        
         if not config_file.exists():
             log_debug(f"Config file not found: {config_file}")
             log_debug("Please run 'python chips.py' first to configure protocol and role")
+            # DEBUG: List files in temp directory
+            temp_dir = Path(tempfile.gettempdir())
+            if temp_dir.exists():
+                files = list(temp_dir.glob("maf_*.txt"))
+                log_debug(f"DEBUG: Files matching 'maf_*.txt' in {temp_dir}: {[f.name for f in files]}")
             return None, []
         
         config_content = config_file.read_text().strip()
@@ -537,7 +550,6 @@ async def _initialize_protocol_and_role():
                     
                     if roles_list:
                         log_debug(f"CHIPS config (JSON): {roles_list}")
-                        return roles_list[0][0], roles_list  # First protocol, full list
         except (json.JSONDecodeError, ValueError):
             pass
         
@@ -553,14 +565,149 @@ async def _initialize_protocol_and_role():
             roles_list = [(protocol_name, role_name)]
             
             log_debug(f"CHIPS config (simple): {protocol_name}:{role_name}")
-            return protocol_name, roles_list
         
-        return roles_list[0][0], roles_list if roles_list else (None, [])
+        # Determine which agent(s) are needed to play these roles
+        agent_roles = {}  # agent_id -> list of (protocol, role) tuples
+        
+        for protocol_name, role_name in roles_list:
+            protocol_config = systems.get(protocol_name)
+            if not protocol_config:
+                log_debug(f"ERROR: Protocol '{protocol_name}' not found in systems")
+                return None, []
+            
+            # Find which agent plays this role
+            protocol = protocol_config["protocol"]
+            role_obj = protocol.roles.get(role_name)
+            if not role_obj:
+                log_debug(f"ERROR: Role '{role_name}' not found in protocol '{protocol_name}'")
+                return None, []
+            
+            agent_identity = protocol_config["roles"].get(role_obj)
+            if not agent_identity:
+                log_debug(f"ERROR: No agent assigned to {protocol_name}:{role_name}")
+                return None, []
+            
+            if agent_identity not in agent_roles:
+                agent_roles[agent_identity] = []
+            agent_roles[agent_identity].append((protocol_name, role_name))
+        
+        log_debug(f"Determined agent assignments: {agent_roles}")
+        
+        # Currently ahoy supports one agent at a time
+        # Future: extend to support multiple agents
+        if len(agent_roles) > 1:
+            agents_str = ", ".join(agent_roles.keys())
+            log_debug(f"ERROR: Multiple agents needed: {agents_str}. ahoy currently supports one agent per instance.")
+            return None, []
+        
+        agent_identity = list(agent_roles.keys())[0]
+        assigned_roles = agent_roles[agent_identity]
+        
+        log_debug(f"Agent identity: {agent_identity}")
+        log_debug(f"Roles: {assigned_roles}")
+        
+        return agent_identity, assigned_roles
         
     except Exception as e:
         log_debug(f"Error reading protocol/role config: {e}")
         log_debug(f"Traceback: {traceback.format_exc()}")
         return None, []
+
+
+def initialize_ahoy_from_globals():
+    """
+    Initialize ahoy adapters and decision handlers.
+    
+    Call this when you've already set assigned_protocol and assigned_roles_list,
+    but need to initialize the adapter and decision handler infrastructure.
+    
+    Used by demo6_buyer.py and other external integrations.
+    """
+    global adapter, adapters
+    
+    if not assigned_protocol or not assigned_roles_list:
+        raise ValueError(f"assigned_protocol and assigned_roles_list must be set before calling initialize_ahoy_from_globals(). Got protocol={assigned_protocol}, roles={assigned_roles_list}")
+    
+    log_debug(f"Initializing ahoy adapters for: {assigned_roles_list}")
+    
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # If no event loop exists, create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    # Initialize tracking systems
+    _initialize_tracking_systems()
+    
+    # Phase 2: Create adapters for all assigned roles
+    for protocol, role in assigned_roles_list:
+        try:
+            color_idx = get_color_for_protocol_role(protocol, role)
+            adapter_instance, error = create_adapter_for_role(protocol, role, color_idx)
+            
+            if error:
+                raise SystemExit(f"Failed to create adapter for {protocol}:{role}: {error}")
+            
+            adapter_key = f"{protocol}:{role}"
+            adapters[adapter_key] = adapter_instance
+            log_debug(f"Adapter created successfully for {adapter_key}")
+        except Exception as e:
+            log_debug(f"Error creating adapter: {e}")
+            raise
+    
+    # Keep reference to first adapter for backward compatibility
+    try:
+        adapter = adapters[f"{assigned_roles_list[0][0]}:{assigned_roles_list[0][1]}"]
+        log_debug(f"Set global adapter to: {adapter}")
+    except Exception as e:
+        log_debug(f"Error setting adapter reference: {e}")
+        raise
+    
+    # Initialize protocol analysis (extract request-response mappings using LLM)
+    try:
+        _initialize_protocol_analysis(assigned_protocol, assigned_role)
+    except Exception as e:
+        log_debug(f"Warning: Protocol analysis failed (non-fatal): {e}")
+    
+    # Write claimed roles to file so start script knows not to start these agents
+    try:
+        claimed_role_dir = Path(tempfile.gettempdir())
+        claimed_role_file = claimed_role_dir / f"maf_claimed_role_{getpid()}.txt"
+        roles_str = ",".join([f"{p}:{r}" for p, r in assigned_roles_list])
+        claimed_role_file.write_text(roles_str)
+        log_debug(f"Claimed roles written to temp file: {claimed_role_file}")
+    except Exception as e:
+        log_debug(f"Warning: Could not write claimed role file: {e}")
+    
+    # Reset agent notes for fresh run
+    for protocol, role in assigned_roles_list:
+        reset_agent_notes(role)
+    reset_agent_notes('Adapter')
+    
+    # Phase 3: Register LLM decision handlers with all adapters
+    try:
+        llm_decision_handler = loop.run_until_complete(_get_llm_decision_handler())
+    except Exception as e:
+        log_debug(f"Error getting LLM decision handler: {e}")
+        raise
+    
+    # For single adapter, register directly (backward compatible)
+    if len(adapters) == 1:
+        adapter.decision()(llm_decision_handler)
+        adapter.start(main())
+    else:
+        # For multiple adapters, register with all and use multi-protocol decision handler
+        for adapter_key, adapter_instance in adapters.items():
+            multi_handler = loop.run_until_complete(_get_multi_protocol_decision_handler(adapter_key))
+            adapter_instance.decision()(multi_handler)
+        
+        # Start all adapters concurrently
+        async def run_multiple():
+            await asyncio.gather(*[main() for _ in adapters])
+        
+        for adapter_key, adapter_instance in adapters.items():
+            adapter_instance.start(run_multiple())
 
 
 if __name__ == "__main__":
@@ -571,29 +718,28 @@ if __name__ == "__main__":
         # Phase 1: Initialize protocol and roles
         # Run async initialization
         loop = asyncio.get_event_loop()
-        assigned_protocol, assigned_roles_list = loop.run_until_complete(_initialize_protocol_and_role())
+        agent_identity, assigned_roles_list = loop.run_until_complete(_initialize_protocol_and_role())
         
-        if not assigned_protocol or not assigned_roles_list:
-            raise SystemExit("Failed to determine protocol and role(s)")
+        if not agent_identity or not assigned_roles_list:
+            raise SystemExit("Failed to determine agent identity and role(s)")
         
-        log_debug(f"Agent assigned to: {assigned_roles_list}")
+        log_debug(f"Agent assigned: {agent_identity}")
+        log_debug(f"Roles: {assigned_roles_list}")
         
-        # Phase 2: Create adapters for all assigned roles
-        for protocol, role in assigned_roles_list:
-            color_idx = get_color_for_protocol_role(protocol, role)
-            adapter_instance, error = create_adapter_for_role(protocol, role, color_idx)
-            
-            if error:
-                raise SystemExit(f"Failed to create adapter for {protocol}:{role}: {error}")
-            
-            adapter_key = f"{protocol}:{role}"
-            adapters[adapter_key] = adapter_instance
-            log_debug(f"Adapter created successfully for {adapter_key}")
-        
-        # Keep reference to first adapter for backward compatibility
-        adapter = adapters[f"{assigned_roles_list[0][0]}:{assigned_roles_list[0][1]}"]
+        # Set module-level globals for backward compatibility
         assigned_protocol = assigned_roles_list[0][0]
         assigned_role = assigned_roles_list[0][1]
+        
+        # Phase 2: Create adapter for this agent across all assigned roles
+        # The agent plays all their assigned roles through a single adapter instance
+        from lib.dynamic_adapter_manager import create_adapter_for_agent
+        adapter, error = create_adapter_for_agent(agent_identity)
+        
+        if error:
+            raise SystemExit(f"Failed to create adapter for {agent_identity}: {error}")
+        
+        adapters[f"{agent_identity}"] = adapter
+        log_debug(f"Adapter created successfully for agent: {agent_identity}")
         
         # Initialize protocol analysis (extract request-response mappings using LLM)
         _initialize_protocol_analysis(assigned_protocol, assigned_role)
@@ -611,24 +757,16 @@ if __name__ == "__main__":
         # Reset agent notes for fresh run
         for protocol, role in assigned_roles_list:
             reset_agent_notes(role)
+        reset_agent_notes(agent_identity)
         reset_agent_notes('Adapter')
         
-        # Phase 3: Register LLM decision handlers with all adapters
+        # Phase 3: Register LLM decision handler
+        log_debug("PHASE 3: Starting LLM decision handler registration")
         llm_decision_handler = loop.run_until_complete(_get_llm_decision_handler())
         
-        # For single adapter, register directly (backward compatible)
-        if len(adapters) == 1:
-            adapter.decision()(llm_decision_handler)
-            adapter.start(main())
-        else:
-            # For multiple adapters, register with all and use multi-protocol decision handler
-            for adapter_key, adapter_instance in adapters.items():
-                multi_handler = loop.run_until_complete(_get_multi_protocol_decision_handler(adapter_key))
-                adapter_instance.decision()(multi_handler)
-            
-            # Start all adapters concurrently
-            tasks = [adapter_instance.start(main()) for adapter_instance in adapters.values()]
-            loop.run_until_complete(asyncio.gather(*tasks))
+        # Register decision handler and start adapter
+        adapter.decision()(llm_decision_handler)
+        adapter.start(main())
         
     except KeyboardInterrupt:
         log_debug("Interrupted by user")

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.12.1)  29 JAN 2026 15:49
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (MiKTeX 25.4) (preloaded format=pdflatex 2025.12.1)  2 FEB 2026 23:36
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -668,43 +668,54 @@ Overfull \hbox (1.61885pt too wide) in paragraph at lines 98--101
 [1
 
 {C:/Users/Omkar/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}] [2]
-<Images/Architecture Diagram.png, id=22, 584.48363pt x 523.05412pt>
+Overfull \hbox (5.54971pt too wide) in paragraph at lines 186--187
+[]\OT1/cmr/bx/n/10 Execution Loop (Re-peated): \OT1/cmr/m/n/10 Dur-ing pro-to-c
+ol en-act-ment, the Kiko adapter
+ []
+
+[3]
+<Images/Architecture Diagram.png, id=25, 584.48363pt x 523.05412pt>
 File: Images/Architecture Diagram.png Graphic file (type png)
 <use Images/Architecture Diagram.png>
-Package pdftex.def Info: Images/Architecture Diagram.png  used on input line 18
-8.
+Package pdftex.def Info: Images/Architecture Diagram.png  used on input line 20
+0.
 (pdftex.def)             Requested size: 347.12354pt x 310.64243pt.
+ [4]
+Overfull \hbox (1.15486pt too wide) in paragraph at lines 230--232
+\OT1/cmr/m/n/10 The prompt con-struc-tion layer trans-forms pro-to-col state in
+to struc-tured, context-
+ []
 
-[3] [4 <./Images/Architecture Diagram.png>] [5] [6]
+[5 <./Images/Architecture Diagram.png>] [6] [7]
 (C:\Users\Omkar\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstlang1.sty
 File: lstlang1.sty 2025/11/14 1.11b listings language file
 )
 LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <9> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 457.
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 489.
 
-[7] [8] [9]
-Overfull \hbox (9.98409pt too wide) in paragraph at lines 605--606
+[8] [9] [10] [11]
+Overfull \hbox (9.98409pt too wide) in paragraph at lines 637--638
 []\OT1/cmr/bx/n/10 Synchronization: \OT1/cmr/m/n/10 Both event paths con-verge 
 on the same \OT1/cmtt/m/n/10 choose[]and[]bind()
  []
 
-[10]
-Overfull \hbox (9.71043pt too wide) in paragraph at lines 622--624
+
+Overfull \hbox (9.71043pt too wide) in paragraph at lines 654--656
 \OT1/cmr/m/n/10 Together, these ex-per-i-ments demon-strate that Ahoy achieves 
 protocol--agnosticism.
  []
 
-
-Overfull \hbox (3.18271pt too wide) in paragraph at lines 643--646
+[12]
+Overfull \hbox (3.18271pt too wide) in paragraph at lines 675--678
 \OT1/cmr/m/n/10 Established pro-gram-ming mod-els for mul-ti-a-gent sys-tems in
 -clude the Ac-tor model,
  []
 
 
-LaTeX Warning: Citation `singh2011information' on page 11 undefined on input li
-ne 647.
+LaTeX Warning: Citation `singh2011information' on page 13 undefined on input li
+ne 679.
 
-(Juice.bbl) [11] (Juice.aux)
+(Juice.bbl) [13] (Juice.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-11-06>
@@ -715,13 +726,13 @@ LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
  ) 
 Here is how much of TeX's memory you used:
- 15408 strings out of 467871
- 310828 string characters out of 5418376
- 1058480 words of memory out of 5000000
- 44036 multiletter control sequences out of 15000+600000
- 633517 words of font info for 60 fonts, out of 8000000 for 9000
+ 15423 strings out of 467871
+ 310975 string characters out of 5418376
+ 989701 words of memory out of 5000000
+ 44043 multiletter control sequences out of 15000+600000
+ 635966 words of font info for 68 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 102i,7n,107p,474b,1722s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 102i,7n,107p,758b,1898s stack positions out of 10000i,1000n,20000p,200000b,200000s
  <C:\Users\Omkar\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm
 1000.pk><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
 ts/cm/cmbx10.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/publ
@@ -729,20 +740,21 @@ ic/amsfonts/cm/cmbx12.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/t
 ype1/public/amsfonts/cm/cmbx9.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX
 /fonts/type1/public/amsfonts/cm/cmitt10.pfb><C:/Users/Omkar/AppData/Local/Progr
 ams/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/Omkar/AppData/Lo
-cal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/Omkar/Ap
-pData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Users/O
-mkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/
-Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr9.p
-fb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm
-/cmss10.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/am
-sfonts/cm/cmsy7.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/p
-ublic/amsfonts/cm/cmti10.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/font
-s/type1/public/amsfonts/cm/cmti9.pfb><C:/Users/Omkar/AppData/Local/Programs/MiK
-TeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/Omkar/AppData/Local/Pro
-grams/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt9.pfb>
-Output written on Juice.pdf (11 pages, 280114 bytes).
+cal/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmib10.pfb><C:/Users/Omkar/
+AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/User
+s/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr6.pfb><
+C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr
+7.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts
+/cm/cmr9.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1/public/a
+msfonts/cm/cmss10.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fonts/type1
+/public/amsfonts/cm/cmsy7.pfb><C:/Users/Omkar/AppData/Local/Programs/MiKTeX/fon
+ts/type1/public/amsfonts/cm/cmti10.pfb><C:/Users/Omkar/AppData/Local/Programs/M
+iKTeX/fonts/type1/public/amsfonts/cm/cmti9.pfb><C:/Users/Omkar/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt10.pfb><C:/Users/Omkar/AppData
+/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt9.pfb>
+Output written on Juice.pdf (13 pages, 292823 bytes).
 PDF statistics:
- 123 PDF objects out of 1000 (max. 8388607)
+ 135 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  18 words of extra memory for PDF output out of 10000 (max. 10000000)
 

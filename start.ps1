@@ -88,6 +88,9 @@ $agentRoles = @{
 # Initialize array to track started processes
 $startedProcs = @()
 
+# Initialize claimed roles list (will be populated by ahoy)
+$claimedRoles = @()
+
 # Clean up old claimed role file
 $claimedRoleFile = Join-Path $env:TEMP "maf_claimed_role_$($proc.Id).txt"
 
@@ -121,10 +124,22 @@ if (Test-Path $full) {
 			}
 			
 			if (Test-Path $claimedRoleFile) {
-				$claimedRole = Get-Content -Path $claimedRoleFile -Raw
-				Write-Host "LLM agent claimed role: $claimedRole"
+				$claimedRolesStr = Get-Content -Path $claimedRoleFile -Raw
+				Write-Host "LLM agent claimed roles: $claimedRolesStr"
+				
+				# Parse claimed roles (format: "Protocol:Role" or "Protocol:Role,Protocol:Role,...")
+				$claimedRoles = @()
+				if ($claimedRolesStr -match ',') {
+					# Multiple roles
+					$claimedRoles = $claimedRolesStr.Split(',') | ForEach-Object { $_.Trim() }
+				} else {
+					# Single role
+					$claimedRoles = @($claimedRolesStr.Trim())
+				}
+				Write-Host "Parsed claimed roles: $($claimedRoles -join ', ')"
 			} else {
 				Write-Host "Warning: LLM agent did not write claimed role file within timeout"
+				$claimedRoles = @()
 			}
 		}
 	} catch {
@@ -144,8 +159,18 @@ foreach ($a in $agents) {
 	# Check if this agent's role was claimed by the LLM
 	if ($agentRoles.ContainsKey($a)) {
 		$agentRole = $agentRoles[$a]
-		if ((Test-Path $claimedRoleFile) -and ((Get-Content -Path $claimedRoleFile -Raw).Trim() -eq $agentRole.Trim())) {
-			Write-Host "Skipping $a (role claimed by LLM agent: $agentRole)"
+		
+		# Check if this role is in the claimed roles list
+		$roleClaimed = $false
+		foreach ($claimedRole in $claimedRoles) {
+			if ($claimedRole -eq $agentRole) {
+				$roleClaimed = $true
+				break
+			}
+		}
+		
+		if ($roleClaimed) {
+			Write-Host "Skipping $a (role $agentRole claimed by LLM agent)"
 			continue
 		}
 	}
@@ -184,7 +209,6 @@ if (-not $startedAny) {
 Write-Host "All requested agents started. Consolidated log: $logFile"
 Write-Host "Press any key to stop agents and free ports..."
 
-# Open file streams for each agent log + err with shared read/write
 $readers = @()
 foreach ($entry in $startedProcs) {
 	$outPath = $entry.Log

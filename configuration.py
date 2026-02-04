@@ -30,48 +30,68 @@ logistics_spec.export("Logistics")
 
 from Logistics import Labeler, Merchant, Packer, Wrapper
 
-# systems: mapping of system name -> { roles: {role_name: agent_identifier}, protocol: Protocol }
+# MULTI-ROLE SUPPORT: Agent identities (strings) instead of role objects
+# Each agent can have multiple addresses to support playing multiple roles simultaneously
+# Format: agent_name -> list of (host, port) tuples
+agents = {
+    "Buyer": [("127.0.0.1", 8001)],
+    "Seller": [("127.0.0.1", 8002)],
+    "Shipper": [("127.0.0.1", 8003)],
+    "Labeler": [("127.0.0.1", 8004)],
+    "Merchant": [("127.0.0.1", 8005)],
+    "Packer": [("127.0.0.1", 8006)],
+    "Wrapper": [("127.0.0.1", 8007)],
+    "CreditBuyer": [("127.0.0.1", 8008)],
+    "CreditSeller": [("127.0.0.1", 8009)],
+    "CreditShipper": [("127.0.0.1", 8010)],
+}
+
+# BACKWARD COMPATIBILITY: Legacy role-based agent mapping for existing hardcoded agents
+# These allow old agents (buyer.py, seller.py, etc.) to continue working
+# Maps role objects to agent identities for resolution
+agents[Buyer] = agents["Buyer"]
+agents[Seller] = agents["Seller"]
+agents[Shipper] = agents["Shipper"]
+agents[Labeler] = agents["Labeler"]
+agents[Merchant] = agents["Merchant"]
+agents[Packer] = agents["Packer"]
+agents[Wrapper] = agents["Wrapper"]
+agents[CreditBuyer] = agents["CreditBuyer"]
+agents[CreditSeller] = agents["CreditSeller"]
+agents[CreditShipper] = agents["CreditShipper"]
+
+# Legacy alias for backward compatibility (old agents import 'config' instead of 'agents')
+config = agents
+
+# systems: mapping of system name -> { roles: {role_obj: agent_name}, protocol: Protocol }
+# Role objects map to agent identities (strings), not role identifiers anymore
 systems = {
     "Purchase": {
-        # Map Role objects (from the parsed protocol) to agent identifiers
+        # Map Role objects (from the parsed protocol) to agent identities (strings)
         "roles": {
-            purchase_protocol.roles["Buyer"]: Buyer,
-            purchase_protocol.roles["Seller"]: Seller,
-            purchase_protocol.roles["Shipper"]: Shipper,
+            purchase_protocol.roles["Buyer"]: "Buyer",
+            purchase_protocol.roles["Seller"]: "Seller",
+            purchase_protocol.roles["Shipper"]: "Shipper",
         },
         "protocol": purchase_protocol,
     },
     "CreditPurchase": {
-        # Map Role objects (from the parsed protocol) to agent identifiers
+        # Map Role objects (from the parsed protocol) to agent identities (strings)
         "roles": {
-            credit_purchase_protocol.roles["CreditBuyer"]: CreditBuyer,
-            credit_purchase_protocol.roles["CreditSeller"]: CreditSeller,
-            credit_purchase_protocol.roles["CreditShipper"]: CreditShipper,
+            credit_purchase_protocol.roles["CreditBuyer"]: "CreditBuyer",
+            credit_purchase_protocol.roles["CreditSeller"]: "CreditSeller",
+            credit_purchase_protocol.roles["CreditShipper"]: "CreditShipper",
         },
         "protocol": credit_purchase_protocol,
     },
     "Logistics": {
-        # Map Role objects (from the parsed protocol) to agent identifiers
+        # Map Role objects (from the parsed protocol) to agent identities (strings)
         "roles": {
-            logistics_protocol.roles["Labeler"]: Labeler,
-            logistics_protocol.roles["Merchant"]: Merchant,
-            logistics_protocol.roles["Packer"]: Packer,
-            logistics_protocol.roles["Wrapper"]: Wrapper,
+            logistics_protocol.roles["Labeler"]: "Labeler",
+            logistics_protocol.roles["Merchant"]: "Merchant",
+            logistics_protocol.roles["Packer"]: "Packer",
+            logistics_protocol.roles["Wrapper"]: "Wrapper",
         },
         "protocol": logistics_protocol,
     }
-}
-
-# agents / endpoints: mapping of agent identifier -> address tuple
-agents = {
-    Buyer: [("127.0.0.1", 8001)],
-    Seller: [("127.0.0.1", 8002)],
-    Shipper: [("127.0.0.1", 8003)],
-    Labeler: [("127.0.0.1", 8004)],
-    Merchant: [("127.0.0.1", 8005)],
-    Packer: [("127.0.0.1", 8006)],
-    Wrapper: [("127.0.0.1", 8007)],
-    CreditBuyer: [("127.0.0.1", 8008)],
-    CreditSeller: [("127.0.0.1", 8009)],
-    CreditShipper: [("127.0.0.1", 8010)],
 }

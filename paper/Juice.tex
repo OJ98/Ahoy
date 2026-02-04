@@ -175,68 +175,100 @@ These components work together to create an agentic loop where the LLM observes 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Architecture}
-% \oj{[Figure to be inserted: Agent architecture diagram showing LLM driver, LLM
-% core, BSPL adapter, local state store, memory systems, and prompt construction
-% components; external interfaces include other agents, user dialog, and configuration files]}
-\akc{See Azorus for premable}
-The \ahoy framework comprises three layers that take advantage of LLM reasoning to achieve protocol agnosticism.
-Rather than encoding protocol--specific logic in agents, \ahoy delegates all reasoning to an LLM decision endpoint that understands both the protocol structure and the agent goals.
-\akc{higher layers go higher in the figure}
+
+\ahoy achieves protocol agnosticism by decoupling LLM reasoning from protocol-specific logic. 
+Rather than implementing distinct agents for each protocol, \ahoy uses a unified architecture where the LLM serves as the decision-making layer, reasoning over constraints and possibilities defined by BSPL protocols.
+The architecture orchestrates interaction between four key components through a well-defined flow:
+
+\begin{enumerate}
+    \item \textbf{Initialization Phase (One-Time):} When a user provides a natural language goal, the \emph{role detection module} (part of the LLM decision layer) queries the LLM to select an appropriate protocol and role from available options. This selection is fixed for the lifetime of the agent instance. Once the protocol and role are determined, a Kiko adapter is instantiated for that specific protocol-role pair, and the prompt construction layer generates a system prompt containing foundational knowledge about BSPL semantics and the selected protocol.
+    
+    \item \textbf{Execution Loop (Repeated):} During protocol enactment, the Kiko adapter monitors protocol state and triggers a decision event whenever state changes (e.g., a message arrives from another agent or a custom event fires). The decision endpoint (mediator between LLM and adapters) receives this event and invokes the prompt construction layer to assemble a context-aware user prompt from the current adapter state. The user prompt is passed to the \emph{message decision module} (part of the LLM decision layer), which selects which enabled message to send and how to bind its parameters. The decision endpoint returns this choice to the adapter, which validates and sends the message.
+    
+    \item \textbf{Termination Check (Each Iteration):} Before each new decision, the \emph{termination condition detection module} (part of the LLM decision layer) checks whether the protocol should conclude. Termination can result from either protocol-driven completion (adapter detects terminal state) or user-defined criteria (e.g., threshold met, timeout reached). If termination conditions are satisfied, the protocol enactment concludes and the adapter shuts down gracefully.
+    
+    \item \textbf{Concurrency (Optional):} Multiple Kiko adapters can execute concurrently, each managing isolated social state for a different protocol instance. The decision endpoint can interleave decisions across adapters, with the LLM receiving distinct prompts for each protocol context.
+\end{enumerate}
+
+This design separates concerns across four layers: the LLM decision layer handles all reasoning (protocol selection, termination detection, message choice), the prompt construction layer transforms protocol state into LLM input, the decision endpoint orchestrates communication flow, and the Kiko adapters enforce all structural constraints and manage protocol state. 
+This separation enables protocol agnosticism: new protocols require only a new BSPL specification file, not new LLM logic.
+The architecture is illustrated in Figure \ref{fig:architecture_diagram}.
+The remainder of this section details each component's role in this flow.
 
 \begin{figure*}[ht]
     \centering
     \includegraphics[width=\textwidth]{Images/Architecture Diagram.png}
-    \caption{{\ahoy} Three Layer Architecture Diagram}
+    \caption{{\ahoy} Architecture Overview}
     \label{fig:architecture_diagram}
 \end{figure*}
 
-\subsection{Three-Layer Architecture}
-Figure \ref{fig:architecture_diagram} presents the layered design.
-\subsubsection{Layer 1: Protocol Definition.}
-Interaction protocols are formally specified in BSPL (as described in Section \ref{sec:Background}). 
-The BSPL specifications are parsed into protocol objects that export message types and roles for convenient access.
-These protocol objects are augmented with natural language protocol descriptions and sent to the protocol and role selection module.
-\subsubsection{Layer 2: Protocol Instantiation.}
-An \emph{adapter factory} creates runtime instances of the Kiko Adapter for any protocol--role pair.
-Given a protocol name and role (e.g. Purchase protocol and the Buyer role), the factory binds the protocol specifications into a concrete adapter instance that tracks social state (message history, parameter bindings) and computes enabled messages --- the set of messages that may be legally sent without violating the protocol constraints.
-\subsubsection{Layer 3: Decision Logic.} Agents interact with the Kiko adapter with a decision endpoint provided by \ahoy.
-This is an event handler that observes protocol state changes and delegates reasoning to an LLM.
-The handler receives the enabled message set and the trigger event and passes that to the LLM along with agent goals and a concise explanation of the BSPL world (Listing \ref{lst:bspl-expl}).
-The LLM reasons about which message(s) to send along with appropriate parameter--value bindings to achieve the user goals.
-This information is packed into a formatted message instance that the Kiko adapter sends according to the protocol constraints.
+\subsection{LLM Decision Layer}
 
-\begin{lstlisting}[caption=BSPL Explanation String,label=lst:bspl-expl]
-You are participating in BSPL (Blindingly Simple Protocol Language) protocol enactments. 
-    BSPL defines multi-agent protocols where:
-    - Roles are named agents (e.g., Merchant, Buyer)
-    - Messages are directed communication between roles with parameters marked as `out` (sender provides) or `in` (requires prior binding from other messages)
-    - Parameters marked `key` identify protocol instances
-    - You play one role and must track received messages to determine which messages you can legally send next
-    - A message can only be sent when all its `in` parameters are bound by prior messages
-    - When multiple messages are enabled, choose based on domain reasoning and the protocol's intended flow
-\end{lstlisting}
+The LLM decision layer is responsible for all reasoning about protocol selection and execution. 
+It consists of three interdependent modules that operate in sequence during agent initialization and execution.
 
-The adapter enforces protocol--level constraints (message schema, preconditions, ordering) while the LLM handles domain--specific reasoning about optimal actions.
-This separation is the key to protocol--agnosticism: this approach works across different protocols without modification because \ahoy only requires the LLM to fulfill user goals in an abstract setting with constrained options, a task that LLMs have been shown to perform well.
+\subsubsection{Role Detection Module}
+The role detection module determines which protocol and role combination is appropriate for a given user intent. 
+When an agent is initialized with a natural language goal (e.g., ``I want to buy a notebook''), this module queries the LLM with the set of available protocols, their roles, and the user goal. 
+The LLM selects the protocol-role pair that best aligns with the stated objective. 
+This determination happens once during initialization and is then fixed for the lifetime of that agent instance, ensuring consistent role behavior throughout execution.
 
-\mps{check every occurrence of "only"}
+\subsubsection{Termination Condition Detection Module}
+The termination condition detection module monitors whether a protocol enactment should conclude. 
+Termination can occur for two reasons: (1) the protocol reaches a terminal state (successful completion or deadlock detected by the Kiko adapter), or (2) user-defined termination criteria are met (e.g., a transaction value exceeds a threshold, a timeout is reached, or a satisfaction condition is met). 
+This module queries the current protocol state, consults any external conditions or alerts, and signals the adapter to halt gracefully when appropriate. 
+By separating termination detection from the message decision logic, \ahoy can handle both protocol-driven and domain-driven conclusion criteria.
 
-\subsection{Guarantees}
-The adapter enforces two kinds of guarantees. 
-\emph{Structural guarantees} are provided by the Kiko adapter: all messages conform to their schema, and message ordering respects protocol constraints (e.g, an agent cannot send a quote before receiving an rfq if the protocol forbids it).
-\emph{Logical guarantees} must be provided by agent logic: agents should choose actions that are semantically sound for the domain (e.g, quoting a reasonable price for the requested item).
-The \ahoy design reflects this separation: the first two layers are responsible for what is \emph{possible}, while the logic layer is responsible for what is \emph{best}.
+\subsubsection{Message Decision and Parameter Binding Module}
+The message decision module is the core reasoning component that executes repeatedly during protocol enactment. 
+When a decision event is triggered (either by an incoming message or a custom event), this module receives: (1) the set of enabled messages from the Kiko adapter (all messages that can legally be sent without violating protocol constraints), (2) the current message history and bound parameters, and (3) agent goals and domain-specific preferences. 
+The LLM evaluates the enabled options and selects the message(s) to send along with appropriate parameter bindings. 
+The module is constrained to choose only from the enabled message set; the Kiko adapter ensures the preconditions are met, so the LLM need only reason about domain appropriateness and goal alignment.
 
-\subsection{LLM Decision Endpoint}
-The LLM decision endpoint calls a decision handler when a trigger event occurs.
-This could be a communication event (message received) or a custom event (out--of--stock alert triggered for a product).
-The first call to the decision handler function provided by \ahoy sets the system prompt.
-The system prompt contains the information that does not change for all future LLM calls for this specific enactment.
-This includes information about the BSPL world as shown in Listing \ref{lst:bspl-expl}, the agent role the LLM is playing, tool calls available to the LLM, and an explanation of parameter binding rules.
-This prompt is cached for reuse and overwritten once a new enactment begins.
-For each call to the LLM, the decision handler function extracts the social state from the Kiko adapter and structures this information into a user prompt.
-The prompt contains the adapter message history, agent goals, enabled messages, bound parameters, and the parameters that would need to be bound to send each enabled message.
-Finally, a format enforcement message is added to the end of the prompt, and the LLM is called asynchronously.
+\subsection{Prompt Construction Layer}
+
+The prompt construction layer transforms protocol state into structured, context-aware LLM input. 
+Prompts are assembled in two phases: a static system prompt constructed once per protocol enactment, and dynamic user prompts constructed on each decision event.
+
+\subsubsection{System Prompt}
+The system prompt, created once when the protocol and role are determined, establishes foundational knowledge that persists across all decision iterations. 
+It contains: (1) an explanation of BSPL semantics (roles, messages, parameter binding rules), (2) the agent's assigned role and protocol, (3) an explanation of enabled messages and how constraints work, (4) available tools and their calling conventions, and (5) human-readable guidelines for parameter binding. 
+The system prompt is cached and reused to minimize API calls and maintain consistency. 
+It is overwritten only when a new protocol enactment begins.
+
+\subsubsection{User Prompt}
+For each decision event, a fresh user prompt is constructed by querying the Kiko adapter for current state. 
+The user prompt is assembled from: (1) a role reminder establishing the agent identity and decision task, (2) the complete message history from the adapter showing all messages sent and received, (3) currently enabled messages extracted from the adapter's enabled message store, (4) bound parameters already set by prior messages, and (5) which parameters must be filled for each enabled message option. 
+This prompt encodes sufficient context for the LLM to make informed decisions while remaining concise enough to stay within token limits.
+
+\subsection{Decision Endpoint}
+
+The decision endpoint is an event handler that mediates between the Kiko adapter and the LLM decision layer. 
+It is registered as a callback with the adapter and triggered whenever protocol state changes. 
+The decision endpoint executes the following sequence: (1) receive a trigger event (message received, custom timeout fired, etc.) from the adapter, (2) invoke the termination detection module to check if the protocol should conclude, (3) if not terminating, construct the user prompt from current adapter state, (4) call the LLM decision module with the assembled system and user prompts, (5) parse the LLM's response to extract selected message type and parameter bindings, (6) return the selected message instance to the adapter, which sends it according to protocol constraints. 
+Because the adapter enforces all structural constraints, the decision endpoint can focus purely on domain reasoning without duplicating validation logic. 
+This separation of concerns is the key to protocol agnosticism: the same endpoint logic works for any protocol.
+
+\subsection{Kiko Adapters ($n$ Instances)}
+
+\ahoy instantiates one Kiko adapter per protocol-role pair being executed. 
+Each adapter is independent and maintains isolated social state, ensuring that concurrent protocol enactments do not interfere.
+
+\subsubsection{Adapter Responsibilities}
+Each Kiko adapter is responsible for: (1) enforcing protocol constraints (message schema validation, precondition checking, state machine transitions), (2) tracking message history and parameter bindings in isolated social state, (3) computing the set of enabled messages at each step (all messages whose preconditions are satisfied), (4) sending and receiving messages according to protocol rules, (5) detecting protocol terminal states (completion or deadlock), and (6) invoking registered decision endpoint callbacks when state changes. 
+The adapter provides a Python API (via decorators such as \texttt{@adapter.reaction(MessageType)}) that allows agents to register handlers for protocol events.
+
+\subsubsection{Social State Isolation}
+Because each protocol instance has its own adapter, parameters are naturally scoped per protocol. 
+For example, an \texttt{orderID} parameter in the Purchase protocol is isolated from an \texttt{orderID} in the Logistics protocol; they do not interfere even though they share the same name. 
+This isolation is enforced at the adapter level and requires no special logic in the LLM layer. 
+Message history is similarly isolated: the LLM receives only the message history relevant to the current protocol when constructing user prompts.
+
+\subsubsection{Concurrent Execution}
+Multiple adapters can run concurrently, enabling a single LLM-driven agent to participate in multiple protocol enactments simultaneously. 
+Each adapter maintains its own decision endpoint callback and triggers decisions independently. 
+The LLM receives distinct prompts for each protocol context and reasons appropriately for each. 
+Concurrency is managed via asynchronous I/O (\texttt{asyncio}) to prevent blocking between protocol instances.
 
 
 % The {\ahoy} framework can broadly be divided into two parts: a protocol and role selection module, which determines the appropriate combination of role and protocol based on user input; and a generic {\ahoy} agent that performs any role in a multiagent system without code modifications.
@@ -606,9 +638,8 @@ and a summary table showing the accuracy, recall and precision.
 \end{itemize}
 Test scenarios include:
 \begin{itemize}
-    \item Purchase Protocol (Buyer with periodic timeout): Adapter processes incoming quotes; custom event handler checks every 2 seconds whether to send follow-up messages.
-    \item Logistics Protocol (Merchant with stall detection): Adapter processes shipping requests; custom event handler detects prolonged inactivity and triggers proactive decisions.
-\end{itemize}
+    \item Purchase Protocol (Buyer with periodic timeout): Adapter processes incoming quotes; custom event handler gets a ping from a mocked inventory system after 30 seconds to buy a laptop.
+    \end{itemize}
 \textbf{Results:} We verify that:
 \begin{itemize}
     \item \textbf{Concurrent Execution:} Both adapter and custom event paths execute without race conditions or deadlocks.
