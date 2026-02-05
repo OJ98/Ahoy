@@ -1,0 +1,31 @@
+{
+  "run_timestamp": "20260204_171922",
+  "execution_mode": "concurrent",
+  "protocols_executed": 2,
+  "protocols_successful": 0,
+  "total_execution_time_seconds": 1.02,
+  "total_llm_calls": 0,
+  "total_llm_duration_seconds": 2.04,
+  "time_saved_vs_sequential_seconds": 1.02,
+  "speedup_factor": 2.0,
+  "parallel_efficiency_percent": 100.0,
+  "per_protocol_metrics": {
+    "Purchase": {
+      "role": "Buyer",
+      "execution_time": 1.0186753273010254,
+      "llm_calls": 0,
+      "llm_duration": 1.0186753273010254,
+      "success": false,
+      "efficiency": 0
+    },
+    "Logistics": {
+      "role": "Merchant",
+      "execution_time": 1.0186753273010254,
+      "llm_calls": 0,
+      "llm_duration": 1.0186753273010254,
+      "success": false,
+      "efficiency": 0
+    }
+  },
+  "analysis_timestamp": "2026-02-04 17:19:24"
+}

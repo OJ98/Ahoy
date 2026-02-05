@@ -44,6 +44,9 @@ agents = {
     "CreditBuyer": [("127.0.0.1", 8008)],
     "CreditSeller": [("127.0.0.1", 8009)],
     "CreditShipper": [("127.0.0.1", 8010)],
+    # Generic LLM agent for multiprotocol testing (ahoy.py uses this)
+    # Running on port 8000 for simplified configuration
+    "ahoy": [("127.0.0.1", 8000)],
 }
 
 # BACKWARD COMPATIBILITY: Legacy role-based agent mapping for existing hardcoded agents
@@ -59,6 +62,49 @@ agents[Wrapper] = agents["Wrapper"]
 agents[CreditBuyer] = agents["CreditBuyer"]
 agents[CreditSeller] = agents["CreditSeller"]
 agents[CreditShipper] = agents["CreditShipper"]
+
+# Special agent registry class to handle both string and role object keys
+class AgentRegistry(dict):
+    """
+    Dictionary that supports looking up agent addresses by both string name and role object.
+    Falls back to string lookup if role object lookup fails.
+    """
+    def __getitem__(self, key):
+        # Try direct lookup first (string or role object)
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            # If key is a role object with a name, try string lookup
+            if hasattr(key, 'name'):
+                try:
+                    return super().__getitem__(key.name)
+                except KeyError:
+                    pass
+            # Also try the other direction - if it's a string, check for role object
+            if isinstance(key, str):
+                # Search for a role object with this name
+                for k, v in self.items():
+                    if hasattr(k, 'name') and k.name == key:
+                        return v
+            raise KeyError(key)
+    
+    def __contains__(self, key):
+        # Check direct lookup
+        if super().__contains__(key):
+            return True
+        # Check name-based lookup for role objects
+        if hasattr(key, 'name') and super().__contains__(key.name):
+            return True
+        # Check reverse lookup
+        if isinstance(key, str):
+            for k in self.keys():
+                if hasattr(k, 'name') and k.name == key:
+                    return True
+        return False
+
+
+# Convert agents dict to AgentRegistry for robust lookups
+agents = AgentRegistry(agents)
 
 # Legacy alias for backward compatibility (old agents import 'config' instead of 'agents')
 config = agents
@@ -95,3 +141,69 @@ systems = {
         "protocol": logistics_protocol,
     }
 }
+
+
+def configure_ahoy_for_multiprotocol(protocol_role_pairs):
+    """
+    Configure the role mappings to use 'ahoy' agent for multiprotocol participation.
+    
+    Args:
+        protocol_role_pairs: List of (protocol_name, role_name) tuples
+                              e.g., [("Purchase", "Buyer"), ("Logistics", "Merchant")]
+    
+    This function dynamically updates:
+    1. The role-to-agent mappings in the systems dict to use "ahoy" agent
+    2. Preserves all original agent address bindings unchanged
+    """
+    # Get ahoy's address
+    ahoy_addresses = agents.get("ahoy", [("127.0.0.1", 9000)])
+    
+    for protocol_name, role_name in protocol_role_pairs:
+        if protocol_name in systems and role_name in systems[protocol_name]["protocol"].roles:
+            # Get the role object from the protocol
+            role_obj = systems[protocol_name]["protocol"].roles[role_name]
+            
+            # Map this role to the "ahoy" agent in systems
+            # This tells the BSPL adapter that this role is handled by "ahoy"
+            systems[protocol_name]["roles"][role_obj] = "ahoy"
+            
+            # NO NEED to modify agents dict!
+            # The agents["ahoy"] entry already has the right address.
+            # Hardcoded agents (seller.py, etc.) will simply not be started by start.ps1
+            # because their roles are already claimed by ahoy
+
+
+def _apply_multiprotocol_ahoy_from_env():
+    """
+    Apply multiprotocol ahoy configuration from environment variable.
+    
+    Environment variable: MULTIPROTOCOL_AHOY_ROLES
+    Value: Comma-separated list of "Protocol:Role" pairs
+    Example: "Purchase:Buyer,Logistics:Merchant"
+    
+    This is called automatically at module load time if the env var is set.
+    """
+    import os
+    roles_str = os.environ.get("MULTIPROTOCOL_AHOY_ROLES")
+    if not roles_str:
+        return
+    
+    try:
+        # Parse roles from env var
+        protocol_role_pairs = []
+        for pair_str in roles_str.split(","):
+            parts = pair_str.strip().split(":")
+            if len(parts) == 2:
+                protocol, role = parts
+                protocol_role_pairs.append((protocol.strip(), role.strip()))
+        
+        if protocol_role_pairs:
+            configure_ahoy_for_multiprotocol(protocol_role_pairs)
+    except Exception as e:
+        import sys
+        print(f"Warning: Failed to apply MULTIPROTOCOL_AHOY_ROLES override: {e}", file=sys.stderr)
+
+
+# Apply multiprotocol ahoy overrides from environment variable at module load time
+_apply_multiprotocol_ahoy_from_env()
+

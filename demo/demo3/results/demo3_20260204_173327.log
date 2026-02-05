@@ -1,0 +1,39 @@
+2026-02-04 17:33:27 [INFO] [demo3] ======================================================================
+2026-02-04 17:33:27 [INFO] [demo3] DEMO 3: Concurrent Multi-Protocol Participation
+2026-02-04 17:33:27 [INFO] [demo3] ======================================================================
+2026-02-04 17:33:27 [INFO] [demo3] Start Time: 2026-02-04 17:33:27
+2026-02-04 17:33:27 [INFO] [demo3] Results Directory: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo3\results
+2026-02-04 17:33:27 [INFO] [demo3] Log File: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo3\results\demo3_20260204_173327.log
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Project Root: C:\PhD\Research\MultiAgents\Code\MAF
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Cleared stop signal
+2026-02-04 17:33:27 [INFO] [demo3] 
+======================================================================
+2026-02-04 17:33:27 [INFO] [demo3] Configuration: One Agent, Multiple Protocol Roles
+2026-02-04 17:33:27 [INFO] [demo3] ======================================================================
+
+2026-02-04 17:33:27 [INFO] [demo3] Agent will play 2 roles across 2 protocols:
+2026-02-04 17:33:27 [INFO] [demo3]   - Buyer in Purchase
+2026-02-04 17:33:27 [INFO] [demo3]   - Merchant in Logistics
+2026-02-04 17:33:27 [INFO] [demo3] 
+2026-02-04 17:33:27 [INFO] [demo3] ======================================================================
+2026-02-04 17:33:27 [INFO] [demo3] Starting Supporting Agents
+2026-02-04 17:33:27 [INFO] [demo3] ======================================================================
+
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Set MULTIPROTOCOL_AHOY_ROLES=Purchase:Buyer,Logistics:Merchant
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Started packer.py (PID 538960) for Logistics
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Started labeler.py (PID 538788) for Logistics
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Started wrapper.py (PID 540448) for Logistics
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Started seller.py (PID 515928) for Purchase
+2026-02-04 17:33:27 [DEBUG] [demo3_debug] Started shipper.py (PID 530892) for Purchase
+2026-02-04 17:33:27 [INFO] [demo3] Started 5 supporting agents
+2026-02-04 17:33:27 [INFO] [demo3] 
+2026-02-04 17:33:28 [INFO] [demo3] ======================================================================
+2026-02-04 17:33:28 [INFO] [demo3] Starting Multiprotocol Agent (ahoy.py)
+2026-02-04 17:33:28 [INFO] [demo3] ======================================================================
+
+2026-02-04 17:33:28 [DEBUG] [demo3_debug] Wrote multiprotocol ahoy config: {"agent": "ahoy", "roles": [{"protocol": "Purchase", "role": "Buyer"}, {"protocol": "Logistics", "role": "Merchant"}]}
+2026-02-04 17:33:28 [DEBUG] [demo3_debug] Wrote combined scenario input
+2026-02-04 17:33:28 [DEBUG] [demo3_debug] Started ahoy.py (PID 540824) for multiprotocol: Buyer(Purchase), Merchant(Logistics)
+2026-02-04 17:33:28 [INFO] [demo3] Multiprotocol agent started. Waiting for protocol completion...
+2026-02-04 17:33:28 [INFO] [demo3] 
+2026-02-04 17:34:43 [DEBUG] [demo3_debug] Demo harness shutdown

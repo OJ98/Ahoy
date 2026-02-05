@@ -1,0 +1,83 @@
+2026-02-04 17:26:56 [INFO] [demo3] ======================================================================
+2026-02-04 17:26:56 [INFO] [demo3] DEMO 3: Concurrent Multi-Protocol Participation
+2026-02-04 17:26:56 [INFO] [demo3] ======================================================================
+2026-02-04 17:26:56 [INFO] [demo3] Start Time: 2026-02-04 17:26:56
+2026-02-04 17:26:56 [INFO] [demo3] Results Directory: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo3\results
+2026-02-04 17:26:56 [INFO] [demo3] Log File: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo3\results\demo3_20260204_172656.log
+2026-02-04 17:26:56 [DEBUG] [demo3_debug] Project Root: C:\PhD\Research\MultiAgents\Code\MAF
+2026-02-04 17:26:56 [DEBUG] [demo3_debug] Cleared stop signal
+2026-02-04 17:26:56 [INFO] [demo3] 
+======================================================================
+2026-02-04 17:26:56 [INFO] [demo3] Configuration: One Agent, Multiple Protocol Roles
+2026-02-04 17:26:56 [INFO] [demo3] ======================================================================
+
+2026-02-04 17:26:56 [INFO] [demo3] Agent will play 2 roles across 2 protocols:
+2026-02-04 17:26:56 [INFO] [demo3]   - Buyer in Purchase
+2026-02-04 17:26:56 [INFO] [demo3]   - Merchant in Logistics
+2026-02-04 17:26:56 [INFO] [demo3] 
+2026-02-04 17:26:56 [INFO] [demo3] ======================================================================
+2026-02-04 17:26:56 [INFO] [demo3] Starting Supporting Agents
+2026-02-04 17:26:56 [INFO] [demo3] ======================================================================
+
+2026-02-04 17:26:56 [DEBUG] [demo3_debug] Started seller.py (PID 536620) for Purchase
+2026-02-04 17:26:56 [DEBUG] [demo3_debug] Started shipper.py (PID 539436) for Purchase
+2026-02-04 17:26:56 [DEBUG] [demo3_debug] Started packer.py (PID 526284) for Logistics
+2026-02-04 17:26:56 [DEBUG] [demo3_debug] Started labeler.py (PID 539280) for Logistics
+2026-02-04 17:26:56 [DEBUG] [demo3_debug] Started wrapper.py (PID 537676) for Logistics
+2026-02-04 17:26:56 [INFO] [demo3] Started 5 supporting agents
+2026-02-04 17:26:56 [INFO] [demo3] 
+2026-02-04 17:26:57 [INFO] [demo3] ======================================================================
+2026-02-04 17:26:57 [INFO] [demo3] Starting Multiprotocol Agent (ahoy.py)
+2026-02-04 17:26:57 [INFO] [demo3] ======================================================================
+
+2026-02-04 17:26:57 [DEBUG] [demo3_debug] Wrote multiprotocol ahoy config: {"agent": "ahoy", "roles": [{"protocol": "Purchase", "role": "Buyer"}, {"protocol": "Logistics", "role": "Merchant"}]}
+2026-02-04 17:26:57 [DEBUG] [demo3_debug] Wrote combined scenario input
+2026-02-04 17:26:57 [DEBUG] [demo3_debug] Started ahoy.py (PID 538888) for multiprotocol: Buyer(Purchase), Merchant(Logistics)
+2026-02-04 17:26:57 [INFO] [demo3] Multiprotocol agent started. Waiting for protocol completion...
+2026-02-04 17:26:57 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] Multiprotocol execution completed in 3.04s
+2026-02-04 17:27:00 [INFO] [demo3] 
+======================================================================
+2026-02-04 17:27:00 [INFO] [demo3] Execution Metrics
+2026-02-04 17:27:00 [INFO] [demo3] ======================================================================
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] Total Execution Time: 3.04s
+2026-02-04 17:27:00 [INFO] [demo3] LLM Calls: 0
+2026-02-04 17:27:00 [INFO] [demo3] Success: False
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] Terminating agents...
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Set stop signal
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Terminated agent process 538888
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Terminated agent process 536620
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Terminated agent process 539436
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Terminated agent process 526284
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Terminated agent process 539280
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Terminated agent process 537676
+2026-02-04 17:27:00 [INFO] [demo3] All agents terminated.
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] ======================================================================
+2026-02-04 17:27:00 [INFO] [demo3] Saving Results
+2026-02-04 17:27:00 [INFO] [demo3] ======================================================================
+
+2026-02-04 17:27:00 [INFO] [demo3] Log saved to: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo3\results\demo3_20260204_172656.log
+2026-02-04 17:27:00 [INFO] [demo3] 
+======================================================================
+2026-02-04 17:27:00 [INFO] [demo3] DEMO 3 SUMMARY - CONCURRENT MULTIPROTOCOL PARTICIPATION
+2026-02-04 17:27:00 [INFO] [demo3] ======================================================================
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] Execution Mode: Single agent playing 2 roles across 2 protocols
+2026-02-04 17:27:00 [INFO] [demo3] Total Execution Time: 3.04s
+2026-02-04 17:27:00 [INFO] [demo3] LLM Calls: 0
+2026-02-04 17:27:00 [INFO] [demo3] Success: False
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] Roles Played (Concurrently):
+2026-02-04 17:27:00 [INFO] [demo3]   - Buyer (Purchase)
+2026-02-04 17:27:00 [INFO] [demo3]   - Merchant (Logistics)
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] ======================================================================
+2026-02-04 17:27:00 [INFO] [demo3] Running Post-Execution Analysis...
+2026-02-04 17:27:00 [INFO] [demo3] ======================================================================
+2026-02-04 17:27:00 [INFO] [demo3] 
+2026-02-04 17:27:00 [INFO] [demo3] Executing: demo3_analysis.py
+2026-02-04 17:27:00 [DEBUG] [demo3_debug] Full path: C:\PhD\Research\MultiAgents\Code\MAF\demo\demo3\demo3_analysis.py

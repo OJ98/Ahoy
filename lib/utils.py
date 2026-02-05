@@ -264,14 +264,17 @@ def build_message_history_from_social_state(
     """Build a formatted history of past messages from social state.
     
     Constructs a human-readable summary of recent messages for LLM context,
-    optionally filtered to messages sent to a specific agent.
+    optionally filtered to messages sent to a specific agent/role.
     
     Uses module-level cache to avoid rebuilding identical history multiple times
     during a single decision cycle.
     
+    For multirole adapters, filters messages by actual role names (e.g., "Buyer", "Merchant")
+    rather than adapter name (e.g., "ahoy"), since recipients are role names.
+    
     Args:
         social_state: Extracted social state dictionary
-        agent_name: Optional agent name to filter by
+        agent_name: Optional agent name to filter by (for single-role adapters)
         max_history: Maximum number of recent messages to include
         use_cache: Whether to use caching (default: True)
     
@@ -296,10 +299,27 @@ def build_message_history_from_social_state(
     if use_cache and cache_key in _message_history_cache:
         return _message_history_cache[cache_key]
     
-    # Filter to messages sent to agent if specified
-    if agent_name:
+    # Extract role names for multirole adapters
+    # For multirole adapters, recipients contain role names like "Buyer", "Merchant"
+    # not adapter names like "ahoy"
+    role_names = []
+    if "roles" in social_state and social_state["roles"]:
+        for role in social_state["roles"]:
+            if isinstance(role, dict) and "name" in role:
+                role_names.append(role["name"])
+            else:
+                role_names.append(str(role))
+    
+    # Filter to messages relevant to this adapter's roles (or agent if no roles)
+    if role_names:
+        # For multirole adapters: filter by role names
+        filtered = [m for m in all_messages 
+                   if any(role in m.get('recipients', []) for role in role_names)]
+    elif agent_name:
+        # For single-role adapters: try filtering by agent_name (legacy support)
         filtered = [m for m in all_messages if agent_name in m.get('recipients', [])]
     else:
+        # No filter: show all messages
         filtered = all_messages
     
     # Format message entries

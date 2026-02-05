@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-import asyncio
-import logging
-import random
 import sys
-from datetime import datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+import asyncio
+import logging
+import random
+from datetime import datetime
 
 from bspl.adapter import Adapter
 from bspl.adapter.core import COLORS
@@ -37,7 +38,6 @@ def log_debug(msg):
 # Import the protocol
 import Purchase
 from Purchase import Seller, quote, ship
-
 
 # Instantiate the adapter for the Seller role
 adapter = Adapter(Seller, systems, agents, color=COLORS[1])
@@ -75,7 +75,7 @@ async def send_quote(msg):
     elif any(word in item for word in ["computer", "laptop", "phone", "device", "electronics", "complex"]):
         # Electronics/complex items: $500-2000
         msg.bindings["price"] = random.randint(500, 2000)
-    elif any(word in item for word in ["book", "guide", "manual", "document"]):
+    elif any(word in item for word in ["book", "guide", "manual", "document", "ceramic plate", "vase", "wooden bat"]):
         # Books/documents: $10-50
         msg.bindings["price"] = random.randint(10, 50)
     else:

@@ -1,10 +1,11 @@
-# Minimal start script for starting agents in the maf-py environment.
-# - Activates `maf-py` (conda), falls back to common venv locations.
-# - Runs CHIPS interface to configure protocol/role if needed
-# - Starts agent scripts as background jobs and appends all their console
-#   output (stdout+stderr) to a single log file: ./logs/agents.log
-# - Waits for a keypress; then stops jobs and terminates any matching python processes
-#   whose command line contains the agent script name (to free ports).
+# Multi-Agent Framework Startup Script
+# Features:
+#   - Activates `maf-py` (conda), falls back to common venv locations.
+#   - Runs CHIPS interface to configure protocol/role(s) if needed
+#   - [NEW] Supports multi-role mode: ahoy can now claim multiple roles across different protocols
+#   - Starts agent scripts as background jobs with consolidated logging: ./logs/agents.log
+#   - Dynamically skips agents whose roles are claimed by ahoy (prevents port conflicts)
+#   - Waits for completion signal or keypress, then gracefully shuts down all agents
 
 $ErrorActionPreference = 'Stop'
 
@@ -68,6 +69,22 @@ $logDir = Join-Path $scriptDir "logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 $logFile = Join-Path $logDir "agents.log"
 
+# Detect Python executable - try conda environment first, then system python
+function Get-PythonExecutable {
+	if (Get-Command python -ErrorAction SilentlyContinue) {
+		return (Get-Command python).Source
+	}
+	if (Get-Command python3 -ErrorAction SilentlyContinue) {
+		return (Get-Command python3).Source
+	}
+	# Fallback to default conda env path
+	return "C:\\Users\\Omkar\\miniconda3\\envs\\maf-py\\python.exe"
+}
+$pythonExe = Get-PythonExecutable
+if (-not (Test-Path $pythonExe)) {
+	Write-Host "Warning: Python executable not found at $pythonExe. Continuing anyway..."
+}
+
 # List of agent scripts to start
 $allAgents = @("agents/ahoy.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py", "agents/credit_buyer.py", "agents/credit_seller.py", "agents/credit_shipper.py")
 
@@ -105,7 +122,6 @@ if (Test-Path $full) {
 		$agentLog = Join-Path $logDir ("$agentName.log")
 		$tempName = "$agentName-$([guid]::NewGuid().ToString()).err"
 		$agentErr = Join-Path $env:TEMP $tempName
-		$pythonExe = "C:\\Users\\Omkar\\miniconda3\\envs\\maf-py\\python.exe"
 		$proc = Start-Process -FilePath $pythonExe -ArgumentList @('-u', $full) -WorkingDirectory $scriptWorkingDir -RedirectStandardOutput $agentLog -RedirectStandardError $agentErr -NoNewWindow -PassThru
 		if ($proc) {
 			# Now set the claimed role file path based on the generic agent PID
@@ -128,15 +144,19 @@ if (Test-Path $full) {
 				Write-Host "LLM agent claimed roles: $claimedRolesStr"
 				
 				# Parse claimed roles (format: "Protocol:Role" or "Protocol:Role,Protocol:Role,...")
+				# Multi-role support: ahoy can now claim multiple roles across different protocols
 				$claimedRoles = @()
 				if ($claimedRolesStr -match ',') {
-					# Multiple roles
+					# Multiple roles (comma-separated)
 					$claimedRoles = $claimedRolesStr.Split(',') | ForEach-Object { $_.Trim() }
 				} else {
 					# Single role
 					$claimedRoles = @($claimedRolesStr.Trim())
 				}
-				Write-Host "Parsed claimed roles: $($claimedRoles -join ', ')"
+				Write-Host "Parsed claimed roles for skipping: [$($claimedRoles -join ', ')]"
+				if ($claimedRoles.Count -gt 1) {
+					Write-Host "  → Ahoy is running multiple roles: $($claimedRoles -join ' + ')"
+				}
 			} else {
 				Write-Host "Warning: LLM agent did not write claimed role file within timeout"
 				$claimedRoles = @()
@@ -148,29 +168,22 @@ if (Test-Path $full) {
 	}
 }
 
-# Now start all other agents EXCEPT the one claimed by LLM
+# Now start all other agents EXCEPT the ones claimed by ahoy (multi-role support)
 Write-Host ""
-Write-Host "Starting hardcoded background agents (excluding claimed role)..."
+Write-Host "Starting hardcoded background agents (excluding roles claimed by ahoy)..."
+Write-Host "  Note: Ahoy can now claim multiple roles across different protocols"
 $agents = $allAgents | Where-Object { $_ -ne $genericAgent }
 
 $startedAny = $false
 
 foreach ($a in $agents) {
-	# Check if this agent's role was claimed by the LLM
+	# Check if this agent's role was claimed by ahoy (supports multi-role scenarios)
 	if ($agentRoles.ContainsKey($a)) {
 		$agentRole = $agentRoles[$a]
 		
-		# Check if this role is in the claimed roles list
-		$roleClaimed = $false
-		foreach ($claimedRole in $claimedRoles) {
-			if ($claimedRole -eq $agentRole) {
-				$roleClaimed = $true
-				break
-			}
-		}
-		
-		if ($roleClaimed) {
-			Write-Host "Skipping $a (role $agentRole claimed by LLM agent)"
+		# Check if this role is in the claimed roles list (supports multiple roles)
+		if ($agentRole -in $claimedRoles) {
+			Write-Host "  Skipping $a (role $agentRole claimed by ahoy)"
 			continue
 		}
 	}
@@ -206,7 +219,16 @@ if (-not $startedAny) {
 	exit 1
 }
 
-Write-Host "All requested agents started. Consolidated log: $logFile"
+Write-Host ""
+Write-Host "=== Multi-Agent Configuration ===" 
+Write-Host "Python executable: $pythonExe"
+if ($claimedRoles.Count -gt 0) {
+	Write-Host "Ahoy claimed roles: $($claimedRoles -join ', ')"
+} else {
+	Write-Host "Ahoy claimed roles: (none detected yet)"
+}
+Write-Host "All agents started. Consolidated log: $logFile"
+Write-Host "===================================="
 Write-Host "Press any key to stop agents and free ports..."
 
 $readers = @()
