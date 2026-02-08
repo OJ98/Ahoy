@@ -2,12 +2,12 @@ I need to complete a full end-to-end transaction that involves both buying items
 
 PURCHASE PHASE:
 I need to buy the following items:
-- A glass vase for $25
-- Two ceramic plates for $15 total
-- A wooden bat for $30
+- A glass vase for $100
+- Two ceramic plates for $100 total
+- A wooden bat for $50
 
 Delivery location: 123 Main Street, Portland, OR 97201
-Total budget: $75
+Total budget: $300
 
 LOGISTICS PHASE (After Purchase Complete):
 Once the items are received, they need to be prepared for redistribution:

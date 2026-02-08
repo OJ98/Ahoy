@@ -153,7 +153,7 @@ def configure_ahoy_for_multiprotocol(protocol_role_pairs):
     
     This function dynamically updates:
     1. The role-to-agent mappings in the systems dict to use "ahoy" agent
-    2. Preserves all original agent address bindings unchanged
+    2. The agents dict so that messages to these roles route to ahoy's address
     """
     # Get ahoy's address
     ahoy_addresses = agents.get("ahoy", [("127.0.0.1", 9000)])
@@ -167,10 +167,11 @@ def configure_ahoy_for_multiprotocol(protocol_role_pairs):
             # This tells the BSPL adapter that this role is handled by "ahoy"
             systems[protocol_name]["roles"][role_obj] = "ahoy"
             
-            # NO NEED to modify agents dict!
-            # The agents["ahoy"] entry already has the right address.
-            # Hardcoded agents (seller.py, etc.) will simply not be started by start.ps1
-            # because their roles are already claimed by ahoy
+            # CRITICAL: Update agents dict so messages route to ahoy's port, not the original role's port
+            # When other agents send messages to this role, they look it up in the agents dict
+            # and need to find ahoy's address (port 8000), not the original address (e.g., port 8001 for Buyer)
+            agents[role_obj] = ahoy_addresses
+            agents[role_name] = ahoy_addresses  # Also update string-based lookup
 
 
 def _apply_multiprotocol_ahoy_from_env():

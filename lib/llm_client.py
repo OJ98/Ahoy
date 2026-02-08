@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 import time
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, Optional, Tuple, List, TYPE_CHECKING
 import anthropic
 import uuid as _uuid
 from datetime import datetime as _datetime
@@ -357,7 +357,10 @@ async def choose_and_bind(
     timeout: float,
     logger_callback=None,
     agent_name: str = "unknown",
-    multi_protocol_states: Optional[Dict[str, Any]] = None
+    multi_protocol_states: Optional[Dict[str, Any]] = None,
+    current_protocol: Optional[str] = None,
+    current_role: Optional[str] = None,
+    all_roles_list: Optional[List[Tuple[str, str]]] = None
 ):
     """
     Prompt LLM to choose a message and bind its parameters.
@@ -374,6 +377,9 @@ async def choose_and_bind(
         logger_callback: Optional function for logging: logger_callback(message)
         agent_name: Name of the agent making the decision
         multi_protocol_states: Optional dict of {adapter_key: social_state} for multi-protocol scenarios
+        current_protocol: Optional protocol name for multi-role scenarios (overrides adapter detection)
+        current_role: Optional role name for multi-role scenarios (shows LLM the specific role)
+        all_roles_list: Optional list of (protocol, role) tuples for all roles the agent plays
 
     Returns:
         Bound Message instance or None if no valid choice made
@@ -401,7 +407,19 @@ async def choose_and_bind(
 
     adapter_name = adapter_name_obj.get('name', 'unknown') if isinstance(adapter_name_obj, dict) else str(adapter_name_obj)
     
+    # For multi-role scenarios, construct full agent description
+    if all_roles_list and len(all_roles_list) > 1:
+        # Show all roles: "Buyer in Purchase and Merchant in Logistics"
+        roles_str = " and ".join([f"{role} in {proto}" for proto, role in all_roles_list])
+        display_agent_name = f"{adapter_name} (as {roles_str})"
+    elif current_protocol and current_role:
+        # Single active role context
+        display_agent_name = f"{adapter_name} (as {current_role} in {current_protocol})"
+    else:
+        display_agent_name = adapter_name
+    
     log_msg(f"Adapter: {adapter_name}")
+    log_msg(f"Display name for LLM: {display_agent_name}")
 
     # Initialize system prompt on first call
     if _system_prompt_cache is None:
@@ -453,12 +471,27 @@ async def choose_and_bind(
         }
 
     # Build user prompt with decision count for optimization
+    # For multi-role scenarios, show ALL roles the agent is playing
+    prompt_agent_name = adapter_name
+    
+    if all_roles_list and len(all_roles_list) > 1:
+        # Multi-role: show all roles - "ahoy (as Buyer in Purchase and Merchant in Logistics)"
+        roles_str = " and ".join([f"{role} in {proto}" for proto, role in all_roles_list])
+        prompt_agent_name = f"{adapter_name} (as {roles_str})"
+    elif current_role and current_role != adapter_name:
+        # Single active role from current context
+        if current_protocol:
+            prompt_agent_name = f"{adapter_name} (as {current_role} in {current_protocol})"
+        else:
+            prompt_agent_name = f"{adapter_name} (as {current_role})"
+    
     user_prompt = build_user_prompt(
-        adapter_name,
+        prompt_agent_name,
         social_state,
         options,
         recent_event=event,
         decision_count=choose_and_bind._decision_count,
+        all_roles_list=all_roles_list,
         examples=[
             {"choice": None, "params": {}},
             {"choice": 0, "params": {}},

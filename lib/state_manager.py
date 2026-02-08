@@ -108,6 +108,10 @@ def extract_social_state(adapter: Any) -> Dict[str, Any]:
     - protocols: Protocol names involved
     - roles: Available roles in the system
     - global_message_count: Total message count
+    
+    IMPORTANT: For multirole adapters, messages are stored ONCE at the top level
+    (not duplicated in each system entry) to avoid confusing the LLM with duplicate
+    message history. Each system still maintains its own message context if needed.
     """
     # Serialize adapter name (may be a Role object or string)
     adapter_name = adapter.name if hasattr(adapter, 'name') else 'unknown'
@@ -122,27 +126,66 @@ def extract_social_state(adapter: Any) -> Dict[str, Any]:
         "systems": {},
         "global_message_count": 0,
         "protocols": [],
-        "roles": []
+        "roles": [],
+        "all_messages": []  # Initialize at top level
     }
     
     # Extract history from adapter contexts
+    # For multirole adapters, extract messages from ALL protocol contexts
     if hasattr(adapter, 'history') and hasattr(adapter.history, 'contexts'):
+        all_messages_seen = set()  # Use set to deduplicate by (qualified_name, key)
+        all_messages_list = []  # Preserve order
+        
+        # First, try the top-level history.messages() method which should combine all contexts
+        try:
+            top_level_messages = list(adapter.history.messages())
+            import sys
+            print(f"DEBUG extract_social_state: adapter={adapter.name}, top_level_message_count={len(top_level_messages)}", file=sys.stderr)
+            for msg in top_level_messages:
+                # Deduplicate by message schema qualified name + key (message instance identifier)
+                msg_id = (msg.schema.qualified_name, str(msg.key))
+                if msg_id not in all_messages_seen:
+                    all_messages_seen.add(msg_id)
+                    all_messages_list.append(msg)
+                    # Debug: log extracted message
+                    sender = msg.schema.sender.name if hasattr(msg.schema, 'sender') and msg.schema.sender else "?"
+                    recipients = [r.name for r in msg.schema.recipients] if hasattr(msg.schema, 'recipients') and msg.schema.recipients else []
+                    print(f"  → {msg.schema.name}: {sender} → {recipients}", file=sys.stderr)
+        except Exception as e:
+            import sys
+            print(f"DEBUG: Error extracting top-level messages: {e}", file=sys.stderr)
+        
+        # Fallback: iterate through each protocol context individually
+        # This ensures we catch messages even if top-level aggregation fails
+        if not all_messages_list:
+            try:
+                for system_id, context in adapter.history.contexts.items():
+                    context_messages = list(context.messages())
+                    for msg in context_messages:
+                        msg_id = (msg.schema.qualified_name, str(msg.key))
+                        if msg_id not in all_messages_seen:
+                            all_messages_seen.add(msg_id)
+                            all_messages_list.append(msg)
+            except Exception as e:
+                import sys
+                print(f"DEBUG: Error extracting per-context messages: {e}", file=sys.stderr)
+        
+        # Serialize all collected messages
+        all_serialized = [_serialize_message(msg) for msg in all_messages_list]
+        
+        # Store all messages at result level (not duplicated in each system)
+        result["all_messages"] = all_serialized
+        result["global_message_count"] = len(all_serialized)
+        
+        # Store per-protocol message counts for debugging
         for system_id, context in adapter.history.contexts.items():
-            root_context = _serialize_context(context, system_id)
-            
-            # Filter messages for this specific system
-            all_messages = list(adapter.history.messages())
-            system_messages = [
-                _serialize_message(msg) for msg in all_messages 
-                if getattr(msg, 'system', None) == system_id
-            ]
-            
-            result["systems"][str(system_id)] = {
-                "root_context": root_context,
-                "all_messages": system_messages,
-                "message_count": len(system_messages)
-            }
-            result["global_message_count"] += len(system_messages)
+            try:
+                context_messages = list(context.messages())
+                result["systems"][str(system_id)] = {
+                    "message_count": len(context_messages)
+                }
+            except Exception:
+                result["systems"][str(system_id)] = {"message_count": 0}
     
     # Extract protocol information
     if hasattr(adapter, 'protocols'):

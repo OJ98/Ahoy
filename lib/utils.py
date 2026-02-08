@@ -7,7 +7,7 @@ Provides: message history building, user prompt construction, and adapter shutdo
 import asyncio
 import os
 import uuid
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, Optional, Union, List, Tuple
 
 # ============================================================================
 # MODULE-LEVEL CACHES FOR OPTIMIZATION
@@ -283,12 +283,25 @@ def build_message_history_from_social_state(
     """
     global _message_history_cache, _previous_message_state
     
-    # Extract all messages from social state systems
-    all_messages = []
-    if "systems" in social_state:
+    # Extract all messages from social state
+    # Try new top-level location first (after fix), then fall back to systems entries
+    all_messages = social_state.get("all_messages", [])
+    if not all_messages and "systems" in social_state:
+        # Fall back to old structure (systems entries)
         for system_info in social_state["systems"].values():
             if "all_messages" in system_info:
                 all_messages.extend(system_info["all_messages"])
+    
+    # Remove duplicates by converting to dict (preserving order in Python 3.7+)
+    # Use qualified_name + key as unique identifier
+    seen = {}
+    unique_messages = []
+    for msg in all_messages:
+        msg_id = (msg.get('qualified_name', msg.get('schema_name')), str(msg.get('key')))
+        if msg_id not in seen:
+            seen[msg_id] = True
+            unique_messages.append(msg)
+    all_messages = unique_messages
     
     # Create a cache key based on message count and agent_name
     # Simple but effective: if message count unchanged, reuse cached result
@@ -312,9 +325,12 @@ def build_message_history_from_social_state(
     
     # Filter to messages relevant to this adapter's roles (or agent if no roles)
     if role_names:
-        # For multirole adapters: filter by role names
+        # For multirole adapters: show ALL messages since the adapter is executing them all
+        # Messages may be sent by these roles (sender field) or sent to them (recipients field)
+        # For context, we need to show both incoming and outgoing messages
         filtered = [m for m in all_messages 
-                   if any(role in m.get('recipients', []) for role in role_names)]
+                   if (any(role in m.get('recipients', []) for role in role_names) or
+                       any(role == m.get('sender') for role in role_names))]
     elif agent_name:
         # For single-role adapters: try filtering by agent_name (legacy support)
         filtered = [m for m in all_messages if agent_name in m.get('recipients', [])]
@@ -358,7 +374,8 @@ def build_user_prompt(
     recent_event: Optional[dict] = None,
     examples: Optional[list] = None,
     include_history: bool = True,
-    decision_count: int = 1
+    decision_count: int = 1,
+    all_roles_list: Optional[List[Tuple[str, str]]] = None
 ) -> str:
     """Build a user prompt for the LLM including context and options.
     
@@ -379,10 +396,18 @@ def build_user_prompt(
     lines = [f"You are agent '{agent_name}'. Choose at most one option, or return null."]
     lines.append("Your role requires making decisions. When choosing an option, always provide values for all required parameters.")
     lines.append("")
-    role_names = social_state.get('roles', [])
-    if role_names:
-        roles_str = ', '.join(str(r) for r in role_names)
-        lines.append(f"Roles: {roles_str}")
+    
+    # Display all roles for multi-role scenarios
+    if all_roles_list and len(all_roles_list) > 1:
+        # Multi-role: show all (protocol, role) pairs
+        roles_display = [f"{role} (in {protocol})" for protocol, role in all_roles_list]
+        lines.append(f"Your roles: {', '.join(roles_display)}")
+    else:
+        # Single-role or fallback: use role names from social state
+        role_names = social_state.get('roles', [])
+        if role_names:
+            roles_str = ', '.join(str(r) for r in role_names)
+            lines.append(f"Roles: {roles_str}")
     
     # Add message history if requested (with caching optimization)
     if include_history and social_state:

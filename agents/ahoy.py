@@ -337,7 +337,35 @@ async def _get_llm_decision_handler():
         """
         from bspl.adapter.event import InitEvent
         
-        log_debug(f"DEBUG: llm_decision called for {assigned_protocol}.{assigned_role}")
+        # For multirole adapters, determine which protocol/role this event is for
+        # by examining the enabled messages
+        current_protocol = assigned_protocol
+        current_role = assigned_role
+        
+        # Try to detect the protocol from enabled messages
+        if len(assigned_roles_list) > 1:  # Multirole case
+            try:
+                # Get first message to determine protocol
+                for msg in enabled_store.messages():
+                    if hasattr(msg, 'system'):
+                        # The system attribute is a Protocol object, get its name
+                        msg_system = msg.system
+                        msg_system_name = msg_system.name if hasattr(msg_system, 'name') else str(msg_system)
+                        
+                        # Find matching protocol in our assigned roles
+                        for proto, role in assigned_roles_list:
+                            if proto == msg_system_name:
+                                current_protocol = proto
+                                current_role = role
+                                log_debug(f"DEBUG: Detected protocol/role from enabled message: {proto}/{role}")
+                                break
+                        break
+            except Exception as e:
+                log_debug(f"DEBUG: Could not detect protocol from enabled_store: {e}")
+                import traceback
+                log_debug(f"Traceback: {traceback.format_exc()}")
+        
+        log_debug(f"DEBUG: llm_decision called for {current_protocol}.{current_role}")
         log_debug(f"  - enabled_store type: {type(enabled_store)}")
         log_debug(f"  - event type: {type(event)}")
         
@@ -345,13 +373,13 @@ async def _get_llm_decision_handler():
         # This allows roles that complete by receiving a message to exit properly
         is_completed, completion_msg = _check_for_received_completion_message(adapter)
         if is_completed:
-            log_debug(f"DEBUG: Role {assigned_role} completed by RECEIVING: {completion_msg}")
+            log_debug(f"DEBUG: Role {current_role} completed by RECEIVING: {completion_msg}")
             _handle_role_completion(completion_msg)
         
         # For InitEvent with no enabled messages, still try to get LLM decision for initial sends
         is_init_event = isinstance(event, InitEvent)
         if is_init_event:
-            log_debug(f"DEBUG: InitEvent detected for {assigned_protocol}.{assigned_role}")
+            log_debug(f"DEBUG: InitEvent detected for {current_protocol}.{current_role}")
         
         # Validate enabled_store and retrieve messages
         is_valid, messages = _validate_enabled_store(enabled_store)
@@ -382,7 +410,10 @@ async def _get_llm_decision_handler():
             event=event,
             client=llm_client,
             timeout=TIMEOUT,
-            logger_callback=log_debug
+            logger_callback=log_debug,
+            current_protocol=current_protocol,
+            current_role=current_role,
+            all_roles_list=assigned_roles_list
         )
         
         # Display status after LLM call
@@ -526,6 +557,14 @@ async def _initialize_protocol_and_role():
             log_debug(f"Using explicit agent identity from config: {explicit_agent_identity}")
             assigned_roles = roles_list
             return explicit_agent_identity, assigned_roles
+        
+        # CRITICAL: Configure ahoy to play multiple roles across protocols
+        # This remaps all specified roles to the "ahoy" agent in the systems dict
+        # Must be done BEFORE checking which agents are needed
+        if roles_list:
+            log_debug(f"Configuring ahoy to play multiple roles: {roles_list}")
+            from configuration import configure_ahoy_for_multiprotocol
+            configure_ahoy_for_multiprotocol(roles_list)
         
         # Otherwise, determine which agent(s) are needed to play these roles
         agent_roles = {}  # agent_id -> list of (protocol, role) tuples

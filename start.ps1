@@ -69,6 +69,35 @@ $logDir = Join-Path $scriptDir "logs"
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 $logFile = Join-Path $logDir "agents.log"
 
+# Parse CHIPS config and set MULTIPROTOCOL_AHOY_ROLES environment variable
+# This ensures ALL agents (including Seller) load with correct address routing from the start
+Write-Host "Parsing CHIPS configuration to set routing..."
+$chipsConfig = Get-Content -Path $chipsConfigFile
+try {
+	# Try parsing as JSON (multi-role format)
+	$configObj = $chipsConfig | ConvertFrom-Json
+	if ($configObj.roles) {
+		# Multi-role format: extract all roles
+		$rolesStr = ($configObj.roles | ForEach-Object { "$($_.protocol):$($_.role)" }) -join ','
+		Write-Host "  Multi-role detected: $rolesStr"
+		$env:MULTIPROTOCOL_AHOY_ROLES = $rolesStr
+	}
+} catch {
+	# Try simple "Protocol:Role" format (backward compatible)
+	if ($chipsConfig -match '^[^:]+:[^:]+$') {
+		Write-Host "  Single-role format: $chipsConfig"
+		$env:MULTIPROTOCOL_AHOY_ROLES = $chipsConfig
+	} else {
+		Write-Host "  Warning: Could not parse CHIPS config format"
+	}
+}
+
+if ($env:MULTIPROTOCOL_AHOY_ROLES) {
+	Write-Host "  MULTIPROTOCOL_AHOY_ROLES=$($env:MULTIPROTOCOL_AHOY_ROLES)"
+} else {
+	Write-Host "  (No environment variable set)"
+}
+
 # Detect Python executable - try conda environment first, then system python
 function Get-PythonExecutable {
 	if (Get-Command python -ErrorAction SilentlyContinue) {
