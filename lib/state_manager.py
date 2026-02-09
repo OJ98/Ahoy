@@ -139,21 +139,14 @@ def extract_social_state(adapter: Any) -> Dict[str, Any]:
         # First, try the top-level history.messages() method which should combine all contexts
         try:
             top_level_messages = list(adapter.history.messages())
-            import sys
-            print(f"DEBUG extract_social_state: adapter={adapter.name}, top_level_message_count={len(top_level_messages)}", file=sys.stderr)
             for msg in top_level_messages:
                 # Deduplicate by message schema qualified name + key (message instance identifier)
                 msg_id = (msg.schema.qualified_name, str(msg.key))
                 if msg_id not in all_messages_seen:
                     all_messages_seen.add(msg_id)
                     all_messages_list.append(msg)
-                    # Debug: log extracted message
-                    sender = msg.schema.sender.name if hasattr(msg.schema, 'sender') and msg.schema.sender else "?"
-                    recipients = [r.name for r in msg.schema.recipients] if hasattr(msg.schema, 'recipients') and msg.schema.recipients else []
-                    print(f"  → {msg.schema.name}: {sender} → {recipients}", file=sys.stderr)
         except Exception as e:
-            import sys
-            print(f"DEBUG: Error extracting top-level messages: {e}", file=sys.stderr)
+            pass
         
         # Fallback: iterate through each protocol context individually
         # This ensures we catch messages even if top-level aggregation fails
@@ -167,8 +160,7 @@ def extract_social_state(adapter: Any) -> Dict[str, Any]:
                             all_messages_seen.add(msg_id)
                             all_messages_list.append(msg)
             except Exception as e:
-                import sys
-                print(f"DEBUG: Error extracting per-context messages: {e}", file=sys.stderr)
+                pass
         
         # Serialize all collected messages
         all_serialized = [_serialize_message(msg) for msg in all_messages_list]

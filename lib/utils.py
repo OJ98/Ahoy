@@ -258,7 +258,7 @@ async def shutdown_watcher(adapter, stop_path: str = None):
 def build_message_history_from_social_state(
     social_state: Dict[str, Any],
     agent_name: Optional[str] = None,
-    max_history: int = 10,
+    max_history: int = 50,
     use_cache: bool = True
 ) -> str:
     """Build a formatted history of past messages from social state.
@@ -413,7 +413,7 @@ def build_user_prompt(
     if include_history and social_state:
         lines.append("")
         history = build_message_history_from_social_state(
-            social_state, agent_name=agent_name, max_history=10, use_cache=True
+            social_state, agent_name=agent_name, max_history=50, use_cache=True
         )
         lines.append(history)
     

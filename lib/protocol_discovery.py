@@ -79,8 +79,8 @@ def _load_protocol_descriptions() -> Dict[str, str]:
                 if ':' in line:
                     proto_name, description = line.split(':', 1)
                     descriptions[proto_name.strip()] = description.strip()
-    except Exception as e:
-        print(f"Warning: Could not load protocol descriptions: {e}")
+    except Exception:
+        pass
     
     return descriptions
 

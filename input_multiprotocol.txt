@@ -3,9 +3,9 @@ I need to complete a full end-to-end transaction that involves both buying items
 PURCHASE PHASE:
 I need to buy the following items:
 - A glass vase for $100
-- Two ceramic plates for $100 total
+- A ceramic plate for $50
 - A wooden bat for $50
-
+Send only one rfq per item.
 Delivery location: 123 Main Street, Portland, OR 97201
 Total budget: $300
 
@@ -14,12 +14,12 @@ Once the items are received, they need to be prepared for redistribution:
 
 Items to process for packaging and shipping:
 - 1 glass vase (fragile - requires bubblewrap)
-- 2 ceramic plates (fragile - requires bubblewrap)
+- 1 ceramic plate (fragile - requires bubblewrap)
 - 1 wooden bat (can use paper wrap)
 
 Orders to prepare for shipment:
-1. Order ID: ORD-MP-001, Destination: Warehouse A, Items: glass vase + 1 plate
-2. Order ID: ORD-MP-002, Destination: Warehouse B, Items: 1 plate + wooden bat
+1. Order ID: ORD-MP-001, Destination: Warehouse A, Items: glass vase
+2. Order ID: ORD-MP-002, Destination: Warehouse B, Items: ceramic plate + wooden bat
 
 All items require unique tracking labels and must be properly wrapped before packing.
 Ensure fragile items are handled with appropriate protective materials.

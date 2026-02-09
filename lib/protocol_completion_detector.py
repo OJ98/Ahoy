@@ -130,7 +130,6 @@ def extract_completion_rule_from_protocol(protocol_name: str, role_name: str) ->
         protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{protocol_name.lower()}.bspl"
         
         if not protocol_file.exists():
-            print(f"Protocol file not found: {protocol_file}")
             return None
         
         protocol_spec = protocol_file.read_text()
@@ -145,7 +144,7 @@ def extract_completion_rule_from_protocol(protocol_name: str, role_name: str) ->
         llm = AnthropicLLMClient()
         
         prompt = (
-            f"""Analyze this BSPL protocol and user instructions to determine the completion rule for the {role_name} role.
+            f"""Analyze this BSPL protocol and user instructions to determine the completion rule for the {role_name} role in the {protocol_name} protocol.
 
 USER REQUIREMENTS:
 ```
@@ -159,6 +158,8 @@ BSPL PROTOCOL:
 
 COMPLETION RULE FORMAT:
 Return a JSON with:
+- "protocol": The protocol name (should be "{protocol_name}")
+- "role": The role name (should be "{role_name}")
 - "message_type": The message that indicates role completion (e.g., "Packed", "Labeled", "RequestWrapping")
 - "direction": Either "send" (role sends the message) or "receive" (role receives the message)
 - "count": How many of that message type indicates completion for this role
@@ -169,8 +170,8 @@ ANALYSIS PROCESS:
 3. The count should equal the number of items/orders to process
 
 EXAMPLE RESPONSES:
-{{"message_type": "Packed", "direction": "receive", "count": 4}}  // Role completes after receiving 4 Packed messages
-{{"message_type": "RequestWrapping", "direction": "send", "count": 4}}  // Role completes after sending 4 RequestWrapping messages
+{{"protocol": "Logistics", "role": "Merchant", "message_type": "Packed", "direction": "receive", "count": 4}}  // Merchant completes after receiving 4 Packed messages
+{{"protocol": "Purchase", "role": "Buyer", "message_type": "completed", "direction": "send", "count": 3}}  // Buyer completes after sending 3 completed messages
 
 Based on the user requirements and protocol structure, return ONLY the JSON completion rule (no explanation):"""
         )
@@ -200,6 +201,8 @@ Based on the user requirements and protocol structure, return ONLY the JSON comp
             json_str = json_part[json_start:json_end+1]
             try:
                 rule = json.loads(json_str)
+                protocol = rule.get('protocol', protocol_name)
+                role = rule.get('role', role_name)
                 message_type = rule.get('message_type')
                 direction = rule.get('direction')
                 count = rule.get('count')
@@ -209,25 +212,17 @@ Based on the user requirements and protocol structure, return ONLY the JSON comp
                     try:
                         count = int(count)
                     except (ValueError, TypeError):
-                        print(f"Invalid count value: {count}")
                         return None
                 
                 if message_type and direction in ['send', 'receive'] and isinstance(count, int) and count > 0:
-                    print(f"✓ Extracted completion rule for {protocol_name}/{role_name}: {message_type} {direction} x{count}")
-                    return (message_type, direction, count)
+                    return (message_type, direction, count, protocol, role)
                 else:
-                    print(f"Invalid rule fields: {rule}")
                     return None
-            except json.JSONDecodeError as je:
-                print(f"JSON parse error: {je}")
+            except json.JSONDecodeError:
                 return None
         
-        print(f"Could not find valid JSON in LLM response")
         return None
-    except Exception as e:
-        print(f"Error extracting completion rule from protocol with LLM: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
         return None
 
 
@@ -311,17 +306,10 @@ RESPONSE (JSON ONLY):"""
             json_str = json_part[json_start:json_end+1]
             try:
                 mapping = json.loads(json_str)
-                print(f"Successfully extracted mapping: {mapping}")
                 return mapping
-            except json.JSONDecodeError as je:
-                print(f"JSON parse error: {je}")
-                print(f"Attempted to parse: {json_str[:200]}")
+            except json.JSONDecodeError:
+                pass
         
-        print(f"DEBUG: Could not find valid JSON in LLM response")
-        print(f"DEBUG: Response was: {response_stripped[:300]}")
         return {}
-    except Exception as e:
-        print(f"Error extracting request-response from protocol with LLM: {e}")
-        import traceback
-        traceback.print_exc()
+    except Exception:
         return {}

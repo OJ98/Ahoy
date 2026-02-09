@@ -629,7 +629,7 @@ def save_state_to_memory(agent_name: str, key: str, value: str) -> Dict[str, str
         notes.save(key, value)
     except Exception as e:
         # Don't fail the tool if notes recording fails
-        print(f"Warning: Could not save to agent_notes for {agent_name}: {e}")
+        pass
     
     return {"status": "saved", "key": key, "value": value}
 

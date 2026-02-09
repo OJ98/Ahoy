@@ -111,8 +111,14 @@ def _initialize_protocol_analysis(protocol_name: str, role_name: str):
         
         if rule:
             protocol_completion_rules[(protocol_name, role_name)] = rule
-            msg_type, direction, count = rule
-            log_debug(f"Successfully extracted completion rule for {protocol_name}/{role_name}: {msg_type} {direction} x{count}")
+            # Unpack with protocol and role info if available (new format: 5 values)
+            # or fall back to just message/direction/count if not (old format: 3 values)
+            if len(rule) >= 5:
+                msg_type, direction, count, rule_protocol, rule_role = rule[:5]
+                log_debug(f"Successfully extracted completion rule for {rule_protocol}/{rule_role}: {msg_type} {direction} x{count}")
+            else:
+                msg_type, direction, count = rule[:3]
+                log_debug(f"Successfully extracted completion rule for {protocol_name}/{role_name}: {msg_type} {direction} x{count}")
         else:
             log_debug(f"LLM extraction failed for {protocol_name}/{role_name}, will use hardcoded rules")
     except Exception as e:
@@ -176,7 +182,7 @@ def _update_llm_status():
 
 def _handle_role_completion(instance):
     """
-    Handle role completion by creating stop signal.
+    Handle role completion by creating stop signal with role information.
     
     Args:
         instance: The completed message instance
@@ -185,12 +191,127 @@ def _handle_role_completion(instance):
         SystemExit: Always raises to signal completion
     """
     try:
-        STOP_SIGNAL_PATH.write_text("transaction_complete")
-        log_debug(f"Stop signal created - role {assigned_role} in {assigned_protocol} completed")
+        import json
+        from datetime import datetime
+        
+        # Record which roles are terminating
+        completed_roles_to_record = []
+        for protocol, role in assigned_roles_list:
+            completed_roles_to_record.append(f"{protocol}:{role}")
+        
+        termination_record = {
+            "status": "transaction_complete",
+            "completed_roles": completed_roles_to_record,
+            "agent": assigned_agent_identity,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        STOP_SIGNAL_PATH.write_text(json.dumps(termination_record, indent=2))
+        log_debug(f"Stop signal created with roles: {completed_roles_to_record}")
     except Exception as e:
         log_debug(f"Error creating stop signal: {e}")
     
-    raise SystemExit(f"✅ Goal achieved: {assigned_role} completed in {assigned_protocol}. {instance}")
+    raise SystemExit(f"✅ Goal achieved: All roles completed for {assigned_agent_identity}. {instance}")
+
+
+def _check_all_roles_completion(sent_message_instance):
+    """
+    For multirole agents, check if all assigned roles have completed.
+    
+    Checks both sent and received completion messages for each role:
+    - A role completes when it SENDS its completion message, OR
+    - A role completes when it RECEIVES its completion message
+    
+    Reuses the same completion message detection logic as single-role,
+    but applies it to each role in assigned_roles_list.
+    
+    Args:
+        sent_message_instance: The message instance just sent (or None if checking only history)
+    
+    Returns:
+        bool: True if ALL roles have had their completion message sent/received, False otherwise
+    """
+    if len(assigned_roles_list) <= 1:
+        # Single-role case handled directly in caller
+        return True
+    
+    try:
+        from lib.agent_notes import get_agent_notes
+        from lib.state_manager import extract_social_state
+        
+        # Get current completion tracking state from agent notes
+        agent_notes_obj = get_agent_notes(assigned_agent_identity)
+        completed_roles = agent_notes_obj.get("completed_roles", [])
+        
+        log_debug(f"DEBUG: Checking multirole completion. Currently completed: {completed_roles}")
+        
+        # Get message history for checking received completions
+        social_state = extract_social_state(adapter)
+        # Note: extract_social_state stores all messages at result["all_messages"] (top level),
+        # not in each system entry. Use the aggregated list directly.
+        all_messages = social_state.get("all_messages", [])
+        
+        log_debug(f"DEBUG: Total messages in history: {len(all_messages)}")
+        
+        # Check each role to see if we've now completed it
+        all_completed = True
+        for protocol, role in assigned_roles_list:
+            role_key = f"{protocol}:{role}"
+            
+            # If already marked complete, skip detailed check
+            if role_key in completed_roles:
+                log_debug(f"DEBUG:   {role_key} already marked complete")
+                continue
+            
+            role_name_str = str(role)
+            
+            # Check 1: Did this role SEND a completion message?
+            if hasattr(sent_message_instance, 'schema') and hasattr(sent_message_instance.schema, 'name'):
+                msg_type = sent_message_instance.schema.name
+                if is_completion_message(protocol, role, msg_type):
+                    log_debug(f"DEBUG:   {role_key} completed by SENDING: {msg_type}")
+                    completed_roles.append(role_key)
+                    agent_notes_obj.save("completed_roles", completed_roles)
+                    continue
+            
+            # Check 2: Did this role RECEIVE a completion message?
+            role_completed = False
+            for msg in all_messages:
+                if is_completion_message(protocol, role, msg.get("schema_name", "")):
+                    sender = msg.get("sender")
+                    recipients = msg.get('recipients', [])
+                    # Message completes this role if:
+                    # - It's NOT sent by this role (it's from someone else), AND
+                    # - This role is in the recipients list (it received it)
+                    if (sender and str(sender).lower() != role_name_str.lower() and
+                        role_name_str.lower() in [str(r).lower() for r in recipients]):
+                        log_debug(f"DEBUG:   {role_key} completed by RECEIVING: {msg.get('schema_name')} from {sender}")
+                        role_completed = True
+                        break
+            
+            if role_completed:
+                completed_roles.append(role_key)
+                agent_notes_obj.save("completed_roles", completed_roles)
+            
+            # Check if this role is now complete
+            if role_key not in completed_roles:
+                all_completed = False
+                log_debug(f"DEBUG:   {role_key} still pending")
+            else:
+                log_debug(f"DEBUG:   {role_key} is complete")
+        
+        if all_completed:
+            log_debug(f"\nDEBUG: ✓✓ ALL {len(assigned_roles_list)} ROLES COMPLETED")
+            return True
+        else:
+            log_debug(f"\nDEBUG: Not all roles complete yet")
+            return False
+    
+    except Exception as e:
+        log_debug(f"Error checking multirole completion: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        return False
 
 
 async def main():
@@ -218,114 +339,6 @@ async def main():
         raise
 
 
-def _check_for_received_completion_message(adapter_ref):
-    """
-    Protocol-agnostic completion detection using LLM-determined rule.
-
-    The LLM analyzes the protocol and determines:
-    - What message type indicates completion
-    - Whether to count sent or received instances
-    - How many are needed for completion
-
-    Rule format: (message_type, "send"|"receive", count)
-    Example: ("Packed", "receive", 4) = complete when 4 Packed messages received
-
-    Args:
-        adapter_ref: The BSPL adapter instance
-
-    Returns:
-        tuple: (is_completed, message_info) where message_info is the completion message details
-    """
-    try:
-        from lib.state_manager import extract_social_state
-        
-        # Use dynamically extracted rule if available, otherwise use hardcoded
-        # For multi-role support, check the primary role first
-        rule = protocol_completion_rules.get((assigned_protocol, assigned_role))
-        if not rule:
-            # Fallback to hardcoded rules - but we need to determine the counter manually
-            completion_msg_type = get_completion_message(assigned_protocol, assigned_role)
-            if not completion_msg_type:
-                log_debug(f"DEBUG: No completion rule defined for {assigned_protocol}/{assigned_role}")
-                return False, None
-            
-            # Try to infer from hardcoded mapping
-            request_msg_type = get_request_message_for_completion(assigned_protocol, completion_msg_type)
-            if request_msg_type:
-                rule = (completion_msg_type, "receive", None)  # Count-based on requests
-            else:
-                log_debug(f"DEBUG: Cannot determine completion rule for {completion_msg_type}")
-                return False, None
-        
-        message_type, direction, target_count = rule
-        
-        social_state = extract_social_state(adapter_ref)
-        
-        # Get all messages from all systems
-        all_messages = []
-        for system_id, system_data in social_state.get("systems", {}).items():
-            all_messages.extend(system_data.get("all_messages", []))
-        
-        log_debug(f"DEBUG: Checking for completion: {message_type} ({direction}) x{target_count}")
-        log_debug(f"DEBUG: Total messages in history: {len(all_messages)}")
-        
-        # Get our role name for comparison
-        our_role_name = adapter_ref.name if hasattr(adapter_ref, 'name') else str(assigned_role)
-        if hasattr(our_role_name, 'name'):
-            our_role_name = our_role_name.name
-        
-        log_debug(f"DEBUG: Our role: {our_role_name}, looking for message_type: {message_type}")
-        
-        # Count messages based on direction
-        if direction == "send":
-            # Count messages SENT BY our role
-            sent_count = 0
-            for msg in all_messages:
-                if msg.get("schema_name", "").lower() == message_type.lower():
-                    sender = msg.get("sender")
-                    if sender and str(sender).lower() == str(our_role_name).lower():
-                        sent_count += 1
-                        log_debug(f"DEBUG:   → Found sent {message_type} from {sender}")
-            
-            log_debug(f"DEBUG: {message_type} sent by us: {sent_count}, need {target_count}")
-            
-            if sent_count >= target_count:
-                log_debug(f"DEBUG: ✓ Role {assigned_role} completed: sent {sent_count} {message_type} messages")
-                return True, None
-            else:
-                log_debug(f"DEBUG: Role {assigned_role} waiting: {sent_count}/{target_count} {message_type} messages sent")
-                return False, None
-        
-        elif direction == "receive":
-            # Count messages RECEIVED BY our role (sender is NOT our role)
-            received_count = 0
-            for msg in all_messages:
-                if msg.get("schema_name", "").lower() == message_type.lower():
-                    sender = msg.get("sender")
-                    # Message is "received" if sender is NOT us
-                    if not sender or str(sender).lower() != str(our_role_name).lower():
-                        received_count += 1
-                        log_debug(f"DEBUG:   → Found received {message_type} from {sender}")
-            
-            log_debug(f"DEBUG: {message_type} received by us: {received_count}, need {target_count}")
-            
-            if received_count >= target_count:
-                log_debug(f"DEBUG: ✓ Role {assigned_role} completed: received {received_count} {message_type} messages")
-                return True, None
-            else:
-                log_debug(f"DEBUG: Role {assigned_role} waiting: {received_count}/{target_count} {message_type} messages received")
-                return False, None
-        else:
-            log_debug(f"DEBUG: Unknown direction: {direction}")
-            return False, None
-            
-    except Exception as e:
-        log_debug(f"Error checking for received completion: {e}")
-        import traceback
-        log_debug(f"Traceback: {traceback.format_exc()}")
-        return False, None
-
-
 async def _get_llm_decision_handler():
     """
     Return the LLM decision handler as an async function.
@@ -337,49 +350,15 @@ async def _get_llm_decision_handler():
         """
         from bspl.adapter.event import InitEvent
         
-        # For multirole adapters, determine which protocol/role this event is for
-        # by examining the enabled messages
-        current_protocol = assigned_protocol
-        current_role = assigned_role
-        
-        # Try to detect the protocol from enabled messages
-        if len(assigned_roles_list) > 1:  # Multirole case
-            try:
-                # Get first message to determine protocol
-                for msg in enabled_store.messages():
-                    if hasattr(msg, 'system'):
-                        # The system attribute is a Protocol object, get its name
-                        msg_system = msg.system
-                        msg_system_name = msg_system.name if hasattr(msg_system, 'name') else str(msg_system)
-                        
-                        # Find matching protocol in our assigned roles
-                        for proto, role in assigned_roles_list:
-                            if proto == msg_system_name:
-                                current_protocol = proto
-                                current_role = role
-                                log_debug(f"DEBUG: Detected protocol/role from enabled message: {proto}/{role}")
-                                break
-                        break
-            except Exception as e:
-                log_debug(f"DEBUG: Could not detect protocol from enabled_store: {e}")
-                import traceback
-                log_debug(f"Traceback: {traceback.format_exc()}")
-        
-        log_debug(f"DEBUG: llm_decision called for {current_protocol}.{current_role}")
+        log_debug(f"DEBUG: llm_decision called for {assigned_protocol}.{assigned_role}")
         log_debug(f"  - enabled_store type: {type(enabled_store)}")
         log_debug(f"  - event type: {type(event)}")
         
-        # PROTOCOL-AGNOSTIC: Check for received completion BEFORE consulting LLM
-        # This allows roles that complete by receiving a message to exit properly
-        is_completed, completion_msg = _check_for_received_completion_message(adapter)
-        if is_completed:
-            log_debug(f"DEBUG: Role {current_role} completed by RECEIVING: {completion_msg}")
-            _handle_role_completion(completion_msg)
-        
+
         # For InitEvent with no enabled messages, still try to get LLM decision for initial sends
         is_init_event = isinstance(event, InitEvent)
         if is_init_event:
-            log_debug(f"DEBUG: InitEvent detected for {current_protocol}.{current_role}")
+            log_debug(f"DEBUG: InitEvent detected for {assigned_protocol}.{assigned_role}")
         
         # Validate enabled_store and retrieve messages
         is_valid, messages = _validate_enabled_store(enabled_store)
@@ -411,8 +390,8 @@ async def _get_llm_decision_handler():
             client=llm_client,
             timeout=TIMEOUT,
             logger_callback=log_debug,
-            current_protocol=current_protocol,
-            current_role=current_role,
+            current_protocol=assigned_protocol,
+            current_role=assigned_role,
             all_roles_list=assigned_roles_list
         )
         
@@ -428,12 +407,6 @@ async def _get_llm_decision_handler():
         
         if instance is None:
             log_debug("DEBUG: No instance returned from LLM, skipping")
-            # Before giving up, check if we've received a completion message
-            is_completed, completion_msg = _check_for_received_completion_message(adapter)
-            if is_completed:
-                log_debug(f"DEBUG: Role completed by receiving: {completion_msg}")
-                _handle_role_completion(completion_msg)
-            
             # If LLM deferred choice for tools, we need to retry the decision
             # This allows the LLM to make a message choice on the next call with tool results available
             # Return None to skip this event, and adapter will check again
@@ -441,11 +414,18 @@ async def _get_llm_decision_handler():
 
         log_debug(f"DEBUG: Sending message: {instance}")
         
-        # Check if this message completes the role (sent messages)
+        # Check if this message completes the role(s)
         if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
             msg_type = instance.schema.name
-            if is_completion_message(assigned_protocol, assigned_role, msg_type):
-                _handle_role_completion(instance)
+            
+            if len(assigned_roles_list) == 1:
+                # Single-role: check if this role completes
+                if is_completion_message(assigned_protocol, assigned_role, msg_type):
+                    _handle_role_completion(instance)
+            else:
+                # Multi-role: check if all roles are now complete
+                if _check_all_roles_completion(instance):
+                    _handle_role_completion(instance)
         
         return instance
     

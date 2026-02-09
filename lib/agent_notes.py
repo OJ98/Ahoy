@@ -89,8 +89,8 @@ class AgentNotes:
         try:
             if self.notes_file.exists():
                 self.notes_file.unlink()
-        except IOError as e:
-            print(f"Warning: Could not delete notes file {self.notes_file}: {e}")
+        except IOError:
+            pass
     
     def _save(self) -> None:
         """Save all notes to JSON file."""
@@ -111,8 +111,8 @@ class AgentNotes:
             # Write back
             with open(self.notes_file, 'w') as f:
                 json.dump(all_agents_data, f, indent=2, default=str)
-        except IOError as e:
-            print(f"Warning: Could not save notes to {self.notes_file}: {e}")
+        except IOError:
+            pass
 
 
 # Global notes instances (per-agent)

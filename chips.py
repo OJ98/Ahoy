@@ -66,13 +66,32 @@ class CHIPS:
     
     async def infer_protocol_and_role(self, scenario: str) -> Tuple[Optional[str], Optional[str]]:
         """
-        Use LLM to infer protocol and role from user's scenario description.
+        Use LLM to infer protocol and role(s) from user's scenario description.
+        Can return single or multiple roles.
         
         Args:
             scenario: User's scenario description
         
         Returns:
             Tuple of (protocol_name, role_name) or (None, None) on failure
+            Note: For multiple roles, this returns the primary role; see infer_protocol_and_roles_list() for all roles
+        """
+        roles_list = await self.infer_protocol_and_roles_list(scenario)
+        if roles_list:
+            protocol, role = roles_list[0]
+            return protocol, role
+        return None, None
+    
+    async def infer_protocol_and_roles_list(self, scenario: str) -> List[Tuple[str, str]]:
+        """
+        Use LLM to infer protocol and role(s) from user's scenario description.
+        Returns all roles identified by the LLM.
+        
+        Args:
+            scenario: User's scenario description
+        
+        Returns:
+            List of (protocol_name, role_name) tuples, or empty list on failure
         """
         print("\n" + "="*70, flush=True)
         print("Analyzing scenario with LLM...", flush=True)
@@ -82,50 +101,66 @@ class CHIPS:
             # Get protocol summary for LLM context
             protocol_summary = get_protocol_summary_for_llm()
             
-            # Create prompt for LLM to infer protocol and role
+            # Create prompt for LLM to infer protocol(s) and role(s)
             prompt = f"""You are a protocol selection assistant. Based on the user's goal, 
-determine which protocol and role ahoy should participate in.
+determine which protocol(s) and role(s) the agent (ahoy) should play in.
+
+Note: Return ONLY the role(s) that ahoy should directly play. Other agents will handle their own roles.
+Return multiple roles only if the scenario explicitly suggests the agent should play multiple distinct roles
+(e.g., coordinating across protocols, or multi-protocol participation). For a simple single-protocol scenario,
+return just the one primary role.
 
 {protocol_summary}
 
 User's Goal:
 {scenario}
 
-Respond with ONLY the protocol and role in this exact format:
+Respond with ONLY the protocol(s) and role(s) in this exact format:
 PROTOCOL: <ProtocolName>
 ROLE: <RoleName>
 
-Be concise. Do not explain your reasoning."""
+Repeat PROTOCOL/ROLE pairs only if multiple distinct roles are needed. Be concise. Do not explain your reasoning."""
             
             # Call LLM
-            response = await self.llm_client.complete(prompt, max_tokens=100)
+            response = await self.llm_client.complete(prompt, max_tokens=200)
             
-            # Parse response
-            protocol_name = None
-            role_name = None
+            # Parse response - extract all PROTOCOL/ROLE pairs
+            roles_list = []
+            lines = response.strip().split('\n')
             
-            for line in response.strip().split('\n'):
+            i = 0
+            while i < len(lines):
+                line = lines[i].strip()
                 if line.startswith('PROTOCOL:'):
                     protocol_name = line.replace('PROTOCOL:', '').strip()
-                elif line.startswith('ROLE:'):
-                    role_name = line.replace('ROLE:', '').strip()
+                    # Look for corresponding ROLE in next line
+                    if i + 1 < len(lines):
+                        role_line = lines[i + 1].strip()
+                        if role_line.startswith('ROLE:'):
+                            role_name = role_line.replace('ROLE:', '').strip()
+                            
+                            # Validate
+                            is_valid, error_msg = validate_protocol_and_role(protocol_name, role_name)
+                            if is_valid:
+                                roles_list.append((protocol_name, role_name))
+                            else:
+                                print(f"⚠ Skipped invalid role: {error_msg}", flush=True)
+                            
+                            i += 2
+                            continue
+                i += 1
             
-            # Validate
-            if protocol_name and role_name:
-                is_valid, error_msg = validate_protocol_and_role(protocol_name, role_name)
-                if is_valid:
-                    print(f"✓ LLM inferred: {protocol_name}:{role_name}\n", flush=True)
-                    return protocol_name, role_name
-                else:
-                    print(f"✗ LLM selection invalid: {error_msg}", flush=True)
-                    return None, None
-            
-            print("✗ Could not parse LLM response", flush=True)
-            return None, None
+            if roles_list:
+                roles_str = ", ".join([f"{p}:{r}" for p, r in roles_list])
+                print(f"✓ LLM inferred: {roles_str}\n", flush=True)
+                return roles_list
+            else:
+                print("✗ Could not parse LLM response", flush=True)
+                return []
             
         except Exception as e:
             print(f"✗ Error during LLM inference: {e}", flush=True)
-            return None, None
+            return []
     
     def confirm_selection(self, protocol: str, role: str) -> bool:
         """Confirm the LLM's protocol and role selection."""
@@ -250,17 +285,19 @@ Be concise. Do not explain your reasoning."""
         # Gather scenario
         self.conversation = self.gather_scenario()
         
-        # Infer protocol and role
-        protocol, role = await self.infer_protocol_and_role(self.conversation)
+        # Infer protocol and role(s)
+        roles_list = await self.infer_protocol_and_roles_list(self.conversation)
         
         # If inference failed, offer manual selection
-        if not protocol or not role:
+        if not roles_list:
             print("\n⚠ LLM inference didn't work. Let's try manual selection.\n", flush=True)
             protocol, role = self.show_protocol_options()
+            roles_list = [(protocol, role)]
         
-        self.protocol = protocol
-        self.role = role
-        self.roles_list = [(protocol, role)]
+        self.roles_list = roles_list
+        if roles_list:
+            self.protocol = roles_list[0][0]
+            self.role = roles_list[0][1]
         
         # Ask if user wants to add more roles
         self.roles_list = await self._ask_for_additional_roles(self.roles_list)

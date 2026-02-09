@@ -38,7 +38,6 @@ async def decision(msg):
         await adapter.send(accept(**msg.payload, address="Home", resp="Accept"))
     else:
         msg = reject(**msg.payload, outcome="Rejected", resp="Reject")
-        print(msg)
         global rejections
         rejections += 1
         await adapter.send(msg)
@@ -48,7 +47,6 @@ async def decision(msg):
 async def receive(msg):
     global deliveries
     deliveries += 1
-    print(msg)
 
 
 if __name__ == "__main__":

@@ -51,20 +51,17 @@ adapter_logger.propagate = False
 @adapter.enabled(deliver)
 async def deliver_item(msg):
     """
-    Mark an item as delivered and signal transaction completion.
+    Mark an item as delivered.
     
-    Sets delivery outcome to "delivered" and creates a stop signal
-    that instructs all agents to gracefully shut down when the
-    transaction reaches its final state.
+    Sets delivery outcome to "delivered". Note: In multi-protocol scenarios,
+    the multi-role agent (ahoy) will determine when all protocols are complete
+    and create the stop signal. Single-role agents should NOT create the stop signal.
     
     Args:
         msg: Partial object with bindings containing delivery details
     
     Returns:
         msg: Modified Partial with outcome binding set to "delivered"
-    
-    Raises:
-        Creates maf_stop_signal.txt file in temp directory for all agents to monitor
     """
     msg.bindings["outcome"] = "delivered"
     delivery_id = msg.bindings.get('ID')
@@ -72,21 +69,7 @@ async def deliver_item(msg):
     address = msg.bindings.get('address')
     
     log_debug(f"Delivered: ID={delivery_id}, item='{item}', address={address}")
-    
-    # Signal successful completion to all agents
-    try:
-        STOP_SIGNAL_PATH.write_text("delivery_complete")
-        log_debug("✅ DELIVERY COMPLETE - Stop signal created for all agents")
-        # Print success to terminal
-        print(f"\n{'='*70}")
-        print(f"✅ SUCCESS: Item delivered!")
-        print(f"   Transaction ID: {delivery_id}")
-        print(f"   Item: {item}")
-        print(f"   Address: {address}")
-        print(f"   All agents shutting down gracefully...")
-        print(f"{'='*70}\n")
-    except Exception as e:
-        log_debug(f"Error creating stop signal: {e}")
+    log_debug(f"Note: Multi-protocol transaction completion will be determined by multi-role agent")
     
     return msg
 
