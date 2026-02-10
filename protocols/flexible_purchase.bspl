@@ -1,0 +1,15 @@
+FlexiblePurchase {
+  roles Customer, Merchant
+  parameters out ID key, out item, out price, out done
+  private confirmation, payment, standard_delivery, express_delivery
+  
+  Customer -> Merchant: rfq[out ID, out item]
+  Merchant -> Customer: offer[in ID, in item, out price]
+  Customer -> Merchant: accept[in ID, in item, in price, out confirmation]
+  
+  Merchant -> Customer: standard_delivery[in ID, in item, in confirmation, out standard_delivery]
+  Merchant -> Customer: express_delivery[in ID, in item, in confirmation, out express_delivery]
+  
+  Customer -> Merchant: pay[in ID, in price, in standard_delivery, in express_delivery, out payment]
+  Merchant -> Customer: receipt[in ID, in item, in payment, out done]
+}

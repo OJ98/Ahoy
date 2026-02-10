@@ -34,9 +34,6 @@ from lib import (
 from lib.llm_client import initialize_llm_tracker, get_llm_tracker
 from lib.agent_notes import get_agent_notes, reset_agent_notes
 from lib.protocol_completion_detector import (
-    is_completion_message, 
-    get_completion_message, 
-    get_request_message_for_completion,
     extract_completion_rule_from_protocol
 )
 from lib.dynamic_adapter_manager import create_adapter_for_role, create_adapter_for_agent, get_color_for_protocol_role
@@ -120,10 +117,50 @@ def _initialize_protocol_analysis(protocol_name: str, role_name: str):
                 msg_type, direction, count = rule[:3]
                 log_debug(f"Successfully extracted completion rule for {protocol_name}/{role_name}: {msg_type} {direction} x{count}")
         else:
-            log_debug(f"LLM extraction failed for {protocol_name}/{role_name}, will use hardcoded rules")
+            raise RuntimeError(f"Failed to extract completion rule for {protocol_name}/{role_name} from LLM")
     except Exception as e:
         log_debug(f"Error during protocol analysis for {protocol_name}/{role_name}: {e}")
-        log_debug(f"Will use hardcoded rules as fallback")
+        raise
+
+
+def _is_cached_completion_message(protocol_name: str, role_name: str, message_name: str, direction: str = None) -> tuple:
+    """
+    Check if a message indicates role completion based on cached LLM extraction.
+    Uses the protocol_completion_rules cache populated by _initialize_protocol_analysis.
+    
+    Args:
+        protocol_name: Name of protocol
+        role_name: Name of role
+        message_name: Name of message being checked
+        direction: Optional direction filter ("send" or "receive")
+    
+    Returns:
+        Tuple of (matches: bool, required_count: int)
+        - matches: True if message type and direction match the rule
+        - required_count: The count required from the rule (for multirole message validation)
+    
+    Raises:
+        RuntimeError: If no cached rule exists (should not happen if _initialize_protocol_analysis was called)
+    """
+    rule = protocol_completion_rules.get((protocol_name, role_name))
+    if rule is None:
+        raise RuntimeError(f"No cached completion rule for {protocol_name}/{role_name}. _initialize_protocol_analysis must be called first.")
+    
+    # Unpack rule
+    if len(rule) >= 5:
+        msg_type, rule_direction, count, _, _ = rule[:5]
+    else:
+        msg_type, rule_direction, count = rule[:3]
+    
+    # Check message name matches
+    if message_name.lower() != msg_type.lower():
+        return False, count
+    
+    # Check direction if specified
+    if direction is not None and direction.lower() != rule_direction.lower():
+        return False, count
+    
+    return True, count
 
 
 def _validate_enabled_store(enabled_store):
@@ -266,28 +303,64 @@ def _check_all_roles_completion(sent_message_instance):
             role_name_str = str(role)
             
             # Check 1: Did this role SEND a completion message?
+            # COUNT all sent completion messages (must reach required_count)
+            sent_count = 0
+            send_msg_matches_found = False
+            send_required_count = 1
+            
             if hasattr(sent_message_instance, 'schema') and hasattr(sent_message_instance.schema, 'name'):
                 msg_type = sent_message_instance.schema.name
-                if is_completion_message(protocol, role, msg_type):
-                    log_debug(f"DEBUG:   {role_key} completed by SENDING: {msg_type}")
+                msg_matches, rule_count = _is_cached_completion_message(protocol, role, msg_type, direction="send")
+                if msg_matches:
+                    send_msg_matches_found = True
+                    send_required_count = rule_count  # Get the required count from rule
+                    sent_count = 1  # Count the message being sent RIGHT NOW (before it's added to history)
+            
+            # If we found a matching send rule, count all previously sent instances in message history
+            if send_msg_matches_found:
+                for msg in all_messages:
+                    msg_matches, _ = _is_cached_completion_message(protocol, role, msg.get("schema_name", ""), direction="send")
+                    if msg_matches:
+                        sender = msg.get("sender")
+                        # Count only messages sent BY this role (already in history)
+                        if sender and role_name_str.lower() == str(sender).lower():
+                            sent_count += 1
+                
+                log_debug(f"DEBUG:   {role_key} sent {sent_count}/{send_required_count} completion messages (including current)")
+                
+                if sent_count >= send_required_count:
+                    log_debug(f"DEBUG:   {role_key} completion threshold reached by sending!")
                     completed_roles.append(role_key)
                     agent_notes_obj.save("completed_roles", completed_roles)
                     continue
             
             # Check 2: Did this role RECEIVE a completion message?
-            role_completed = False
+            # COUNT all received completion messages (must reach required_count)
+            received_count = 0
+            msg_matches_found = False
+            required_count = 1  # Default if no rule found
+            
             for msg in all_messages:
-                if is_completion_message(protocol, role, msg.get("schema_name", "")):
+                msg_matches, rule_count = _is_cached_completion_message(protocol, role, msg.get("schema_name", ""), direction="receive")
+                if msg_matches:
+                    msg_matches_found = True
+                    required_count = rule_count  # Update with the actual required count from rule
                     sender = msg.get("sender")
                     recipients = msg.get('recipients', [])
-                    # Message completes this role if:
-                    # - It's NOT sent by this role (it's from someone else), AND
-                    # - This role is in the recipients list (it received it)
+                    # Count only messages actually received by this role (from someone else)
                     if (sender and str(sender).lower() != role_name_str.lower() and
                         role_name_str.lower() in [str(r).lower() for r in recipients]):
-                        log_debug(f"DEBUG:   {role_key} completed by RECEIVING: {msg.get('schema_name')} from {sender}")
-                        role_completed = True
-                        break
+                        received_count += 1
+            
+            if msg_matches_found:
+                log_debug(f"DEBUG:   {role_key} received {received_count}/{required_count} completion messages")
+            else:
+                log_debug(f"DEBUG:   {role_key} no completion messages received yet")
+            
+            role_completed = False
+            if msg_matches_found and received_count >= required_count:
+                log_debug(f"DEBUG:   {role_key} completion threshold reached by receiving!")
+                role_completed = True
             
             if role_completed:
                 completed_roles.append(role_key)
@@ -420,7 +493,8 @@ async def _get_llm_decision_handler():
             
             if len(assigned_roles_list) == 1:
                 # Single-role: check if this role completes
-                if is_completion_message(assigned_protocol, assigned_role, msg_type):
+                msg_matches, _ = _is_cached_completion_message(assigned_protocol, assigned_role, msg_type, direction="send")
+                if msg_matches:
                     _handle_role_completion(instance)
             else:
                 # Multi-role: check if all roles are now complete

@@ -52,9 +52,8 @@ from .protocol_discovery import (
 )
 
 from .protocol_completion_detector import (
-    get_completion_message,
-    is_completion_message,
-    get_all_completion_rules,
+    extract_completion_rule_from_protocol,
+    extract_request_response_from_protocol,
 )
 
 from .dynamic_adapter_manager import (
@@ -102,9 +101,8 @@ __all__ = [
     "get_protocol_object",
     "get_role_object",
     # Protocol completion detection
-    "get_completion_message",
-    "is_completion_message",
-    "get_all_completion_rules",
+    "extract_completion_rule_from_protocol",
+    "extract_request_response_from_protocol",
     # Dynamic adapter management
     "create_adapter_for_role",
     "get_color_for_protocol_role",
