@@ -1,0 +1,2479 @@
+{
+  "metadata": {
+    "source_log": "c:\\PhD\\Research\\MultiAgents\\Code\\MAF\\logs\\generic_agent_debug_20260210_000206.log",
+    "extraction_time": "2026-02-11T21:04:20.966197",
+    "status": "success"
+  },
+  "messages": [
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 5,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 6,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 7,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 13,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 13,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 14,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 13,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 14,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 15,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 13,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 14,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 15,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 16,
+      "type": "RequestLabel",
+      "sender": "Merchant",
+      "receiver": "Labeler",
+      "protocol": "Logistics",
+      "parameters": {
+        "orderID": "32dc1cf9-f8ca-4210-bee3-c6eef3f82100",
+        "address": "Warehouse A"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 13,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 14,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 15,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 16,
+      "type": "RequestLabel",
+      "sender": "Merchant",
+      "receiver": "Labeler",
+      "protocol": "Logistics",
+      "parameters": {
+        "orderID": "32dc1cf9-f8ca-4210-bee3-c6eef3f82100",
+        "address": "Warehouse A"
+      }
+    },
+    {
+      "number": 17,
+      "type": "RequestLabel",
+      "sender": "Merchant",
+      "receiver": "Labeler",
+      "protocol": "Logistics",
+      "parameters": {
+        "orderID": "6aa820dd-8b40-426a-81f4-6546ca5607a1",
+        "address": "Warehouse B"
+      }
+    },
+    {
+      "number": 1,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 2,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42"
+      }
+    },
+    {
+      "number": 3,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 4,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 5,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ab534279-940b-4382-90b1-a606692af9ad",
+        "item": "glass vase",
+        "price": "42",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 6,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate"
+      }
+    },
+    {
+      "number": 7,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27"
+      }
+    },
+    {
+      "number": 8,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 9,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 10,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "item": "ceramic plate",
+        "price": "27",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 11,
+      "type": "rfq",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat"
+      }
+    },
+    {
+      "number": 12,
+      "type": "quote",
+      "sender": "Seller",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39"
+      }
+    },
+    {
+      "number": 13,
+      "type": "accept",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "address": "123 Main Street, Portland, OR 97201",
+        "resp": "Accepted - proceeding with purchase"
+      }
+    },
+    {
+      "number": 14,
+      "type": "deliver",
+      "sender": "Shipper",
+      "receiver": "Buyer",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "address": "123 Main Street, Portland, OR 97201",
+        "outcome": "delivered"
+      }
+    },
+    {
+      "number": 15,
+      "type": "completed",
+      "sender": "Buyer",
+      "receiver": "Seller",
+      "protocol": "Purchase",
+      "parameters": {
+        "ID": "ebbadddb-83b7-4940-a456-221da1583ab9",
+        "item": "wooden bat",
+        "price": "39",
+        "satisfaction": "high"
+      }
+    },
+    {
+      "number": 16,
+      "type": "RequestLabel",
+      "sender": "Merchant",
+      "receiver": "Labeler",
+      "protocol": "Logistics",
+      "parameters": {
+        "orderID": "32dc1cf9-f8ca-4210-bee3-c6eef3f82100",
+        "address": "Warehouse A"
+      }
+    },
+    {
+      "number": 17,
+      "type": "RequestWrapping",
+      "sender": "Merchant",
+      "receiver": "Wrapper",
+      "protocol": "Logistics",
+      "parameters": {
+        "orderID": "32dc1cf9-f8ca-4210-bee3-c6eef3f82100",
+        "itemID": "dbb29637-aac3-4449-aa55-3b26120065fc",
+        "item": "glass vase"
+      }
+    },
+    {
+      "number": 18,
+      "type": "RequestLabel",
+      "sender": "Merchant",
+      "receiver": "Labeler",
+      "protocol": "Logistics",
+      "parameters": {
+        "orderID": "6aa820dd-8b40-426a-81f4-6546ca5607a1",
+        "address": "Warehouse B"
+      }
+    }
+  ],
+  "metrics": {
+    "total_messages": 187,
+    "protocols": [
+      "Logistics",
+      "Purchase"
+    ],
+    "protocol_count": 2,
+    "roles": [
+      [
+        "Logistics",
+        "Labeler"
+      ],
+      [
+        "Logistics",
+        "Merchant"
+      ],
+      [
+        "Logistics",
+        "Wrapper"
+      ],
+      [
+        "Purchase",
+        "Buyer"
+      ],
+      [
+        "Purchase",
+        "Seller"
+      ],
+      [
+        "Purchase",
+        "Shipper"
+      ]
+    ],
+    "violations": 0,
+    "exceptions": 0,
+    "elapsed_time_seconds": 5,
+    "completion_rules": {
+      "Purchase:Buyer": "completed send x3",
+      "Logistics:Merchant": "Packed receive x2"
+    }
+  },
+  "parameter_isolation": {
+    "Purchase:ID": {
+      "parameter": "ID",
+      "protocol": "Purchase",
+      "values": [
+        "0fcd009e-5823-425b-821a-6235a12ddfd6",
+        "ab534279-940b-4382-90b1-a606692af9ad",
+        "ebbadddb-83b7-4940-a456-221da1583ab9"
+      ],
+      "value_count": 3
+    },
+    "Purchase:item": {
+      "parameter": "item",
+      "protocol": "Purchase",
+      "values": [
+        "ceramic plate",
+        "glass vase",
+        "wooden bat"
+      ],
+      "value_count": 3
+    },
+    "Purchase:price": {
+      "parameter": "price",
+      "protocol": "Purchase",
+      "values": [
+        "27",
+        "39",
+        "42"
+      ],
+      "value_count": 3
+    },
+    "Purchase:address": {
+      "parameter": "address",
+      "protocol": "Purchase",
+      "values": [
+        "123 Main Street, Portland, OR 97201"
+      ],
+      "value_count": 1
+    },
+    "Purchase:resp": {
+      "parameter": "resp",
+      "protocol": "Purchase",
+      "values": [
+        "Accepted - proceeding with purchase"
+      ],
+      "value_count": 1
+    },
+    "Purchase:outcome": {
+      "parameter": "outcome",
+      "protocol": "Purchase",
+      "values": [
+        "delivered"
+      ],
+      "value_count": 1
+    },
+    "Purchase:satisfaction": {
+      "parameter": "satisfaction",
+      "protocol": "Purchase",
+      "values": [
+        "high"
+      ],
+      "value_count": 1
+    },
+    "Logistics:orderID": {
+      "parameter": "orderID",
+      "protocol": "Logistics",
+      "values": [
+        "32dc1cf9-f8ca-4210-bee3-c6eef3f82100",
+        "6aa820dd-8b40-426a-81f4-6546ca5607a1"
+      ],
+      "value_count": 2
+    },
+    "Logistics:address": {
+      "parameter": "address",
+      "protocol": "Logistics",
+      "values": [
+        "Warehouse A",
+        "Warehouse B"
+      ],
+      "value_count": 2
+    },
+    "Logistics:itemID": {
+      "parameter": "itemID",
+      "protocol": "Logistics",
+      "values": [
+        "dbb29637-aac3-4449-aa55-3b26120065fc"
+      ],
+      "value_count": 1
+    },
+    "Logistics:item": {
+      "parameter": "item",
+      "protocol": "Logistics",
+      "values": [
+        "glass vase"
+      ],
+      "value_count": 1
+    }
+  },
+  "llm_reasoning_samples": [
+    "2026-02-10 00:02:11,896 - DEBUG - ================================================================================\n2026-02-10 00:02:11,896 - DEBUG - I need to analyze the current state and available options.\n\n**Current Situation:**\n- I'm in the PURCHASE PHASE and need to send RFQs for 3 items (glass vase, ceramic plate, wooden bat)",
+    "2026-02-10 00:02:15,522 - DEBUG - ================================================================================\n2026-02-10 00:02:15,522 - DEBUG - I need to analyze the current situation:\n\n**Current State:**\n- I've already sent 1 RFQ for the glass vase",
+    "2026-02-10 00:02:19,171 - DEBUG - ================================================================================\n2026-02-10 00:02:19,171 - DEBUG - I need to analyze the current state of the protocol and choose the next appropriate action.\n\n**Current Situation Analysis:**\n- Message 1: I (as Buyer) sent an RFQ for a glass vase"
+  ]
+}
