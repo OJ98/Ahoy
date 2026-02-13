@@ -509,31 +509,116 @@ async def choose_and_bind(
         from .utils import build_custom_event_user_prompt
         
         # Parse events from pending_event_context string to reconstruct event objects
-        # Format is: "- message\n  └─ key: value\n..."
+        # Supports two formats (for protocol-agnostic and backwards-compatible parsing):
+        #   NEW format: "Event #N:\n  Message: ...\n  Metadata:\n    • key: value\n"
+        #     - Clear event boundaries with numbered headers prevent context confusion
+        #     - Metadata grouped under "Metadata:" creates visual containment per event
+        #     - Avoids budget/context from one event bleeding into another
+        #   OLD format (backwards compat): "- message\n  └─ key: value\n..."
+        #     - Still supported but deprecated (tree structure unclear with multiple events)
         events = []
         lines = pending_event_context.split('\n')
         current_event = None
         
-        for line in lines:
-            line_stripped = line.strip()
-            if not line_stripped:
-                continue
-            
-            if line_stripped.startswith('- '):
-                # New event message
-                if current_event is not None:
-                    events.append(current_event)
-                current_event = {
-                    'message': line_stripped[2:],
-                    'metadata': {},
-                    'priority': 'normal'
-                }
-            elif line_stripped.startswith('└─ ') and current_event is not None:
-                # Metadata detail - strip the "└─ " prefix (3 characters)
-                metadata_line = line_stripped[3:]
-                if ':' in metadata_line:
-                    key, value = metadata_line.split(':', 1)
-                    current_event['metadata'][key.strip()] = value.strip()
+        # Detect which format is being used
+        is_new_format = any(line.strip().startswith('Event #') for line in lines)
+        
+        if is_new_format:
+            # Parse NEW format: clearer event boundaries
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+                line_stripped = line.strip()
+                
+                # Look for "Event #N:" markers
+                if line_stripped.startswith('Event #'):
+                    # Save previous event if exists
+                    if current_event is not None:
+                        events.append(current_event)
+                    
+                    current_event = {
+                        'message': '',
+                        'metadata': {},
+                        'priority': 'normal'
+                    }
+                    i += 1
+                    
+                    # Next line should be "Message: ..."
+                    while i < len(lines):
+                        line = lines[i]
+                        line_stripped = line.strip()
+                        
+                        if not line_stripped:
+                            i += 1
+                            continue
+                        
+                        if line_stripped.startswith('Message: '):
+                            current_event['message'] = line_stripped[9:]  # Remove "Message: "
+                            i += 1
+                            break
+                        elif line_stripped.startswith('Event #'):
+                            # Next event marker found, break to process it
+                            break
+                        
+                        i += 1
+                    
+                    # Now look for Metadata: section
+                    while i < len(lines):
+                        line = lines[i]
+                        line_stripped = line.strip()
+                        
+                        if line_stripped == 'Metadata:':
+                            i += 1
+                            # Process metadata items (lines starting with •)
+                            while i < len(lines):
+                                line = lines[i]
+                                line_stripped = line.strip()
+                                
+                                if not line_stripped:
+                                    i += 1
+                                    continue
+                                
+                                if line_stripped.startswith('•'):
+                                    metadata_text = line_stripped[1:].strip()  # Remove "• "
+                                    if ':' in metadata_text:
+                                        key, value = metadata_text.split(':', 1)
+                                        current_event['metadata'][key.strip()] = value.strip()
+                                    i += 1
+                                elif line_stripped.startswith('Event #'):
+                                    # Next event found, break to process it
+                                    break
+                                else:
+                                    i += 1
+                            break
+                        elif line_stripped.startswith('Event #'):
+                            # Next event, break
+                            break
+                        else:
+                            i += 1
+                else:
+                    i += 1
+        else:
+            # Parse OLD format (backwards compatibility)
+            for line in lines:
+                line_stripped = line.strip()
+                if not line_stripped:
+                    continue
+                
+                if line_stripped.startswith('- '):
+                    # New event message
+                    if current_event is not None:
+                        events.append(current_event)
+                    current_event = {
+                        'message': line_stripped[2:],
+                        'metadata': {},
+                        'priority': 'normal'
+                    }
+                elif line_stripped.startswith('└─ ') and current_event is not None:
+                    # Metadata detail - strip the "└─ " prefix (3 characters)
+                    metadata_line = line_stripped[3:]
+                    if ':' in metadata_line:
+                        key, value = metadata_line.split(':', 1)
+                        current_event['metadata'][key.strip()] = value.strip()
         
         if current_event is not None:
             events.append(current_event)
@@ -544,7 +629,8 @@ async def choose_and_bind(
                 social_state,
                 options,
                 events=events,
-                all_roles_list=all_roles_list
+                all_roles_list=all_roles_list,
+                decision_count=choose_and_bind._decision_count
             )
         else:
             # Fallback to standard prompt if event parsing failed

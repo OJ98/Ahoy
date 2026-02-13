@@ -571,14 +571,28 @@ async def _get_llm_decision_handler():
             if file_events:
                 has_external_events = True
                 pending_event_context = ""
-                for evt in file_events:
+                for event_idx, evt in enumerate(file_events, 1):
                     # Use timestamp as unique event ID since it's unique per event
                     event_id = evt.get('timestamp', str(evt))
                     pending_event_ids.append(event_id)  # Track this event
-                    pending_event_context += f"- {evt.get('message', 'Unknown event')}\n"
+                    
+                    # Format with clear event boundaries (protocol-agnostic):
+                    # - Numbered headers ("Event #N:") clearly separate each event
+                    # - Metadata grouped under "Metadata:" creates visual containment
+                    # - Bullet points (•) clearly mark individual metadata items
+                    # This prevents context bleeding between events when multiple events exist
+                    pending_event_context += f"Event #{event_idx}:\n"
+                    pending_event_context += f"  Message: {evt.get('message', 'Unknown event')}\n"
+                    
                     if evt.get('metadata'):
+                        pending_event_context += f"  Metadata:\n"
                         for k, v in evt['metadata'].items():
-                            pending_event_context += f"  └─ {k}: {v}\n"
+                            pending_event_context += f"    • {k}: {v}\n"
+                    
+                    # Add blank line between events for visual separation
+                    if event_idx < len(file_events):
+                        pending_event_context += "\n"
+                
                 log_debug(f"Pending custom events: {len(file_events)} event(s)")
                 log_debug(f"DEBUG: Tracking event IDs: {pending_event_ids}")
                 log_debug(f"DEBUG: Built pending_event_context (length={len(pending_event_context)}):")
@@ -597,8 +611,10 @@ async def _get_llm_decision_handler():
             has_external_events = True
             pending_events = event_queue.peek_events()
             pending_event_context = ""
-            for evt in pending_events:
-                pending_event_context += f"- {evt}\n"
+            for event_idx, evt in enumerate(pending_events, 1):
+                pending_event_context += f"Event #{event_idx}:\n  Message: {evt}\n"
+                if event_idx < len(pending_events):
+                    pending_event_context += "\n"
             log_debug(f"Pending custom events: {len(pending_events)} event(s)")
         
         log_debug("LLM decision invoked, consulting LLM...")
@@ -662,24 +678,99 @@ async def _get_llm_decision_handler():
             # Return None to skip this event, and adapter will check again
             return None
 
+        # Reset the empty call counter when LLM successfully makes a choice
+        consecutive_empty_event_calls = 0
+        log_debug(f"DEBUG: LLM made a choice, reset empty call counter")
+
         log_debug(f"DEBUG: Sending message: {instance}")
         
-        # If events were shown in the prompt and LLM made a decision, mark events as handled
-        if pending_event_ids and instance is not None:
-            log_debug(f"DEBUG: LLM decision made with {len(pending_event_ids)} event(s) visible - marking as handled")
-            
-            # Remove handled events from queue
+        # Update termination conditions when a message is sent
+        # Use the same completion message checking logic as non-event code
+        if instance is not None and hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
             try:
-                from lib.event_injector import remove_handled_events
-                removed_count = remove_handled_events(pending_event_ids)
-                if removed_count > 0:
-                    log_debug(f"DEBUG: Removed {removed_count} handled event(s) from queue")
+                msg_type = instance.schema.name
+                
+                # Check if this message completes any pending condition using the same logic as regular runs
+                for (protocol, role) in assigned_roles_list:
+                    # Use _is_cached_completion_message to check if this message completes the role
+                    msg_matches, _ = _is_cached_completion_message(protocol, role, msg_type, direction="send")
+                    if msg_matches:
+                        log_debug(f"[TERMINATION] Message {msg_type} completes {protocol}:{role}")
+                        
+                        # This message completes the condition - find and update matching conditions
+                        from lib.termination_condition_manager import _load_termination_conditions, get_termination_condition_file
+                        
+                        conditions_data = _load_termination_conditions()
+                        
+                        # Get message bindings to match transaction
+                        # Messages support dict-like access: msg["field"]
+                        msg_bindings = {}
+                        try:
+                            # Try to extract bound values from message instance
+                            if hasattr(instance, 'payload'):
+                                msg_bindings = dict(instance.payload)
+                            else:
+                                # Fallback: try to access as dict-like
+                                for key in ['ID', 'item', 'price']:
+                                    try:
+                                        msg_bindings[key] = instance[key]
+                                    except (KeyError, TypeError):
+                                        pass
+                        except Exception as e:
+                            log_debug(f"[TERMINATION] Could not extract message bindings: {e}")
+                        
+                        log_debug(f"[TERMINATION] Message bindings: {msg_bindings}")
+                        
+                        for condition in conditions_data.get("conditions", []):
+                            if condition.get("completion_status") == "pending" and \
+                               condition.get("protocol", "").lower() == protocol.lower():
+                                
+                                # For event-based conditions, check if this message is for the same transaction
+                                # by comparing key bindings (e.g., ID first, then item)
+                                if condition.get("event_metadata"):
+                                    # This is an event-based condition - match by ID or item
+                                    event_metadata = condition.get("event_metadata", {})
+                                    
+                                    # Check if the message bindings match the event
+                                    matches_event = False
+                                    
+                                    # Primary: check by ID
+                                    if event_metadata.get("ID") and msg_bindings.get("ID"):
+                                        if str(event_metadata.get("ID")) == str(msg_bindings.get("ID")):
+                                            matches_event = True
+                                            log_debug(f"[TERMINATION] Matched by ID: {msg_bindings.get('ID')}")
+                                    
+                                    # Secondary: check by item
+                                    if not matches_event and event_metadata.get("item") and msg_bindings.get("item"):
+                                        if event_metadata.get("item").lower() == str(msg_bindings.get("item")).lower():
+                                            matches_event = True
+                                            log_debug(f"[TERMINATION] Matched by item: {msg_bindings.get('item')}")
+                                    
+                                    if not matches_event:
+                                        log_debug(f"[TERMINATION] Skipping {condition['id']} - transaction mismatch (event ID={event_metadata.get('ID')}, item={event_metadata.get('item')}, msg ID={msg_bindings.get('ID')}, item={msg_bindings.get('item')})")
+                                        continue
+                                
+                                # Mark as complete
+                                condition["completion_status"] = "complete"
+                                condition["updated_at"] = datetime.now().isoformat()
+                                
+                                log_debug(f"[TERMINATION] Marked {condition['id']} as COMPLETE")
+                                
+                                # Save updated condition
+                                condition_file = get_termination_condition_file()
+                                with open(condition_file, 'w') as f:
+                                    json.dump(conditions_data, f, indent=2)
+                                
             except Exception as e:
-                log_debug(f"WARNING: Failed to remove handled events: {e}")
+                log_debug(f"[TERMINATION] Warning: {e}")
         
         # NOTE: Events are NOT cleared here. They persist in the queue so the LLM can continue
         # processing them across multiple decision cycles. Termination conditions handle cleanup
         # when events are actually completed by the protocol flow.
+        
+        # Update termination conditions based on current message history
+        # This picks up both sent and received messages
+        _update_termination_conditions_from_history()
         
         # Check if this message completes the role(s)
         if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
@@ -689,11 +780,19 @@ async def _get_llm_decision_handler():
                 # Single-role: check if this role completes
                 msg_matches, _ = _is_cached_completion_message(assigned_protocol, assigned_role, msg_type, direction="send")
                 if msg_matches:
-                    _handle_role_completion(instance)
+                    # Before exiting, verify all termination conditions are also complete
+                    if _all_termination_conditions_complete():
+                        _handle_role_completion(instance)
+                    else:
+                        log_debug(f"[COMPLETION] Protocol completion sent but termination conditions still pending")
             else:
                 # Multi-role: check if all roles are now complete
                 if _check_all_roles_completion(instance):
-                    _handle_role_completion(instance)
+                    # Before exiting, verify all termination conditions are also complete
+                    if _all_termination_conditions_complete():
+                        _handle_role_completion(instance)
+                    else:
+                        log_debug(f"[COMPLETION] Multi-role completion reached but termination conditions still pending")
         
         return instance
     
@@ -701,6 +800,106 @@ async def _get_llm_decision_handler():
 
 
 
+
+
+def _update_termination_conditions_from_history():
+    """
+    Update termination conditions based on current message history.
+    
+    This scans all messages (both sent and received) and updates condition progress.
+    Called after LLM decisions to account for received messages.
+    """
+    try:
+        from lib.state_manager import extract_social_state
+        from lib.termination_condition_manager import _load_termination_conditions, get_termination_condition_file
+        
+        # Get current message history
+        social_state = extract_social_state(adapter)
+        all_messages = social_state.get("all_messages", [])
+        
+        log_debug(f"[TERMINATION] Scanning {len(all_messages)} messages in history")
+        
+        conditions_data = _load_termination_conditions()
+        
+        for condition in conditions_data.get("conditions", []):
+            if condition.get("completion_status") != "pending":
+                continue  # Already complete or other status
+                
+            protocol = condition.get("protocol", "").lower()
+            event_metadata = condition.get("event_metadata", {})
+            
+            if not event_metadata:
+                continue  # Not an event condition
+            
+            # Get the item/ID from the event
+            event_item = event_metadata.get("item", "").lower()
+            event_id = event_metadata.get("ID", "")
+            
+            # Check message history for matching messages
+            for msg in all_messages:
+                msg_item = str(msg.get("item", "")).lower()
+                msg_id = msg.get("ID", "")
+                msg_type = msg.get("schema_name", "").lower()
+                msg_role = str(msg.get("sender", "")).lower()
+                
+                # Check if message matches event transaction
+                matches_transaction = False
+                if event_id and msg_id == event_id:
+                    matches_transaction = True
+                elif event_item and msg_item == event_item:
+                    matches_transaction = True
+                
+                if not matches_transaction:
+                    continue
+                
+                # Check if this message completes the condition
+                for (proto, role) in assigned_roles_list:
+                    if proto.lower() == protocol:
+                        msg_matches, _ = _is_cached_completion_message(proto, role, msg_type, direction=None)
+                        if msg_matches:
+                            log_debug(f"[TERMINATION] Found completion message {msg_type} for {condition['id']}")
+                            condition["completion_status"] = "complete"
+                            condition["updated_at"] = datetime.now().isoformat()
+        
+        # Save if any updates were made
+        condition_file = get_termination_condition_file()
+        with open(condition_file, 'w') as f:
+            json.dump(conditions_data, f, indent=2)
+            
+    except Exception as e:
+        log_debug(f"[TERMINATION] Warning scanning history: {e}")
+
+
+def _all_termination_conditions_complete():
+    """
+    Check if all termination conditions are marked as complete.
+    
+    Returns:
+        bool: True if all conditions are complete (or no event conditions exist), False otherwise
+    """
+    try:
+        from lib.termination_condition_manager import _load_termination_conditions
+        
+        conditions_data = _load_termination_conditions()
+        conditions = conditions_data.get("conditions", [])
+        
+        if not conditions:
+            # No conditions = complete (no events to handle)
+            return True
+        
+        # Check if ALL conditions are complete
+        all_complete = all(c.get("completion_status") == "complete" for c in conditions)
+        
+        if all_complete:
+            log_debug(f"[COMPLETION] ✓ All {len(conditions)} termination conditions are complete")
+        else:
+            pending_count = sum(1 for c in conditions if c.get("completion_status") != "complete")
+            log_debug(f"[COMPLETION] ✗ {pending_count}/{len(conditions)} termination conditions still pending")
+        
+        return all_complete
+    except Exception as e:
+        log_debug(f"[COMPLETION] Warning checking termination conditions: {e}")
+        return True  # If we can't check, assume complete to avoid blocking
 
 
 def _initialize_tracking_systems():

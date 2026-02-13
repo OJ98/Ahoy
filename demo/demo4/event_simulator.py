@@ -137,7 +137,7 @@ class InventorySystemSimulator:
     
     async def inject_events(self):
         """
-        Inject a single event: Purchase request for a bat with delivery constraints.
+        Inject a single event: Purchase request for a trolley with delivery constraints.
         
         This demonstrates external systems providing context to protocol execution.
         The agent's LLM will see this request when making purchase decisions.
@@ -162,13 +162,13 @@ class InventorySystemSimulator:
         # Wait just a tiny bit (100ms) to ensure event queue file is fully written and readable
         await asyncio.sleep(0.1)
         
-        # Inject a single event: bat purchase request
+        # Inject a single event: trolley purchase request
         success = post_event_to_agent(
             event_type="user_defined",
-            message="Purchase request: Buy a bat",
+            message="Purchase request: Buy a trolley",
             priority="high",
             metadata={
-                "item": "bat",
+                "item": "trolley",
                 "delivery_address": "123 Main St, Springfield",
                 "budget": 29.99
             },
@@ -178,15 +178,15 @@ class InventorySystemSimulator:
         
         if success:
             elapsed = time.time() - self.start_time
-            self.logger.info(f"[+{elapsed:.2f}s] [OK] Injected purchase request: bat")
+            self.logger.info(f"[+{elapsed:.2f}s] [OK] Injected purchase request: trolley")
             self.logger.info(f"[+{elapsed:.2f}s]   Delivery: 123 Main St, Springfield")
             self.logger.info(f"[+{elapsed:.2f}s]   Budget: $29.99")
             self.log_event_injection(
                 "user_defined",
-                "Purchase request: Buy a bat",
+                "Purchase request: Buy a trolley",
                 "high",
                 {
-                    "item": "bat",
+                    "item": "trolley",
                     "delivery_address": "123 Main St, Springfield",
                     "budget": 29.99
                 }

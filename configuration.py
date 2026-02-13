@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import bspl
+import os
 
 BASE_DIR = Path(__file__).resolve().parent
 PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "purchase.bspl"
@@ -48,6 +49,13 @@ agents = {
     # Running on port 8000 for simplified configuration
     "ahoy": [("127.0.0.1", 8000)],
 }
+
+# DEMO4 PORT OVERRIDE: Check for demo4 mode and use hardcoded ports
+# This ensures seller.py and shipper.py connect to the correct ahoy instance
+if os.environ.get("DEMO4_CONFIG") == "1":
+    agents["Buyer"] = [("127.0.0.1", 8000)]  # Buyer messages go to ahoy on port 8000
+    agents["Seller"] = [("127.0.0.1", 8001)]
+    agents["Shipper"] = [("127.0.0.1", 8002)]
 
 # BACKWARD COMPATIBILITY: Legacy role-based agent mapping for existing hardcoded agents
 # These allow old agents (buyer.py, seller.py, etc.) to continue working

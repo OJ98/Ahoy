@@ -495,14 +495,21 @@ def build_custom_event_user_prompt(
     social_state: Dict[str, Any],
     options: list,
     events: List[Dict[str, Any]],
-    all_roles_list: Optional[List[Tuple[str, str]]] = None
+    all_roles_list: Optional[List[Tuple[str, str]]] = None,
+    decision_count: int = 1
 ) -> str:
     """
-    Build a focused user prompt for handling custom external events.
+    Build a user prompt for handling custom external events.
     
-    This specialized prompt construction is designed specifically for scenarios where
-    external events need to be processed. It emphasizes the event details and clearly
-    shows what protocol messages can be sent in response.
+    **CRITICAL**: Uses the EXACT SAME structure as build_user_prompt to prevent LLM confusion.
+    The ONLY difference is that external events are highlighted prominently.
+    
+    This ensures the LLM sees a consistent format whether or not events are present:
+    - Same header wording
+    - Same role display format
+    - Same message history section
+    - Same options formatting
+    - Same response format examples
     
     Args:
         agent_name: Name of the agent making the decision
@@ -510,56 +517,57 @@ def build_custom_event_user_prompt(
         options: List of available message options from adapter
         events: List of event dicts, each with 'message', 'metadata', 'priority'
         all_roles_list: Optional list of (protocol, role) tuples for multi-role agents
+        decision_count: Which decision cycle this is (1-indexed)
     
     Returns:
-        Formatted prompt ready for LLM processing
+        Formatted prompt ready for LLM processing (identical structure to build_user_prompt)
     """
-    import json
-    
     lines = []
     
-    # Header
-    lines.append(f"You are agent '{agent_name}'. You have received external events that require handling.")
-    lines.append("Use the available protocol messages to respond to these events appropriately.")
+    # === IDENTICAL HEADER to build_user_prompt ===
+    lines.append(f"You are agent '{agent_name}'. Choose at most one option, or return null.")
+    lines.append("Your role requires making decisions. When choosing an option, always provide values for all required parameters.")
     lines.append("")
     
-    # Role context
+    # === IDENTICAL ROLE DISPLAY to build_user_prompt ===
     if all_roles_list and len(all_roles_list) > 1:
         roles_display = [f"{role} (in {protocol})" for protocol, role in all_roles_list]
         lines.append(f"Your roles: {', '.join(roles_display)}")
     elif all_roles_list and len(all_roles_list) == 1:
         protocol, role = all_roles_list[0]
         lines.append(f"Role: {role} (in {protocol})")
+    else:
+        role_names = social_state.get('roles', [])
+        if role_names:
+            roles_str = ', '.join(str(r) for r in role_names)
+            lines.append(f"Roles: {roles_str}")
+    
     lines.append("")
     
-    # External Events Section - PROMINENT
+    # === PROMINENT EXTERNAL EVENTS (only addition vs build_user_prompt) ===
     lines.append("=" * 80)
     lines.append("EXTERNAL EVENTS REQUIRING YOUR ACTION:")
     lines.append("=" * 80)
+    lines.append("")
     
     for idx, event in enumerate(events, 1):
-        lines.append(f"\nEvent #{idx}: {event.get('message', 'Unknown event')}")
+        lines.append(f"Event #{idx}: {event.get('message', 'Unknown event')}")
         lines.append(f"  Priority: {event.get('priority', 'normal')}")
         
-        # Show metadata as key details
         metadata = event.get('metadata', {})
         if metadata:
             lines.append("  Details:")
             for key, value in metadata.items():
                 lines.append(f"    • {key}: {value}")
+        lines.append("")
     
-    lines.append("")
-    lines.append("Your task: Send protocol messages that appropriately handle these events.")
-    lines.append("")
-    
-    # Message History
+    # === IDENTICAL MESSAGE HISTORY to build_user_prompt ===
     lines.append("=" * 80)
-    lines.append("CURRENT PROTOCOL STATE:")
+    lines.append("MESSAGE HISTORY:")
     lines.append("=" * 80)
-    
     if social_state:
         history = build_message_history_from_social_state(
-            social_state, agent_name=agent_name, max_history=50, use_cache=False
+            social_state, agent_name=agent_name, max_history=50, use_cache=True
         )
         lines.append(history)
     else:
@@ -567,50 +575,30 @@ def build_custom_event_user_prompt(
     
     lines.append("")
     
-    # Available Actions
-    lines.append("=" * 80)
-    lines.append("AVAILABLE PROTOCOL MESSAGES YOU CAN SEND:")
-    lines.append("=" * 80)
-    lines.append("")
-    
-    if not options:
-        lines.append("(No messages currently available to send - protocol may be waiting for responses)")
-    else:
-        for opt in options:
-            idx = opt.get('index', '?')
-            schema = opt.get('schema_name', 'Unknown')
-            missing = opt.get('missing_params', [])
-            
-            # Extract bound parameters
-            partial = opt.get('partial')
-            bindings_str = ""
-            if partial and hasattr(partial, 'bindings'):
-                bound_params = {k: v for k, v in partial.bindings.items() if v is not None}
-                if bound_params:
-                    display_bindings = [f"{k}={v}" for k, v in bound_params.items()]
+    # === IDENTICAL OPTIONS FORMAT to build_user_prompt ===
+    lines.append("Options:")
+    for opt in options:
+        idx = opt.get('index', '?')
+        schema = opt.get('schema_name', 'Unknown')
+        missing = opt.get('missing_params', [])
+        
+        partial = opt.get('partial')
+        bindings_str = ""
+        if partial and hasattr(partial, 'bindings'):
+            bound_params = {k: v for k, v in partial.bindings.items() if v is not None}
+            if bound_params:
+                display_bindings = [f"{key}={value}" for key, value in bound_params.items()]
+                if display_bindings:
                     bindings_str = f" [BOUND: {', '.join(display_bindings)}]"
-            
-            lines.append(f"{idx}) {schema}{bindings_str}")
-            if missing:
-                lines.append(f"   FILL ONLY: {missing}")
-            else:
-                lines.append(f"   (Ready to send - all parameters are bound)")
+        
+        lines.append(f"{idx}) {schema}{bindings_str} - FILL ONLY: {missing}")
     
     lines.append("")
     
-    # Response Instructions
-    lines.append("=" * 80)
-    lines.append("YOUR RESPONSE:")
-    lines.append("=" * 80)
-    lines.append("")
-    lines.append("Choose which protocol message to send in response to the events above.")
-    lines.append("You may send multiple messages by returning the same choice in successive decisions.")
-    lines.append("")
-    lines.append("Response format:")
-    lines.append('  - To send a message: {"choice": 0, "params": {"field": "value"}, "tool_requests": []}')
-    lines.append('  - To send bound message: {"choice": 0, "params": {}, "tool_requests": []}')
-    lines.append('  - If no valid option: {"choice": null, "params": {}, "tool_requests": []}')
-    lines.append("")
+    # === IDENTICAL RESPONSE FORMAT to build_user_prompt ===
+    lines.append("Response format JSON:")
+    lines.append('- To choose an option WITH parameters: {"choice": 0, "params": {"ID": "value", "item": "value"}, "tool_requests": []}')
+    lines.append('- To decline all options: {"choice": null, "params": {}, "tool_requests": []}')
     
     return "\n".join(lines)
 

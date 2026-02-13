@@ -71,7 +71,7 @@ PROTOCOL_CONFIG = {
 }
 
 # Execution timeout
-EXECUTION_TIMEOUT = 60  # seconds (allow protocol to execute after event injection)
+EXECUTION_TIMEOUT = 120  # seconds (allow protocol to execute after event injection)
 
 # Global state
 logger: Optional[logging.Logger] = None
@@ -206,6 +206,23 @@ def start_agents() -> List[Tuple[str, subprocess.Popen]]:
     log(f"Starting agents for {PROTOCOL_CONFIG['name']}...")
     
     processes = []
+    
+    # CRITICAL: Configure the systems dict AND hardcode ports BEFORE starting supporting agents
+    # This ensures seller.py and shipper.py know to send messages to ahoy's port (8000)
+    # instead of the original role ports (8001, 8003, etc.)
+    from configuration import configure_ahoy_for_multiprotocol, agents
+    log("Configuring role mappings to use ahoy agent...")
+    protocol_role_pair = (PROTOCOL_CONFIG['name'], PROTOCOL_CONFIG['ahoy_role'])
+    configure_ahoy_for_multiprotocol([protocol_role_pair])
+    log(f"Configured: {protocol_role_pair[0]}:{protocol_role_pair[1]} -> ahoy (port 8000)")
+    
+    # Set environment variable to enable demo4 port hardcoding in subprocesses
+    # This tells seller.py and shipper.py to use ahoy's port for Buyer messages
+    os.environ["DEMO4_CONFIG"] = "1"
+    log("Set DEMO4_CONFIG environment variable for hardcoded ports")
+    
+    # Hardcode ports for demo4 in current process (for reference/logging)
+    log("Hardcoded ports: ahoy=8000, Seller=8001, Shipper=8002")
     
     # Write configuration for ahoy.py to temp directory
     # Format: "Protocol:Role" (e.g., "Purchase:Buyer")

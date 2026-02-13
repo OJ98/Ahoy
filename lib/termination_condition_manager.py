@@ -71,6 +71,9 @@ def generate_termination_condition_from_event(
     """
     Generate a termination condition based on a detected event.
     
+    Uses generic completion rules for all roles in protocol.
+    If LLM-based extraction was attempted but failed, falls back to this.
+    
     Args:
         event_message: Human-readable event description (e.g., "Purchase request: Buy a bat")
         event_metadata: Event metadata dict (e.g., {"item": "bat", "budget": 29.99, ...})
@@ -78,21 +81,8 @@ def generate_termination_condition_from_event(
         completion_rules: Dict mapping (protocol, role) -> (message_type, direction, count)
     
     Returns:
-        Dict representing the termination condition with:
-        - event_description: What the user requested
-        - event_metadata: Additional event data
-        - protocol: The protocol handling this request
-        - required_messages: List of messages required for completion by each role
-        - termination_criteria: Specific conditions that mark completion
-        - created_at: Timestamp when this condition was created
+        Dict representing the termination condition with required_messages, etc.
     """
-    
-    # Extract event details
-    item_count = 1  # Default: assume single item unless metadata specifies otherwise
-    if "quantity" in event_metadata:
-        item_count = int(event_metadata.get("quantity", 1))
-    elif "items" in event_metadata:
-        item_count = len(event_metadata["items"]) if isinstance(event_metadata["items"], list) else 1
     
     # Build required messages list based on completion rules for this protocol
     required_messages = []
@@ -102,29 +92,25 @@ def generate_termination_condition_from_event(
         if proto.lower() == protocol_name.lower():
             msg_type, direction, count = rule[0], rule[1], rule[2]
             
-            # Adjust count based on item count
-            effective_count = count * item_count
-            
             required_msg = {
                 "role": role,
                 "message_type": msg_type,
                 "direction": direction,
-                "required_count": effective_count,
+                "required_count": count,
                 "current_count": 0
             }
             required_messages.append(required_msg)
             
-            # Create termination criteria statement
-            criteria = f"{role} must {direction} {msg_type} message {effective_count} time(s)"
+            criteria = f"{role} must {direction} {msg_type} message {count} time(s)"
             termination_criteria.append(criteria)
     
     # Construct termination condition
     condition = {
-        "id": f"{protocol_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        "id": f"{protocol_name}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
         "event_description": event_message,
         "event_metadata": event_metadata,
         "protocol": protocol_name,
-        "item_count": item_count,
+        "item_count": 1,  # For events, typically 1 item/request at a time
         "required_messages": required_messages,
         "termination_criteria": termination_criteria,
         "completion_status": "pending",
@@ -274,17 +260,6 @@ def _is_condition_complete(condition: Dict[str, Any]) -> bool:
         if msg["current_count"] < msg["required_count"]:
             return False
     return True
-
-
-def get_active_termination_conditions() -> List[Dict[str, Any]]:
-    """
-    Get all active (non-completed) termination conditions.
-    
-    Returns:
-        List of condition dicts with status == "pending"
-    """
-    conditions_data = _load_termination_conditions()
-    return [c for c in conditions_data["conditions"] if c["completion_status"] == "pending"]
 
 
 def get_termination_condition_summary() -> Dict[str, Any]:

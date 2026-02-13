@@ -53,6 +53,7 @@ from .protocol_discovery import (
 
 from .protocol_completion_detector import (
     extract_completion_rule_from_protocol,
+    extract_event_completion_rule,
     extract_request_response_from_protocol,
 )
 
@@ -64,7 +65,6 @@ from .dynamic_adapter_manager import (
 from .termination_condition_manager import (
     create_or_update_termination_condition,
     update_termination_condition_progress,
-    get_active_termination_conditions,
     get_termination_condition_summary,
     get_termination_condition_file,
     get_termination_history_file,
@@ -112,6 +112,7 @@ __all__ = [
     "get_role_object",
     # Protocol completion detection
     "extract_completion_rule_from_protocol",
+    "extract_event_completion_rule",
     "extract_request_response_from_protocol",
     # Dynamic adapter management
     "create_adapter_for_role",
@@ -119,7 +120,6 @@ __all__ = [
     # Termination condition management
     "create_or_update_termination_condition",
     "update_termination_condition_progress",
-    "get_active_termination_conditions",
     "get_termination_condition_summary",
     "get_termination_condition_file",
     "get_termination_history_file",
