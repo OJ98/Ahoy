@@ -50,7 +50,7 @@ Write-Host "Starting Demo 4 harness..." -ForegroundColor Yellow
 Write-Host "NOTE: This may take 1-2 minutes as it runs agents and injects events" -ForegroundColor Yellow
 Write-Host ""
 
-cd $ProjectRoot
+Set-Location $ProjectRoot
 python "$ScriptDir\demo4_harness.py"
 
 if ($LASTEXITCODE -eq 0) {

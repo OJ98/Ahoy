@@ -1,0 +1,21 @@
+{
+  "simulator": {
+    "protocol": "Purchase",
+    "role": "Buyer",
+    "start_time": "2026-02-12T22:04:14.077438"
+  },
+  "events": [
+    {
+      "timestamp": "2026-02-12T22:03:59.068979",
+      "elapsed_seconds": 0.11291623115539551,
+      "event_type": "user_defined",
+      "message": "Purchase request: Buy a bat",
+      "priority": "high",
+      "metadata": {
+        "item": "bat",
+        "delivery_address": "123 Main St, Springfield",
+        "budget": 29.99
+      }
+    }
+  ]
+}

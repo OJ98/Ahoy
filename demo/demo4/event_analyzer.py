@@ -113,7 +113,7 @@ class EventAnalyzer:
                     # Also look forward for explicit event context markers
                     if not decision_dict["event_context"]:
                         for j in range(i, min(i + 30, len(self.log_lines))):
-                            if "Pending external events:" in self.log_lines[j]:
+                            if "=== PENDING EXTERNAL EVENTS ===" in self.log_lines[j]:
                                 decision_dict["event_context"] = "has_event_context"
                                 break
                             elif "Pending custom events:" in self.log_lines[j]:

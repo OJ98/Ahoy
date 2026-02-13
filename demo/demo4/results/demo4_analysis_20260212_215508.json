@@ -1,0 +1,81 @@
+{
+  "analysis_timestamp": "2026-02-12T21:55:26.929759",
+  "log_file": "C:\\PhD\\Research\\MultiAgents\\Code\\MAF\\logs\\generic_agent_debug_20260212_215509.log",
+  "events_log_file": "C:\\PhD\\Research\\MultiAgents\\Code\\MAF\\demo\\demo4\\results\\demo4_events_20260212_215508.json",
+  "events_injected": 1,
+  "injected_events": [
+    {
+      "timestamp": "2026-02-12T21:55:11.917014",
+      "elapsed_seconds": 0.11221671104431152,
+      "event_type": "user_defined",
+      "message": "Purchase request: Buy a bat",
+      "priority": "high",
+      "metadata": {
+        "item": "bat",
+        "delivery_address": "123 Main St, Springfield",
+        "budget": 29.99
+      }
+    }
+  ],
+  "protocol_messages": [
+    {
+      "line_number": 117,
+      "raw_line": "2026-02-12 21:55:12,329 - DEBUG - DEBUG: Sending message: rfq(ID='bc37ca1e-0268-42cd-8d85-0d31482e25e4',item='pen'){system='Purchase'}",
+      "log_content": "2026-02-12 21:55:12,329 - DEBUG - DEBUG: Sending message: rfq(ID='bc37ca1e-0268-42cd-8d85-0d31482e25e4',item='pen'){system='Purchase'}\n"
+    },
+    {
+      "line_number": 243,
+      "raw_line": "2026-02-12 21:55:14,812 - DEBUG - DEBUG: Sending message: rfq(ID='7bfe0c92-b138-4393-9133-4067664e4a0a',item='bat'){system='Purchase'}",
+      "log_content": "2026-02-12 21:55:14,812 - DEBUG - DEBUG: Sending message: rfq(ID='7bfe0c92-b138-4393-9133-4067664e4a0a',item='bat'){system='Purchase'}\n"
+    }
+  ],
+  "message_count": 2,
+  "llm_decisions": [
+    {
+      "line_number": 35,
+      "raw_line": "2026-02-12 21:55:10,468 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    },
+    {
+      "line_number": 136,
+      "raw_line": "2026-02-12 21:55:12,330 - DEBUG - Consulting LLM for decision...",
+      "event_context": "has_event_context"
+    },
+    {
+      "line_number": 262,
+      "raw_line": "2026-02-12 21:55:14,813 - DEBUG - Consulting LLM for decision...",
+      "event_context": "has_event_context"
+    }
+  ],
+  "llm_decision_count": 3,
+  "llm_decisions_with_event_context": 2,
+  "events_processed": [
+    {
+      "line_number": 127,
+      "raw_line": "2026-02-12 21:55:12,330 - DEBUG - Pending custom events: 1 event(s)"
+    },
+    {
+      "line_number": 253,
+      "raw_line": "2026-02-12 21:55:14,813 - DEBUG - Pending custom events: 1 event(s)"
+    }
+  ],
+  "events_processing_events_count": 2,
+  "summary": {
+    "total_protocol_messages": 2,
+    "total_llm_decisions": 3,
+    "external_event_injected": true,
+    "external_event_description": {
+      "timestamp": "2026-02-12T21:55:11.917014",
+      "elapsed_seconds": 0.11221671104431152,
+      "event_type": "user_defined",
+      "message": "Purchase request: Buy a bat",
+      "priority": "high",
+      "metadata": {
+        "item": "bat",
+        "delivery_address": "123 Main St, Springfield",
+        "budget": 29.99
+      }
+    },
+    "description": "Single external event (bat purchase) injected during protocol execution"
+  }
+}

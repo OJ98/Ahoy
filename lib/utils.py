@@ -169,7 +169,7 @@ def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: s
             # Consolidated Option Selection & Parameter Guidance
             option_selection = """
             EXTERNAL EVENTS AND INTEGRATION:
-            - When "Pending external events:" appear in your decision prompt, these represent NEW real-world requests you must ACTIVELY HANDLE
+            - When external events appear in your decision prompt (marked with === PENDING EXTERNAL EVENTS ===), these represent NEW real-world requests you must ACTIVELY HANDLE
             - External events are NOT informational - they are MANDATORY tasks to be fulfilled using protocol messages
             - CRITICAL: External events are IN ADDITION to existing protocol flow - do NOT ignore them or treat them as conflicts
             - Each external event should trigger corresponding protocol messages (e.g., each "Buy X" event triggers an RFQ for that item)
@@ -429,7 +429,13 @@ def build_user_prompt(
     # Add pending external events context if available
     if pending_event_context:
         lines.append("")
+        lines.append("=== PENDING EXTERNAL EVENTS ===")
         lines.append(pending_event_context)
+        lines.append("=== END PENDING EVENTS ===")
+    else:
+        # No events, but make it explicit in the prompt so LLM knows
+        lines.append("")
+        lines.append("(No pending external events at this time)")
     
     # Add message history if requested (with caching optimization)
     if include_history and social_state:
@@ -476,6 +482,135 @@ def build_user_prompt(
         lines.append("Examples:")
         for ex in examples:
             lines.append(json.dumps(ex))
+    
+    return "\n".join(lines)
+
+
+# ============================================================================
+# CUSTOM EVENT-FOCUSED PROMPT BUILDING
+# ============================================================================
+
+def build_custom_event_user_prompt(
+    agent_name: str,
+    social_state: Dict[str, Any],
+    options: list,
+    events: List[Dict[str, Any]],
+    all_roles_list: Optional[List[Tuple[str, str]]] = None
+) -> str:
+    """
+    Build a focused user prompt for handling custom external events.
+    
+    This specialized prompt construction is designed specifically for scenarios where
+    external events need to be processed. It emphasizes the event details and clearly
+    shows what protocol messages can be sent in response.
+    
+    Args:
+        agent_name: Name of the agent making the decision
+        social_state: Extracted social state from adapter (contains message history)
+        options: List of available message options from adapter
+        events: List of event dicts, each with 'message', 'metadata', 'priority'
+        all_roles_list: Optional list of (protocol, role) tuples for multi-role agents
+    
+    Returns:
+        Formatted prompt ready for LLM processing
+    """
+    import json
+    
+    lines = []
+    
+    # Header
+    lines.append(f"You are agent '{agent_name}'. You have received external events that require handling.")
+    lines.append("Use the available protocol messages to respond to these events appropriately.")
+    lines.append("")
+    
+    # Role context
+    if all_roles_list and len(all_roles_list) > 1:
+        roles_display = [f"{role} (in {protocol})" for protocol, role in all_roles_list]
+        lines.append(f"Your roles: {', '.join(roles_display)}")
+    elif all_roles_list and len(all_roles_list) == 1:
+        protocol, role = all_roles_list[0]
+        lines.append(f"Role: {role} (in {protocol})")
+    lines.append("")
+    
+    # External Events Section - PROMINENT
+    lines.append("=" * 80)
+    lines.append("EXTERNAL EVENTS REQUIRING YOUR ACTION:")
+    lines.append("=" * 80)
+    
+    for idx, event in enumerate(events, 1):
+        lines.append(f"\nEvent #{idx}: {event.get('message', 'Unknown event')}")
+        lines.append(f"  Priority: {event.get('priority', 'normal')}")
+        
+        # Show metadata as key details
+        metadata = event.get('metadata', {})
+        if metadata:
+            lines.append("  Details:")
+            for key, value in metadata.items():
+                lines.append(f"    • {key}: {value}")
+    
+    lines.append("")
+    lines.append("Your task: Send protocol messages that appropriately handle these events.")
+    lines.append("")
+    
+    # Message History
+    lines.append("=" * 80)
+    lines.append("CURRENT PROTOCOL STATE:")
+    lines.append("=" * 80)
+    
+    if social_state:
+        history = build_message_history_from_social_state(
+            social_state, agent_name=agent_name, max_history=50, use_cache=False
+        )
+        lines.append(history)
+    else:
+        lines.append("No message history yet - this is the first message.")
+    
+    lines.append("")
+    
+    # Available Actions
+    lines.append("=" * 80)
+    lines.append("AVAILABLE PROTOCOL MESSAGES YOU CAN SEND:")
+    lines.append("=" * 80)
+    lines.append("")
+    
+    if not options:
+        lines.append("(No messages currently available to send - protocol may be waiting for responses)")
+    else:
+        for opt in options:
+            idx = opt.get('index', '?')
+            schema = opt.get('schema_name', 'Unknown')
+            missing = opt.get('missing_params', [])
+            
+            # Extract bound parameters
+            partial = opt.get('partial')
+            bindings_str = ""
+            if partial and hasattr(partial, 'bindings'):
+                bound_params = {k: v for k, v in partial.bindings.items() if v is not None}
+                if bound_params:
+                    display_bindings = [f"{k}={v}" for k, v in bound_params.items()]
+                    bindings_str = f" [BOUND: {', '.join(display_bindings)}]"
+            
+            lines.append(f"{idx}) {schema}{bindings_str}")
+            if missing:
+                lines.append(f"   FILL ONLY: {missing}")
+            else:
+                lines.append(f"   (Ready to send - all parameters are bound)")
+    
+    lines.append("")
+    
+    # Response Instructions
+    lines.append("=" * 80)
+    lines.append("YOUR RESPONSE:")
+    lines.append("=" * 80)
+    lines.append("")
+    lines.append("Choose which protocol message to send in response to the events above.")
+    lines.append("You may send multiple messages by returning the same choice in successive decisions.")
+    lines.append("")
+    lines.append("Response format:")
+    lines.append('  - To send a message: {"choice": 0, "params": {"field": "value"}, "tool_requests": []}')
+    lines.append('  - To send bound message: {"choice": 0, "params": {}, "tool_requests": []}')
+    lines.append('  - If no valid option: {"choice": null, "params": {}, "tool_requests": []}')
+    lines.append("")
     
     return "\n".join(lines)
 

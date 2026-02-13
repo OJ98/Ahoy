@@ -361,7 +361,8 @@ async def choose_and_bind(
     current_protocol: Optional[str] = None,
     current_role: Optional[str] = None,
     all_roles_list: Optional[List[Tuple[str, str]]] = None,
-    pending_event_context: Optional[str] = None
+    pending_event_context: Optional[str] = None,
+    pending_event_ids: Optional[List] = None
 ):
     """
     Prompt LLM to choose a message and bind its parameters.
@@ -382,6 +383,7 @@ async def choose_and_bind(
         current_role: Optional role name for multi-role scenarios (shows LLM the specific role)
         all_roles_list: Optional list of (protocol, role) tuples for all roles the agent plays
         pending_event_context: Optional context about pending external events to include in prompt
+        pending_event_ids: Optional list of event IDs that were shown in this prompt for tracking handled events
 
     Returns:
         Bound Message instance or None if no valid choice made
@@ -490,19 +492,90 @@ async def choose_and_bind(
         else:
             prompt_agent_name = f"{adapter_name} (as {current_role})"
     
-    user_prompt = build_user_prompt(
-        prompt_agent_name,
-        social_state,
-        options,
-        recent_event=event,
-        decision_count=choose_and_bind._decision_count,
-        all_roles_list=all_roles_list,
-        pending_event_context=pending_event_context,
-        examples=[
-            {"choice": None, "params": {}},
-            {"choice": 0, "params": {}},
-        ]
-    )
+    # Log whether pending events are being passed
+    has_pending_events = pending_event_context and len(pending_event_context.strip()) > 0
+    if has_pending_events:
+        log_msg(f"\nDEBUG: pending_event_context provided (length={len(pending_event_context)})")
+        log_msg("DEBUG: pending_event_context content:")
+        for line in pending_event_context.split('\n'):
+            if line.strip():
+                log_msg(f"  > {line}")
+    else:
+        log_msg("\nDEBUG: No pending_event_context (no external events)")
+    
+    # Build appropriate user prompt based on whether there are events
+    if has_pending_events:
+        # Use specialized prompt for custom events
+        from .utils import build_custom_event_user_prompt
+        
+        # Parse events from pending_event_context string to reconstruct event objects
+        # Format is: "- message\n  └─ key: value\n..."
+        events = []
+        lines = pending_event_context.split('\n')
+        current_event = None
+        
+        for line in lines:
+            line_stripped = line.strip()
+            if not line_stripped:
+                continue
+            
+            if line_stripped.startswith('- '):
+                # New event message
+                if current_event is not None:
+                    events.append(current_event)
+                current_event = {
+                    'message': line_stripped[2:],
+                    'metadata': {},
+                    'priority': 'normal'
+                }
+            elif line_stripped.startswith('└─ ') and current_event is not None:
+                # Metadata detail - strip the "└─ " prefix (3 characters)
+                metadata_line = line_stripped[3:]
+                if ':' in metadata_line:
+                    key, value = metadata_line.split(':', 1)
+                    current_event['metadata'][key.strip()] = value.strip()
+        
+        if current_event is not None:
+            events.append(current_event)
+        
+        if events:
+            user_prompt = build_custom_event_user_prompt(
+                prompt_agent_name,
+                social_state,
+                options,
+                events=events,
+                all_roles_list=all_roles_list
+            )
+        else:
+            # Fallback to standard prompt if event parsing failed
+            user_prompt = build_user_prompt(
+                prompt_agent_name,
+                social_state,
+                options,
+                recent_event=event,
+                decision_count=choose_and_bind._decision_count,
+                all_roles_list=all_roles_list,
+                pending_event_context=pending_event_context,
+                examples=[
+                    {"choice": None, "params": {}},
+                    {"choice": 0, "params": {}},
+                ]
+            )
+    else:
+        # Standard prompt without events
+        user_prompt = build_user_prompt(
+            prompt_agent_name,
+            social_state,
+            options,
+            recent_event=event,
+            decision_count=choose_and_bind._decision_count,
+            all_roles_list=all_roles_list,
+            pending_event_context=pending_event_context,
+            examples=[
+                {"choice": None, "params": {}},
+                {"choice": 0, "params": {}},
+            ]
+        )
 
     log_msg(f"\n{'='*80}")
     log_msg(f"USER PROMPT FOR MESSAGE CHOICE (Decision #{choose_and_bind._decision_count})")

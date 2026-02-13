@@ -193,3 +193,48 @@ def drain_event_queue() -> int:
     except Exception:
         pass
     return 0
+
+
+def remove_handled_events(event_ids: list) -> int:
+    """
+    Remove specific events from the queue after they've been handled.
+    
+    Events are identified by their timestamp (used as unique ID).
+    This allows selective removal of only the events that were processed
+    by the LLM, while keeping others in the queue for future processing.
+    
+    Args:
+        event_ids: List of event timestamp IDs to remove
+    
+    Returns:
+        Number of events removed
+    """
+    if not event_ids:
+        return 0
+    
+    try:
+        queue_file = get_agent_event_queue()
+        if queue_file.exists():
+            queue_data = _load_event_queue_file()
+            events = queue_data.get("events", [])
+            
+            # Filter out events that match the provided IDs
+            # event_ids are timestamps (floats) from the event's 'timestamp' field
+            original_count = len(events)
+            filtered_events = [
+                evt for evt in events 
+                if evt.get('timestamp') not in event_ids
+            ]
+            
+            removed_count = original_count - len(filtered_events)
+            
+            # Write back the filtered events
+            if removed_count > 0:
+                with open(queue_file, 'w') as f:
+                    json.dump({"events": filtered_events}, f)
+            
+            return removed_count
+    except Exception as e:
+        # Silently fail - don't crash if event removal fails
+        pass
+    return 0

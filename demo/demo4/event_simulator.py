@@ -141,6 +141,10 @@ class InventorySystemSimulator:
         
         This demonstrates external systems providing context to protocol execution.
         The agent's LLM will see this request when making purchase decisions.
+        
+        CRITICAL TIMING: Event must be injected BEFORE the agent makes its first
+        decisions. Any delay allows the agent to process decisions without the event
+        context. We inject immediately after confirming agent readiness.
         """
         self.start_time = time.time()
         self.logger.info(f"Starting purchase event simulator for {self.protocol}.{self.role}")
@@ -151,7 +155,12 @@ class InventorySystemSimulator:
             return
         
         elapsed = time.time() - self.start_time
-        self.logger.info(f"[+{elapsed:.2f}s] Agent ready, NOW INJECTING EVENT")
+        self.logger.info(f"[+{elapsed:.2f}s] Agent ready, IMMEDIATELY INJECTING EVENT (no delay!)")
+        
+        # CRITICAL: Inject event with minimal delay to ensure it's available for initial decisions
+        # Even a 100ms delay can cause the agent to make decisions before event is in queue
+        # Wait just a tiny bit (100ms) to ensure event queue file is fully written and readable
+        await asyncio.sleep(0.1)
         
         # Inject a single event: bat purchase request
         success = post_event_to_agent(
@@ -189,8 +198,9 @@ class InventorySystemSimulator:
         # Wait for agents to process the event and execute protocol
         # (Protocol execution happens asynchronously in the agents)
         elapsed = time.time() - self.start_time
-        self.logger.info(f"[+{elapsed:.2f}s] Waiting 10s for protocol execution with injected event...")
-        await asyncio.sleep(10)  # Allow agents to execute protocol
+        self.logger.info(f"[+{elapsed:.2f}s] Waiting for protocol execution with injected event...")
+        # Give agents enough time to make decisions and execute protocol
+        await asyncio.sleep(15)  # Allow agents to fully process event and complete protocol
         
         elapsed = time.time() - self.start_time
         self.logger.info(f"[+{elapsed:.2f}s] [DONE] Event injection simulation complete.")

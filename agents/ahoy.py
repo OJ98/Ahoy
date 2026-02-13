@@ -547,6 +547,7 @@ async def _get_llm_decision_handler():
         
         # Check for pending custom events from external systems (file-based queue)
         pending_event_context = ""
+        pending_event_ids = []  # Track which event IDs are in this prompt
         has_external_events = False
         try:
             from lib.event_injector import _load_event_queue_file, get_agent_event_queue
@@ -554,18 +555,36 @@ async def _get_llm_decision_handler():
             log_debug(f"DEBUG: Event queue file path: {queue_file}")
             log_debug(f"DEBUG: Event queue file exists: {queue_file.exists()}")
             
+            # Read the raw file to diagnose issues
+            if queue_file.exists():
+                try:
+                    raw_content = queue_file.read_text()
+                    log_debug(f"DEBUG: Raw queue file size: {len(raw_content)} bytes")
+                    if len(raw_content) > 0:
+                        log_debug(f"DEBUG: Raw queue file content (first 200 chars): {raw_content[:200]}")
+                except Exception as e:
+                    log_debug(f"DEBUG: Error reading raw file: {e}")
+            
             file_events = _load_event_queue_file().get("events", [])
             log_debug(f"DEBUG: Loaded {len(file_events)} event(s) from queue file")
             
             if file_events:
                 has_external_events = True
-                pending_event_context = f"\n\nPending external events:\n"
+                pending_event_context = ""
                 for evt in file_events:
-                    pending_event_context += f"  - {evt.get('message', 'Unknown event')}\n"
+                    # Use timestamp as unique event ID since it's unique per event
+                    event_id = evt.get('timestamp', str(evt))
+                    pending_event_ids.append(event_id)  # Track this event
+                    pending_event_context += f"- {evt.get('message', 'Unknown event')}\n"
                     if evt.get('metadata'):
                         for k, v in evt['metadata'].items():
-                            pending_event_context += f"    └─ {k}: {v}\n"
+                            pending_event_context += f"  └─ {k}: {v}\n"
                 log_debug(f"Pending custom events: {len(file_events)} event(s)")
+                log_debug(f"DEBUG: Tracking event IDs: {pending_event_ids}")
+                log_debug(f"DEBUG: Built pending_event_context (length={len(pending_event_context)}):")
+                for line in pending_event_context.split('\n'):
+                    if line.strip():
+                        log_debug(f"  > {line}")
             else:
                 log_debug(f"DEBUG: No events in queue file (queue is empty)")
         except Exception as e:
@@ -577,12 +596,18 @@ async def _get_llm_decision_handler():
         if not pending_event_context and event_queue and event_queue.has_events():
             has_external_events = True
             pending_events = event_queue.peek_events()
-            pending_event_context = f"\n\nPending external events:\n"
+            pending_event_context = ""
             for evt in pending_events:
-                pending_event_context += f"  - {evt}\n"
+                pending_event_context += f"- {evt}\n"
             log_debug(f"Pending custom events: {len(pending_events)} event(s)")
         
         log_debug("LLM decision invoked, consulting LLM...")
+        
+        # DEBUG: Log pending events before LLM call
+        if pending_event_context and len(pending_event_context.strip()) > 0:
+            log_debug(f"DEBUG: About to call LLM with pending events (context length={len(pending_event_context)}, {len(pending_event_ids)} event IDs)")
+        else:
+            log_debug(f"DEBUG: About to call LLM with NO pending events")
         
         # Check threshold before making LLM call
         should_continue, reason = _check_threshold()
@@ -601,7 +626,8 @@ async def _get_llm_decision_handler():
             current_protocol=assigned_protocol,
             current_role=assigned_role,
             all_roles_list=assigned_roles_list,
-            pending_event_context=pending_event_context
+            pending_event_context=pending_event_context,
+            pending_event_ids=pending_event_ids  # Pass event IDs for tracking
         )
         
         # Display status after LLM call
@@ -638,14 +664,22 @@ async def _get_llm_decision_handler():
 
         log_debug(f"DEBUG: Sending message: {instance}")
         
-        # Clear the injected event queue after successful decision
-        try:
-            from lib.event_injector import drain_event_queue
-            cleared_count = drain_event_queue()
-            if cleared_count > 0:
-                log_debug(f"DEBUG: Cleared {cleared_count} event(s) from queue after decision")
-        except Exception as e:
-            log_debug(f"WARNING: Failed to clear event queue: {e}")
+        # If events were shown in the prompt and LLM made a decision, mark events as handled
+        if pending_event_ids and instance is not None:
+            log_debug(f"DEBUG: LLM decision made with {len(pending_event_ids)} event(s) visible - marking as handled")
+            
+            # Remove handled events from queue
+            try:
+                from lib.event_injector import remove_handled_events
+                removed_count = remove_handled_events(pending_event_ids)
+                if removed_count > 0:
+                    log_debug(f"DEBUG: Removed {removed_count} handled event(s) from queue")
+            except Exception as e:
+                log_debug(f"WARNING: Failed to remove handled events: {e}")
+        
+        # NOTE: Events are NOT cleared here. They persist in the queue so the LLM can continue
+        # processing them across multiple decision cycles. Termination conditions handle cleanup
+        # when events are actually completed by the protocol flow.
         
         # Check if this message completes the role(s)
         if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):

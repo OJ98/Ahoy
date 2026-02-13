@@ -1,0 +1,62 @@
+{
+  "analysis_timestamp": "2026-02-12T21:48:11.403624",
+  "log_file": "C:\\PhD\\Research\\MultiAgents\\Code\\MAF\\logs\\generic_agent_debug_20260212_214753.log",
+  "events_log_file": "C:\\PhD\\Research\\MultiAgents\\Code\\MAF\\demo\\demo4\\results\\demo4_events_20260212_214753.json",
+  "events_injected": 1,
+  "injected_events": [
+    {
+      "timestamp": "2026-02-12T21:47:56.374226",
+      "elapsed_seconds": 0.12012147903442383,
+      "event_type": "user_defined",
+      "message": "Purchase request: Buy a bat",
+      "priority": "high",
+      "metadata": {
+        "item": "bat",
+        "delivery_address": "123 Main St, Springfield",
+        "budget": 29.99
+      }
+    }
+  ],
+  "protocol_messages": [
+    {
+      "line_number": 118,
+      "raw_line": "2026-02-12 21:47:56,035 - DEBUG - DEBUG: Sending message: rfq(ID='9e9c948d-a95d-46fd-97e7-b252c86401f6',item='pen'){system='Purchase'}",
+      "log_content": "2026-02-12 21:47:56,035 - DEBUG - DEBUG: Sending message: rfq(ID='9e9c948d-a95d-46fd-97e7-b252c86401f6',item='pen'){system='Purchase'}\n"
+    }
+  ],
+  "message_count": 1,
+  "llm_decisions": [
+    {
+      "line_number": 32,
+      "raw_line": "2026-02-12 21:47:54,726 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    },
+    {
+      "line_number": 128,
+      "raw_line": "2026-02-12 21:47:56,038 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    }
+  ],
+  "llm_decision_count": 2,
+  "llm_decisions_with_event_context": 0,
+  "events_processed": [],
+  "events_processing_events_count": 0,
+  "summary": {
+    "total_protocol_messages": 1,
+    "total_llm_decisions": 2,
+    "external_event_injected": true,
+    "external_event_description": {
+      "timestamp": "2026-02-12T21:47:56.374226",
+      "elapsed_seconds": 0.12012147903442383,
+      "event_type": "user_defined",
+      "message": "Purchase request: Buy a bat",
+      "priority": "high",
+      "metadata": {
+        "item": "bat",
+        "delivery_address": "123 Main St, Springfield",
+        "budget": 29.99
+      }
+    },
+    "description": "Single external event (bat purchase) injected during protocol execution"
+  }
+}

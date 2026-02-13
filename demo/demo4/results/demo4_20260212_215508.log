@@ -1,0 +1,20 @@
+2026-02-12 21:55:08 [INFO] [demo4_debug] Previous state cleared
+2026-02-12 21:55:08 [INFO] [demo4_debug] Starting agents for Purchase...
+2026-02-12 21:55:08 [INFO] [demo4_debug] Wrote config to C:\Users\Omkar\AppData\Local\Temp\maf_chips_config.txt: Purchase:Buyer
+2026-02-12 21:55:08 [INFO] [demo4_debug] Wrote scenario input from C:\PhD\Research\MultiAgents\Code\MAF\input_purchase.txt
+2026-02-12 21:55:08 [INFO] [demo4_debug] Started ahoy.py (PID: 87932)
+2026-02-12 21:55:10 [INFO] [demo4_debug] Started seller (PID: 86140)
+2026-02-12 21:55:11 [INFO] [demo4_debug] Started shipper (PID: 87308)
+2026-02-12 21:55:11 [INFO] [demo4_debug] Starting event injection for Buyer...
+2026-02-12 21:55:26 [INFO] [demo4_debug] Demo execution completed in 15.12 seconds
+2026-02-12 21:55:26 [INFO] [demo4_debug] Analyzing results...
+2026-02-12 21:55:26 [INFO] [demo4_debug] Found agent debug log: generic_agent_debug_20260212_215509.log
+2026-02-12 21:55:26 [INFO] [demo4_debug] Analysis report saved to C:\PhD\Research\MultiAgents\Code\MAF\demo\demo4\results\demo4_analysis_20260212_215508.json
+2026-02-12 21:55:26 [INFO] [demo4_debug] Demo 4 completed successfully!
+2026-02-12 21:55:26 [INFO] [demo4_debug] Stop signal written
+2026-02-12 21:55:27 [INFO] [demo4_debug] Terminating agents...
+2026-02-12 21:55:27 [INFO] [demo4_debug] Terminated ahoy.py
+2026-02-12 21:55:27 [INFO] [demo4_debug] Terminated seller
+2026-02-12 21:55:27 [INFO] [demo4_debug] Terminated shipper
+2026-02-12 21:55:27 [INFO] [demo4_debug] All agents terminated
+ Events log saved to C:\PhD\Research\MultiAgents\Code\MAF\demo\demo4\results\demo4_events_20260212_215508.json
