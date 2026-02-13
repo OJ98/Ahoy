@@ -25,6 +25,11 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 
+# CRITICAL: Clear any leftover multiprotocol configuration from previous runs
+# This must be done BEFORE importing any modules that read the environment variable
+if "MULTIPROTOCOL_AHOY_ROLES" in os.environ:
+    del os.environ["MULTIPROTOCOL_AHOY_ROLES"]
+
 # Add project root to path (demo1 is two levels deep: demo/demo1/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:

@@ -2,12 +2,12 @@
   "simulator": {
     "protocol": "Purchase",
     "role": "Buyer",
-    "start_time": "2026-02-12T20:50:29.181135"
+    "start_time": "2026-02-12T21:40:26.466928"
   },
   "events": [
     {
-      "timestamp": "2026-02-12T20:50:19.172950",
-      "elapsed_seconds": 0.011516809463500977,
+      "timestamp": "2026-02-12T21:40:16.450801",
+      "elapsed_seconds": 0.011241674423217773,
       "event_type": "user_defined",
       "message": "Purchase request: Buy a bat",
       "priority": "high",
