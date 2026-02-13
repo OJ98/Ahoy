@@ -360,7 +360,8 @@ async def choose_and_bind(
     multi_protocol_states: Optional[Dict[str, Any]] = None,
     current_protocol: Optional[str] = None,
     current_role: Optional[str] = None,
-    all_roles_list: Optional[List[Tuple[str, str]]] = None
+    all_roles_list: Optional[List[Tuple[str, str]]] = None,
+    pending_event_context: Optional[str] = None
 ):
     """
     Prompt LLM to choose a message and bind its parameters.
@@ -380,6 +381,7 @@ async def choose_and_bind(
         current_protocol: Optional protocol name for multi-role scenarios (overrides adapter detection)
         current_role: Optional role name for multi-role scenarios (shows LLM the specific role)
         all_roles_list: Optional list of (protocol, role) tuples for all roles the agent plays
+        pending_event_context: Optional context about pending external events to include in prompt
 
     Returns:
         Bound Message instance or None if no valid choice made
@@ -436,19 +438,22 @@ async def choose_and_bind(
 
     # Build options from enabled messages
     options = []
-    for idx, partial in enumerate(enabled_store.messages()):
+    option_idx = 0
+    
+    for partial in enabled_store.messages():
         # Get missing params from schema definition
         missing_params = [
             param_name for param_name in partial.schema.parameters
             if partial.bindings.get(param_name) is None
         ]
-        log_msg(f"Option {idx}: {partial.schema.qualified_name} - Missing: {missing_params}")
+        log_msg(f"Option {option_idx}: {partial.schema.qualified_name} - Missing: {missing_params}")
         options.append({
-            "index": idx,
+            "index": option_idx,
             "schema_name": partial.schema.qualified_name,
             "missing_params": missing_params,
             "partial": partial,
         })
+        option_idx += 1
 
     if not options:
         log_msg("No options available")
@@ -492,6 +497,7 @@ async def choose_and_bind(
         recent_event=event,
         decision_count=choose_and_bind._decision_count,
         all_roles_list=all_roles_list,
+        pending_event_context=pending_event_context,
         examples=[
             {"choice": None, "params": {}},
             {"choice": 0, "params": {}},

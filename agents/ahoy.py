@@ -5,12 +5,12 @@ import json
 import logging
 import sys
 import tempfile
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
 from os import getpid
-
-import tempfile
+import os
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -30,6 +30,10 @@ from lib import (
     log_debug,
     shutdown_watcher,
     reset_optimization_caches,
+    create_or_update_termination_condition,
+    update_termination_condition_progress,
+    get_termination_condition_summary,
+    reset_termination_conditions,
 )
 from lib.llm_client import initialize_llm_tracker, get_llm_tracker
 from lib.agent_notes import get_agent_notes, reset_agent_notes
@@ -37,6 +41,7 @@ from lib.protocol_completion_detector import (
     extract_completion_rule_from_protocol
 )
 from lib.dynamic_adapter_manager import create_adapter_for_role, create_adapter_for_agent, get_color_for_protocol_role
+from lib.custom_event_handler import EventQueue
 
 # Set global timeout
 TIMEOUT = 30.0
@@ -62,6 +67,11 @@ assigned_roles_list = []  # List of (protocol, role) tuples this agent plays
 assigned_protocol = None  # First protocol (for backward compat)
 assigned_role = None  # First role (for backward compat)
 protocol_completion_rules = {}  # Dict mapping (protocol, role) -> completion rule (message_type, direction, count)
+event_queue = None  # Custom event queue for external system integration (initialized at startup)
+
+# Counter for consecutive LLM calls without new external events (to prevent infinite polling)
+consecutive_empty_event_calls = 0
+MAX_EMPTY_EVENT_CALLS = 5
 
 # Suppress adapter's internal logging to console
 adapter_logger = logging.getLogger("bspl")
@@ -248,6 +258,15 @@ def _handle_role_completion(instance):
     except Exception as e:
         log_debug(f"Error creating stop signal: {e}")
     
+    # Clear the event queue as part of cleanup
+    try:
+        from lib.event_injector import drain_event_queue
+        cleared_count = drain_event_queue()
+        if cleared_count > 0:
+            log_debug(f"DEBUG: Cleared {cleared_count} event(s) from queue during completion cleanup")
+    except Exception as e:
+        log_debug(f"WARNING: Failed to clear event queue during cleanup: {e}")
+    
     raise SystemExit(f"✅ Goal achieved: All roles completed for {assigned_agent_identity}. {instance}")
 
 
@@ -387,6 +406,74 @@ def _check_all_roles_completion(sent_message_instance):
         return False
 
 
+async def _monitor_event_queue():
+    """
+    Background task: Periodically monitor the event queue for new external events.
+    This ensures that events injected by external systems are available to the LLM
+    in its decision context, even if they arrive after initial protocol decisions.
+    
+    Also generates and updates termination conditions based on detected events.
+    """
+    try:
+        from lib.event_injector import _load_event_queue_file, get_agent_event_queue
+        
+        last_event_count = 0
+        
+        while True:
+            try:
+                queue_file = get_agent_event_queue()
+                if queue_file.exists():
+                    queue_data = _load_event_queue_file()
+                    current_event_count = len(queue_data.get("events", []))
+                    
+                    # Log when new events are detected
+                    if current_event_count > last_event_count:
+                        new_events = queue_data.get("events", [])[last_event_count:]
+                        for evt in new_events:
+                            event_msg = evt.get('message', 'Unknown')
+                            event_meta = evt.get('metadata', {})
+                            
+                            log_debug(f"[EVENT_MONITOR] New external event detected: {event_msg}")
+                            if event_meta:
+                                for k, v in event_meta.items():
+                                    log_debug(f"  └─ {k}: {v}")
+                            
+                            # Generate termination condition for this event
+                            if assigned_protocol and protocol_completion_rules:
+                                try:
+                                    created = create_or_update_termination_condition(
+                                        event_message=event_msg,
+                                        event_metadata=event_meta,
+                                        protocol_name=assigned_protocol,
+                                        completion_rules=protocol_completion_rules,
+                                        agent_identity=assigned_agent_identity
+                                    )
+                                    if created:
+                                        log_debug(f"[EVENT_MONITOR] Termination condition created for event: {event_msg}")
+                                        
+                                        # Log condition summary
+                                        try:
+                                            summary = get_termination_condition_summary()
+                                            log_debug(f"[EVENT_MONITOR] Active conditions: {summary['pending']} pending, {summary['completed']} completed")
+                                        except Exception as e:
+                                            log_debug(f"[EVENT_MONITOR] Could not retrieve condition summary: {e}")
+                                    else:
+                                        log_debug(f"[EVENT_MONITOR] Failed to create termination condition for event: {event_msg}")
+                                except Exception as e:
+                                    log_debug(f"[EVENT_MONITOR] Error generating termination condition: {e}")
+                        
+                        last_event_count = current_event_count
+            
+            except Exception as e:
+                log_debug(f"[EVENT_MONITOR] Error monitoring queue: {e}")
+            
+            # Check for events every 100ms
+            await asyncio.sleep(0.1)
+    
+    except Exception as e:
+        log_debug(f"Error in event monitor task: {e}")
+
+
 async def main():
     """
     Main entry point: Waits for protocol(s) to complete.
@@ -400,9 +487,20 @@ async def main():
             roles_str = ", ".join([f"{r}({p})" for p, r in assigned_roles_list])
             log_debug(f"Generic agent ready for multiple roles: {roles_str}. Waiting for protocol events...")
         
-        # Keep the adapter running until protocol completes
-        # The decision handler will be called on InitEvent to send initial messages if needed
-        await shutdown_watcher(adapter, stop_path=str(STOP_SIGNAL_PATH))
+        # Start background event monitor task
+        monitor_task = asyncio.create_task(_monitor_event_queue())
+        
+        try:
+            # Keep the adapter running until protocol completes
+            # The decision handler will be called on InitEvent to send initial messages if needed
+            await shutdown_watcher(adapter, stop_path=str(STOP_SIGNAL_PATH))
+        finally:
+            # Cancel the monitor task when shutdown watcher exits
+            monitor_task.cancel()
+            try:
+                await monitor_task
+            except asyncio.CancelledError:
+                pass
     
     except SystemExit:
         raise  # Let completion signals propagate
@@ -447,6 +545,43 @@ async def _get_llm_decision_handler():
                 log_debug(f"DEBUG: No enabled messages and not InitEvent, returning")
                 return None
         
+        # Check for pending custom events from external systems (file-based queue)
+        pending_event_context = ""
+        has_external_events = False
+        try:
+            from lib.event_injector import _load_event_queue_file, get_agent_event_queue
+            queue_file = get_agent_event_queue()
+            log_debug(f"DEBUG: Event queue file path: {queue_file}")
+            log_debug(f"DEBUG: Event queue file exists: {queue_file.exists()}")
+            
+            file_events = _load_event_queue_file().get("events", [])
+            log_debug(f"DEBUG: Loaded {len(file_events)} event(s) from queue file")
+            
+            if file_events:
+                has_external_events = True
+                pending_event_context = f"\n\nPending external events:\n"
+                for evt in file_events:
+                    pending_event_context += f"  - {evt.get('message', 'Unknown event')}\n"
+                    if evt.get('metadata'):
+                        for k, v in evt['metadata'].items():
+                            pending_event_context += f"    └─ {k}: {v}\n"
+                log_debug(f"Pending custom events: {len(file_events)} event(s)")
+            else:
+                log_debug(f"DEBUG: No events in queue file (queue is empty)")
+        except Exception as e:
+            log_debug(f"ERROR loading file-based events: {e}")
+            import traceback
+            log_debug(f"ERROR traceback: {traceback.format_exc()}")
+        
+        # Also check in-memory queue for backward compatibility
+        if not pending_event_context and event_queue and event_queue.has_events():
+            has_external_events = True
+            pending_events = event_queue.peek_events()
+            pending_event_context = f"\n\nPending external events:\n"
+            for evt in pending_events:
+                pending_event_context += f"  - {evt}\n"
+            log_debug(f"Pending custom events: {len(pending_events)} event(s)")
+        
         log_debug("LLM decision invoked, consulting LLM...")
         
         # Check threshold before making LLM call
@@ -465,7 +600,8 @@ async def _get_llm_decision_handler():
             logger_callback=log_debug,
             current_protocol=assigned_protocol,
             current_role=assigned_role,
-            all_roles_list=assigned_roles_list
+            all_roles_list=assigned_roles_list,
+            pending_event_context=pending_event_context
         )
         
         # Display status after LLM call
@@ -480,12 +616,36 @@ async def _get_llm_decision_handler():
         
         if instance is None:
             log_debug("DEBUG: No instance returned from LLM, skipping")
+            
+            # Track consecutive empty LLM calls when no external events (to prevent infinite polling)
+            global consecutive_empty_event_calls
+            if not has_external_events and not is_init_event:
+                consecutive_empty_event_calls += 1
+                log_debug(f"DEBUG: No external events and LLM returned None. Empty call #{consecutive_empty_event_calls}/{MAX_EMPTY_EVENT_CALLS}")
+                if consecutive_empty_event_calls >= MAX_EMPTY_EVENT_CALLS:
+                    log_debug(f"DEBUG: Reached max consecutive empty calls ({MAX_EMPTY_EVENT_CALLS}), terminating to wait for external input")
+                    raise SystemExit(f"Graceful termination: No external events after {MAX_EMPTY_EVENT_CALLS} consecutive LLM calls. Waiting for external input.")
+            else:
+                # Reset counter if we have external events or are in InitEvent
+                if has_external_events:
+                    consecutive_empty_event_calls = 0
+                    log_debug(f"DEBUG: External events present, reset empty call counter")
+            
             # If LLM deferred choice for tools, we need to retry the decision
             # This allows the LLM to make a message choice on the next call with tool results available
             # Return None to skip this event, and adapter will check again
             return None
 
         log_debug(f"DEBUG: Sending message: {instance}")
+        
+        # Clear the injected event queue after successful decision
+        try:
+            from lib.event_injector import drain_event_queue
+            cleared_count = drain_event_queue()
+            if cleared_count > 0:
+                log_debug(f"DEBUG: Cleared {cleared_count} event(s) from queue after decision")
+        except Exception as e:
+            log_debug(f"WARNING: Failed to clear event queue: {e}")
         
         # Check if this message completes the role(s)
         if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
@@ -510,9 +670,13 @@ async def _get_llm_decision_handler():
 
 
 def _initialize_tracking_systems():
-    """Initialize LLM call tracker."""
+    """Initialize LLM call tracker and reset termination conditions for fresh run."""
     initialize_llm_tracker(max_calls=50, max_duration_seconds=300.0)
     log_debug("LLM tracker initialized: max 20 calls or 3 minutes")
+    
+    # Reset termination conditions for fresh run
+    reset_termination_conditions()
+    log_debug("Termination conditions reset for new session")
 
 
 def _cleanup_logging():
@@ -713,6 +877,40 @@ def initialize_ahoy_from_globals():
         log_debug(f"Error creating adapter: {e}")
         raise
     
+    # Initialize file-based event queue IMMEDIATELY after adapter creation
+    # This must happen before any LLM decisions are made
+    try:
+        from lib.event_injector import get_agent_event_queue
+        queue_file = get_agent_event_queue()
+        
+        # Ensure parent directory exists
+        queue_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Create the file with empty events array
+        if not queue_file.exists():
+            with open(queue_file, 'w') as f:
+                json.dump({"events": []}, f)
+                f.flush()
+        
+        log_debug(f"Event queue file ready at: {queue_file}")
+        log_debug(f"File exists and is readable: {queue_file.exists()}")
+        
+        # Brief pause to allow external systems time to post events before main loop
+        log_debug("Pausing briefly to allow external systems to inject events...")
+        time.sleep(1.0)  # Increased to 1 second for more reliable event posting
+    except Exception as e:
+        log_debug(f"Warning: Could not initialize event queue file (non-fatal): {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+    
+    # Initialize custom event queue for external system integration
+    global event_queue
+    try:
+        event_queue = EventQueue(protocol=assigned_protocol, role=assigned_role)
+        log_debug(f"Event queue (in-memory) initialized for {assigned_protocol}.{assigned_role}")
+    except Exception as e:
+        log_debug(f"Warning: Could not initialize in-memory event queue (non-fatal): {e}")
+    
     # Register enabled message handlers for all send messages across all roles
     _register_enabled_message_handlers()
     
@@ -813,6 +1011,19 @@ if __name__ == "__main__":
             reset_agent_notes(role)
         reset_agent_notes(agent_identity)
         reset_agent_notes('Adapter')
+        
+        # Initialize event queue file at startup for external system integration
+        # This allows event simulators to detect when the agent is ready
+        try:
+            from lib.event_injector import _load_event_queue_file, get_agent_event_queue
+            queue_file = get_agent_event_queue()
+            # Create an empty queue if it doesn't exist
+            if not queue_file.exists():
+                with open(queue_file, 'w') as f:
+                    json.dump({"events": []}, f)
+                log_debug(f"Initialized empty event queue at: {queue_file}")
+        except Exception as e:
+            log_debug(f"Warning: Could not initialize event queue file: {e}")
         
         # Phase 3: Register LLM decision handler
         log_debug("Phase 3: Registering LLM decision handler")

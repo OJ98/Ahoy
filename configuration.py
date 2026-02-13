@@ -154,7 +154,16 @@ def configure_ahoy_for_multiprotocol(protocol_role_pairs):
     This function dynamically updates:
     1. The role-to-agent mappings in the systems dict to use "ahoy" agent
     2. The agents dict so that messages to these roles route to ahoy's address
+    3. Clears the adapter cache to ensure fresh role resolution on next adapter creation
     """
+    # Clear the adapter cache FIRST to ensure fresh state
+    # This is important when ahoy is reconfigured between different runs
+    try:
+        from lib.dynamic_adapter_manager import clear_adapter_cache
+        clear_adapter_cache()
+    except Exception:
+        pass  # If cache clearing fails, continue anyway
+    
     # Get ahoy's address
     ahoy_addresses = agents.get("ahoy", [("127.0.0.1", 9000)])
     

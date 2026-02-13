@@ -168,6 +168,16 @@ def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: s
  
             # Consolidated Option Selection & Parameter Guidance
             option_selection = """
+            EXTERNAL EVENTS AND INTEGRATION:
+            - When "Pending external events:" appear in your decision prompt, these represent NEW real-world requests you must ACTIVELY HANDLE
+            - External events are NOT informational - they are MANDATORY tasks to be fulfilled using protocol messages
+            - CRITICAL: External events are IN ADDITION to existing protocol flow - do NOT ignore them or treat them as conflicts
+            - Each external event should trigger corresponding protocol messages (e.g., each "Buy X" event triggers an RFQ for that item)
+            - You may need to send MULTIPLE messages of the same type if multiple events request the same action
+            - Example: If your regular requirement is "buy pen" and you receive external event "buy bat", you should send RFQs for BOTH pen AND bat
+            - Each external event represents a separate business transaction - handle each one with appropriate protocol messages
+            - Do NOT treat an external event as conflicting with prior messages - they are parallel transactions
+            
             Your choice will directly determine what message gets SENT and what happens next:
             - The BOUND parameters shown above (in [BOUND: ...]) are already set and will be used
             - You only need to provide values for parameters marked in FILL ONLY
@@ -375,7 +385,8 @@ def build_user_prompt(
     examples: Optional[list] = None,
     include_history: bool = True,
     decision_count: int = 1,
-    all_roles_list: Optional[List[Tuple[str, str]]] = None
+    all_roles_list: Optional[List[Tuple[str, str]]] = None,
+    pending_event_context: Optional[str] = None
 ) -> str:
     """Build a user prompt for the LLM including context and options.
     
@@ -387,6 +398,7 @@ def build_user_prompt(
         examples: Optional example responses
         include_history: Whether to include message history
         decision_count: Which decision cycle this is (1-indexed)
+        pending_event_context: Optional context about pending external events to include in prompt
     
     Returns:
         Formatted prompt ready for LLM processing
@@ -402,12 +414,22 @@ def build_user_prompt(
         # Multi-role: show all (protocol, role) pairs
         roles_display = [f"{role} (in {protocol})" for protocol, role in all_roles_list]
         lines.append(f"Your roles: {', '.join(roles_display)}")
+    elif all_roles_list and len(all_roles_list) == 1:
+        # Single-role: show the specific role this agent plays
+        protocol, role = all_roles_list[0]
+        lines.append(f"Role: {role} (in {protocol})")
     else:
-        # Single-role or fallback: use role names from social state
+        # Fallback: use role names from social state
         role_names = social_state.get('roles', [])
         if role_names:
             roles_str = ', '.join(str(r) for r in role_names)
             lines.append(f"Roles: {roles_str}")
+
+    
+    # Add pending external events context if available
+    if pending_event_context:
+        lines.append("")
+        lines.append(pending_event_context)
     
     # Add message history if requested (with caching optimization)
     if include_history and social_state:

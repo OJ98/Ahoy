@@ -19,6 +19,17 @@ import bspl.adapter.receiver as _recv
 _agent_roles_cache: Dict[str, List[Tuple[str, object]]] = {}
 
 
+def clear_adapter_cache():
+    """
+    Clear the agent roles cache.
+    
+    Call this whenever the systems dict is reconfigured (e.g., when setting up
+    ahoy to play different roles before each new run).
+    """
+    global _agent_roles_cache
+    _agent_roles_cache.clear()
+
+
 def get_agent_role_objects(agent_identity: str) -> List[Tuple[str, object]]:
     """
     Resolve an agent identity string to a list of (protocol_name, role_object) tuples.

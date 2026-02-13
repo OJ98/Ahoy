@@ -543,7 +543,7 @@ Parameters Tracked: {len(self.demo_data.parameters)}
 def main():
     if len(sys.argv) < 2:
         print("Usage: python extract_demo_data.py <log_file> [output_json]")
-        print("Example: python extract_demo_data.py ../../../logs/generic_agent_debug_20260210_000206.log demo3_data.json")
+        print("Example: python extract_demo_data.py ../../../logs/generic_agent_debug_20260210_000206.log demo2_data.json")
         sys.exit(1)
 
     log_file = sys.argv[1]
@@ -555,7 +555,7 @@ def main():
     print(extractor.summary())
 
     extractor.to_json(output_file)
-    print(f"\n✓ Ready to use extracted data for paper sections!")
+    print(f"\nData Extracted!")
 
 
 if __name__ == "__main__":

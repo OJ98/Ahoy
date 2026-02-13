@@ -61,6 +61,16 @@ from .dynamic_adapter_manager import (
     get_color_for_protocol_role,
 )
 
+from .termination_condition_manager import (
+    create_or_update_termination_condition,
+    update_termination_condition_progress,
+    get_active_termination_conditions,
+    get_termination_condition_summary,
+    get_termination_condition_file,
+    get_termination_history_file,
+    reset_termination_conditions,
+)
+
 __all__ = [
     # LLM client
     "LLMClient",
@@ -106,4 +116,12 @@ __all__ = [
     # Dynamic adapter management
     "create_adapter_for_role",
     "get_color_for_protocol_role",
+    # Termination condition management
+    "create_or_update_termination_condition",
+    "update_termination_condition_progress",
+    "get_active_termination_conditions",
+    "get_termination_condition_summary",
+    "get_termination_condition_file",
+    "get_termination_history_file",
+    "reset_termination_conditions",
 ]

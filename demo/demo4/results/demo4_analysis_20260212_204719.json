@@ -1,0 +1,87 @@
+{
+  "analysis_timestamp": "2026-02-12T20:47:32.212968",
+  "log_file": "C:\\PhD\\Research\\MultiAgents\\Code\\MAF\\logs\\generic_agent_debug_20260212_204719.log",
+  "events_log_file": "C:\\PhD\\Research\\MultiAgents\\Code\\MAF\\demo\\demo4\\results\\demo4_events_20260212_204719.json",
+  "events_injected": 1,
+  "injected_events": [
+    {
+      "timestamp": "2026-02-12T20:47:22.192683",
+      "elapsed_seconds": 0.011522769927978516,
+      "event_type": "user_defined",
+      "message": "Purchase request: Buy a bat",
+      "priority": "high",
+      "metadata": {
+        "item": "bat",
+        "delivery_address": "123 Main St, Springfield",
+        "budget": 29.99
+      }
+    }
+  ],
+  "protocol_messages": [
+    {
+      "line_number": 124,
+      "raw_line": "2026-02-12 20:47:23,336 - DEBUG - DEBUG: Sending message: rfq(ID='7fe0fb08-5939-4c9b-bf60-04d64f7aae65',item='pen under $20'){system='Purchase'}",
+      "log_content": "2026-02-12 20:47:23,336 - DEBUG - DEBUG: Sending message: rfq(ID='7fe0fb08-5939-4c9b-bf60-04d64f7aae65',item='pen under $20'){system='Purchase'}\n"
+    },
+    {
+      "line_number": 303,
+      "raw_line": "2026-02-12 20:47:28,899 - DEBUG - DEBUG: Sending message: accept(ID='7fe0fb08-5939-4c9b-bf60-04d64f7aae65',item='pen under $20',price=8,address='Raleigh, NC 27606',resp='Accept quote - proceeding with purchase'){system='Purchase'}",
+      "log_content": "2026-02-12 20:47:28,899 - DEBUG - DEBUG: Sending message: accept(ID='7fe0fb08-5939-4c9b-bf60-04d64f7aae65',item='pen under $20',price=8,address='Raleigh, NC 27606',resp='Accept quote - proceeding with purchase'){system='Purchase'}\n"
+    },
+    {
+      "line_number": 408,
+      "raw_line": "2026-02-12 20:47:31,983 - DEBUG - DEBUG: Sending message: RequestLabel(orderID='24baeafc-6114-4b13-b99c-3f56ae5f5443',address='Raleigh, NC 27606'){system='Logistics'}",
+      "log_content": "2026-02-12 20:47:31,983 - DEBUG - DEBUG: Sending message: RequestLabel(orderID='24baeafc-6114-4b13-b99c-3f56ae5f5443',address='Raleigh, NC 27606'){system='Logistics'}\n"
+    }
+  ],
+  "message_count": 3,
+  "llm_decisions": [
+    {
+      "line_number": 32,
+      "raw_line": "2026-02-12 20:47:20,655 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    },
+    {
+      "line_number": 135,
+      "raw_line": "2026-02-12 20:47:23,338 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    },
+    {
+      "line_number": 215,
+      "raw_line": "2026-02-12 20:47:26,502 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    },
+    {
+      "line_number": 313,
+      "raw_line": "2026-02-12 20:47:28,901 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    },
+    {
+      "line_number": 418,
+      "raw_line": "2026-02-12 20:47:31,985 - DEBUG - Consulting LLM for decision...",
+      "event_context": ""
+    }
+  ],
+  "llm_decision_count": 5,
+  "llm_decisions_with_event_context": 0,
+  "events_processed": [],
+  "events_processing_events_count": 0,
+  "summary": {
+    "total_protocol_messages": 3,
+    "total_llm_decisions": 5,
+    "external_event_injected": true,
+    "external_event_description": {
+      "timestamp": "2026-02-12T20:47:22.192683",
+      "elapsed_seconds": 0.011522769927978516,
+      "event_type": "user_defined",
+      "message": "Purchase request: Buy a bat",
+      "priority": "high",
+      "metadata": {
+        "item": "bat",
+        "delivery_address": "123 Main St, Springfield",
+        "budget": 29.99
+      }
+    },
+    "description": "Single external event (bat purchase) injected during protocol execution"
+  }
+}
