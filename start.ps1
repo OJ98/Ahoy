@@ -115,7 +115,7 @@ if (-not (Test-Path $pythonExe)) {
 }
 
 # List of agent scripts to start
-$allAgents = @("agents/ahoy.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py", "agents/credit_buyer.py", "agents/credit_seller.py", "agents/credit_shipper.py")
+$allAgents = @("agents/ahoy.py", "agents/buyer.py", "agents/seller.py", "agents/shipper.py", "agents/merchant.py", "agents/packer.py", "agents/labeler.py", "agents/wrapper.py", "agents/credit_buyer.py", "agents/credit_seller.py", "agents/credit_shipper.py", "agents/flexible_customer.py", "agents/flexible_merchant.py")
 
 # Mapping of agent files to their protocol and role
 $agentRoles = @{
@@ -129,6 +129,8 @@ $agentRoles = @{
 	"agents/packer.py" = "Logistics:Packer"
 	"agents/labeler.py" = "Logistics:Labeler"
 	"agents/wrapper.py" = "Logistics:Wrapper"
+	"agents/flexible_customer.py" = "FlexiblePurchase:FlexibleCustomer"
+	"agents/flexible_merchant.py" = "FlexiblePurchase:FlexibleMerchant"
 }
 
 # Initialize array to track started processes

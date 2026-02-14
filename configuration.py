@@ -7,13 +7,13 @@ BASE_DIR = Path(__file__).resolve().parent
 PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "purchase.bspl"
 LOGISTICS_PROTOCOL_PATH = BASE_DIR / "protocols" / "logistics.bspl"
 CREDIT_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "credit_purchase.bspl"
+FLEXIBLE_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "flexible_purchase.bspl"
 
 # Load the Purchase protocol
 purchase_spec = bspl.load_file(str(PURCHASE_PROTOCOL_PATH))
 purchase_protocol = purchase_spec.protocols.get("Purchase")
 # Export a module named 'Purchase' for convenient imports
 purchase_spec.export("Purchase")
-
 from Purchase import Buyer, Seller, Shipper
 
 # Load the CreditPurchase protocol
@@ -28,8 +28,14 @@ logistics_spec = bspl.load_file(str(LOGISTICS_PROTOCOL_PATH))
 logistics_protocol = logistics_spec.protocols.get("Logistics")
 # Export a module named 'Logistics' for convenient imports
 logistics_spec.export("Logistics")
-
 from Logistics import Labeler, Merchant, Packer, Wrapper
+
+# Load the FlexiblePurchase protocol
+flexible_purchase_spec = bspl.load_file(str(FLEXIBLE_PURCHASE_PROTOCOL_PATH))
+flexible_purchase_protocol = flexible_purchase_spec.protocols.get("FlexiblePurchase")
+# Export a module named 'FlexiblePurchase' for convenient imports
+flexible_purchase_spec.export("FlexiblePurchase")
+from FlexiblePurchase import FlexibleCustomer, FlexibleMerchant
 
 # MULTI-ROLE SUPPORT: Agent identities (strings) instead of role objects
 # Each agent can have multiple addresses to support playing multiple roles simultaneously
@@ -45,6 +51,8 @@ agents = {
     "CreditBuyer": [("127.0.0.1", 8008)],
     "CreditSeller": [("127.0.0.1", 8009)],
     "CreditShipper": [("127.0.0.1", 8010)],
+    "FlexibleCustomer": [("127.0.0.1", 8011)],
+    "FlexibleMerchant": [("127.0.0.1", 8012)],
     # Generic LLM agent for multiprotocol testing (ahoy.py uses this)
     # Running on port 8000 for simplified configuration
     "ahoy": [("127.0.0.1", 8000)],
@@ -68,6 +76,8 @@ agents[Merchant] = agents["Merchant"]
 agents[Packer] = agents["Packer"]
 agents[Wrapper] = agents["Wrapper"]
 agents[CreditBuyer] = agents["CreditBuyer"]
+agents[FlexibleCustomer] = agents["FlexibleCustomer"]
+agents[FlexibleMerchant] = agents["FlexibleMerchant"]
 agents[CreditSeller] = agents["CreditSeller"]
 agents[CreditShipper] = agents["CreditShipper"]
 
@@ -147,6 +157,14 @@ systems = {
             logistics_protocol.roles["Wrapper"]: "Wrapper",
         },
         "protocol": logistics_protocol,
+    },
+    "FlexiblePurchase": {
+        # Map Role objects (from the parsed protocol) to agent identities (strings)
+        "roles": {
+            flexible_purchase_protocol.roles["FlexibleCustomer"]: "FlexibleCustomer",
+            flexible_purchase_protocol.roles["FlexibleMerchant"]: "FlexibleMerchant",
+        },
+        "protocol": flexible_purchase_protocol,
     }
 }
 

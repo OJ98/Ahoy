@@ -443,16 +443,22 @@ async def choose_and_bind(
     option_idx = 0
     
     for partial in enabled_store.messages():
-        # Get missing params from schema definition
-        missing_params = [
+        # Separate required vs optional (nil) parameters
+        nil_params = set(partial.schema.nils) if hasattr(partial.schema, 'nils') else set()
+        required_params = [
             param_name for param_name in partial.schema.parameters
+            if param_name not in nil_params and partial.bindings.get(param_name) is None
+        ]
+        optional_params = [
+            param_name for param_name in nil_params
             if partial.bindings.get(param_name) is None
         ]
-        log_msg(f"Option {option_idx}: {partial.schema.qualified_name} - Missing: {missing_params}")
+        log_msg(f"Option {option_idx}: {partial.schema.qualified_name} - Required: {required_params}, Optional: {optional_params}")
         options.append({
             "index": option_idx,
             "schema_name": partial.schema.qualified_name,
-            "missing_params": missing_params,
+            "missing_params": required_params,
+            "optional_params": optional_params,
             "partial": partial,
         })
         option_idx += 1

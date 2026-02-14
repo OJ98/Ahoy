@@ -487,6 +487,12 @@ async def main():
             roles_str = ", ".join([f"{r}({p})" for p, r in assigned_roles_list])
             log_debug(f"Generic agent ready for multiple roles: {roles_str}. Waiting for protocol events...")
         
+        # Wait for other agents to start listening (startup synchronization)
+        # This prevents race conditions where ahoy sends messages before receivers are ready
+        log_debug("Waiting 2 seconds for other agents to start listening...")
+        await asyncio.sleep(2.0)
+        log_debug("Startup delay complete, begin processing protocol events")
+        
         # Start background event monitor task
         monitor_task = asyncio.create_task(_monitor_event_queue())
         
@@ -773,7 +779,8 @@ async def _get_llm_decision_handler():
         _update_termination_conditions_from_history()
         
         # Check if this message completes the role(s)
-        if hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
+        completion_via_sent = False
+        if instance is not None and hasattr(instance, 'schema') and hasattr(instance.schema, 'name'):
             msg_type = instance.schema.name
             
             if len(assigned_roles_list) == 1:
@@ -783,6 +790,7 @@ async def _get_llm_decision_handler():
                     # Before exiting, verify all termination conditions are also complete
                     if _all_termination_conditions_complete():
                         _handle_role_completion(instance)
+                        completion_via_sent = True
                     else:
                         log_debug(f"[COMPLETION] Protocol completion sent but termination conditions still pending")
             else:
@@ -791,15 +799,103 @@ async def _get_llm_decision_handler():
                     # Before exiting, verify all termination conditions are also complete
                     if _all_termination_conditions_complete():
                         _handle_role_completion(instance)
+                        completion_via_sent = True
                     else:
                         log_debug(f"[COMPLETION] Multi-role completion reached but termination conditions still pending")
+        
+        # If no completion via sent yet, check for received completion messages
+        # This is critical when instance is None (agent has nothing more to send)
+        if not completion_via_sent:
+            log_debug(f"[DEBUG] completion_via_sent is False, calling _check_for_received_completion_message()")
+            _check_for_received_completion_message()
+        else:
+            log_debug(f"[DEBUG] completion_via_sent is True, skipping received completion check")
         
         return instance
     
     return llm_decision
-
-
-
+def _check_for_received_completion_message():
+    """
+    Check if a received message completes any of the assigned roles.
+    
+    This is called after receiving messages to detect role completion based on
+    received messages (not just sent messages). For example, if a role completes
+    when it RECEIVES a "receipt" message, this function will detect that.
+    """
+    try:
+        from lib.state_manager import extract_social_state
+        
+        log_debug(f"[RECEIVED_COMPLETION] Checking for received completion messages...")
+        
+        # Get current message history
+        social_state = extract_social_state(adapter)
+        all_messages = social_state.get("all_messages", [])
+        
+        log_debug(f"[RECEIVED_COMPLETION] Found {len(all_messages)} messages in history")
+        
+        if not all_messages:
+            log_debug(f"[RECEIVED_COMPLETION] No messages in history")
+            return
+        
+        # Get our role name(s) to determine which messages we RECEIVED
+        our_role_names = set()
+        for protocol, role in assigned_roles_list:
+            our_role_names.add(role.lower() if hasattr(role, 'lower') else str(role).lower())
+        
+        # Check each assigned role to see if it completed via a RECEIVED message
+        for protocol, role in assigned_roles_list:
+            # Get the completion rule for this role
+            rule = protocol_completion_rules.get((protocol, role))
+            log_debug(f"[RECEIVED_COMPLETION] Checking {protocol}:{role}, rule={rule}")
+            if rule is None:
+                log_debug(f"[RECEIVED_COMPLETION]   No rule for {protocol}:{role}")
+                continue  # No rule for this role, skip
+            
+            # Unpack rule
+            if len(rule) >= 5:
+                msg_type, rule_direction, count, _, _ = rule[:5]
+            else:
+                msg_type, rule_direction, count = rule[:3]
+            
+            log_debug(f"[RECEIVED_COMPLETION]   Rule: msg_type={msg_type}, direction={rule_direction}, count={count}")
+            
+            # Only check if the rule is for RECEIVED messages
+            if rule_direction.lower() != "receive":
+                log_debug(f"[RECEIVED_COMPLETION]   Skipping (direction is {rule_direction}, not receive)")
+                continue
+            
+            # Count how many of this message type we RECEIVED
+            received_count = 0
+            for msg in all_messages:
+                msg_schema_name = msg.get("schema_name", "").lower()
+                msg_role = str(msg.get("sender", "")).lower()
+                
+                # Check if this is a message of the type we need
+                if msg_schema_name != msg_type.lower():
+                    continue
+                
+                # Check if we RECEIVED this message (sender is NOT us)
+                if msg_role not in our_role_names:
+                    received_count += 1
+                    log_debug(f"[RECEIVED_COMPLETION]   {protocol}:{role} received {msg_type} (from {msg.get('sender')}), count now {received_count}/{count}")
+                
+                # If we've received enough of this message type
+                if received_count >= count:
+                    log_debug(f"[COMPLETION] {protocol}:{role} completes via received message {msg_type} (count={count})")
+                    
+                    # Check termination conditions before completing
+                    if _all_termination_conditions_complete():
+                        log_debug(f"[COMPLETION] Termination conditions complete, handling role completion")
+                        _handle_role_completion(None)
+                        return  # Completion handled
+                    else:
+                        log_debug(f"[COMPLETION] Received completion message but termination conditions still pending")
+                    return
+            
+            log_debug(f"[RECEIVED_COMPLETION]   {protocol}:{role} received {received_count}/{count} {msg_type} messages")
+    
+    except Exception as e:
+        log_debug(f"[RECEIVED_COMPLETION] Warning checking received messages: {e}")
 
 
 def _update_termination_conditions_from_history():
@@ -1261,6 +1357,14 @@ if __name__ == "__main__":
         # Phase 3: Register LLM decision handler
         log_debug("Phase 3: Registering LLM decision handler")
         llm_decision_handler = loop.run_until_complete(_get_llm_decision_handler())
+        
+        # Wait for other agents to start listening before enabling the adapter
+        # This prevents race conditions where the InitEvent triggers decision handlers
+        # before other protocol participants are ready to receive messages
+        log_debug("Waiting 3 seconds for other agents to start and bind their ports...")
+        import time
+        time.sleep(3.0)
+        log_debug("Startup delay complete, registering decision handler and starting adapter")
         
         # Register handler and start adapter
         adapter.decision()(llm_decision_handler)

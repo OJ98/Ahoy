@@ -3,12 +3,18 @@
 CHIPS - Conversational Interface for Protocol and Input Setup
 An intelligent interface that converses with the user to infer protocol/role,
 then generates input.txt based on the conversation. Uses LLM for inference.
+
+Usage:
+    python chips.py              # Interactive mode with LLM inference
+    python chips.py --manual     # Manual protocol/role selection (no conversation)
+    python chips.py -m           # Short form of --manual
 """
 
 import asyncio
 import sys
 import tempfile
 import json
+import argparse
 from pathlib import Path
 from typing import Tuple, Optional, List
 
@@ -28,13 +34,14 @@ from lib.llm_client import AnthropicLLMClient
 class CHIPS:
     """Intelligent conversational interface for protocol and role selection."""
     
-    def __init__(self):
+    def __init__(self, manual_mode: bool = False):
         self.protocol: Optional[str] = None
         self.role: Optional[str] = None
         self.roles_list: List[Tuple[str, str]] = []  # List of (protocol, role) tuples
         self.conversation: str = ""
         self.llm_client = AnthropicLLMClient()
         self.protocols = get_all_protocols()
+        self.manual_mode = manual_mode
     
     def print_welcome(self):
         """Display welcome message."""
@@ -280,6 +287,63 @@ Repeat PROTOCOL/ROLE pairs only if multiple distinct roles are needed. Be concis
     
     async def run(self):
         """Run the CHIPS interface."""
+        # Manual mode: skip conversation and go directly to selection
+        if self.manual_mode:
+            await self._run_manual_mode()
+        else:
+            await self._run_conversational_mode()
+    
+    async def _run_manual_mode(self):
+        """Manual configuration mode - directly select protocol and roles."""
+        self.print_welcome()
+        
+        print(f"\n{'='*70}", flush=True)
+        print("MANUAL CONFIGURATION MODE", flush=True)
+        print(f"{'='*70}", flush=True)
+        print("\nSkipping conversation. Select protocol and role(s) directly.\n", flush=True)
+        
+        # Select initial protocol and role
+        protocol, role = self.show_protocol_options()
+        self.roles_list = [(protocol, role)]
+        self.protocol = protocol
+        self.role = role
+        
+        # Ask if user wants to add more roles
+        self.roles_list = await self._ask_for_additional_roles(self.roles_list)
+        
+        # Ask for scenario input (optional in manual mode)
+        scenario = self._gather_scenario_optional()
+        self.conversation = scenario if scenario else f"Execute {self.protocol} protocol as {self.role}."
+        
+        # Confirm selection
+        if not self._confirm_all_selections():
+            print("\nConfiguration rejected. Exiting.\n", flush=True)
+            sys.exit(1)
+        
+        # Write files
+        print(f"\n{'='*70}", flush=True)
+        print("Writing configuration files...", flush=True)
+        print(f"{'='*70}\n", flush=True)
+        
+        config_ok = self.write_config_file()
+        input_ok = self.write_input_file()
+        
+        if config_ok and input_ok:
+            print(f"\n{'='*70}", flush=True)
+            print("✅ Setup complete!", flush=True)
+            print(f"{'='*70}", flush=True)
+            roles_str = ", ".join([f"{p}:{r}" for p, r in self.roles_list])
+            print(f"\nConfiguration saved for: {roles_str}", flush=True)
+            print(f"  - Protocol/Role: {Path(tempfile.gettempdir()) / 'maf_chips_config.txt'}", flush=True)
+            print(f"  - Scenario: {PROJECT_ROOT / 'input.txt'}", flush=True)
+            print("\nYou can now run: ./start.ps1 (or ./start.sh on Unix)", flush=True)
+            print("to start ahoy and the other agents.\n", flush=True)
+        else:
+            print("\n❌ Setup failed. Some files could not be written.", flush=True)
+            sys.exit(1)
+    
+    async def _run_conversational_mode(self):
+        """Original conversational mode - infer protocol/role from user scenario."""
         self.print_welcome()
         
         # Gather scenario
@@ -338,6 +402,37 @@ Repeat PROTOCOL/ROLE pairs only if multiple distinct roles are needed. Be concis
             print("\n❌ Setup failed. Some files could not be written.", flush=True)
             sys.exit(1)
     
+    def _gather_scenario_optional(self) -> str:
+        """Optionally gather scenario description (for manual mode)."""
+        print(f"{'='*70}", flush=True)
+        print("Optional Scenario Description", flush=True)
+        print(f"{'='*70}", flush=True)
+        print("\nEnter a scenario description (optional, press Enter to skip):", flush=True)
+        print("(Enter multiple lines. Type 'END' on a new line to finish)\n", flush=True)
+        
+        lines = []
+        try:
+            while True:
+                line = input()
+                if line.strip() == "":
+                    # Empty line - if we have content, ask if done
+                    if lines:
+                        choice = input("Done? (yes/no): ").strip().lower()
+                        if choice in ('yes', 'y'):
+                            break
+                        else:
+                            continue
+                    else:
+                        # No content yet, skip scenario entirely
+                        break
+                if line.strip().upper() == "END":
+                    break
+                lines.append(line)
+        except KeyboardInterrupt:
+            pass
+        
+        return "\n".join(lines).strip()
+    
     async def _ask_for_additional_roles(self, roles_list: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
         """Ask user if they want to add more roles for multi-protocol support."""
         print(f"\n{'='*70}", flush=True)
@@ -382,5 +477,24 @@ Repeat PROTOCOL/ROLE pairs only if multiple distinct roles are needed. Be concis
 
 
 if __name__ == "__main__":
-    chips = CHIPS()
+    parser = argparse.ArgumentParser(
+        description="CHIPS - Conversational Interface for Protocol and Input Setup",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python chips.py              # Interactive mode with LLM inference
+  python chips.py --manual     # Manual protocol/role selection
+  python chips.py -m           # Short form of --manual
+        """
+    )
+    parser.add_argument(
+        "-m", "--manual",
+        action="store_true",
+        help="Skip conversation and directly configure protocol/role selection"
+    )
+    
+    args = parser.parse_args()
+    
+    chips = CHIPS(manual_mode=args.manual)
     asyncio.run(chips.run())
+

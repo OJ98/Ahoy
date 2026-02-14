@@ -205,10 +205,16 @@ def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: s
             
             CRITICAL PARAMETER RULES:
             1. Parameters marked [BOUND: ...] are ALREADY SET - do NOT provide them
-            2. Parameters marked 'FILL ONLY: [...]' are the ONLY ones you should provide
-            3. If you choose an option, provide values for ALL FILL ONLY parameters
-            4. Do not provide values for BOUND parameters - they will cause errors
-            5. Either provide all required FILL ONLY params, or choose null.
+            2. Parameters marked 'FILL ONLY: [...]' are REQUIRED - you must provide all of them
+            3. Do not provide values for BOUND parameters - they will cause errors
+            
+            NIL PARAMETERS (Optional Fields):
+            - Parameters marked OPTIONAL: [...] are nil parameters that you may omit
+            - You are NOT required to provide values for nil parameters
+            - If you don't provide a value for a nil parameter, it will be treated as not-set
+            - You may provide values for nil parameters if they are needed and you know what to use
+            - Example: A message might have FILL ONLY: [payment] | OPTIONAL: [delivery_type] - you must fill payment but may skip delivery_type
+            - Either provide all FILL ONLY parameters (and any OPTIONAL ones you choose), or return null
             
             AVAILABLE TOOLS:
             1. **save_state_to_memory** - Records decisions for later recall
@@ -451,7 +457,8 @@ def build_user_prompt(
     for opt in options:
         idx = opt.get('index', '?')
         schema = opt.get('schema_name', 'Unknown')
-        missing = opt.get('missing_params', [])
+        required = opt.get('missing_params', [])
+        optional = opt.get('optional_params', [])
         
         # Extract bound parameters for display
         partial = opt.get('partial')
@@ -463,7 +470,12 @@ def build_user_prompt(
                 if display_bindings:
                     bindings_str = f" [BOUND: {', '.join(display_bindings)}]"
         
-        lines.append(f"{idx}) {schema}{bindings_str} - FILL ONLY: {missing}")
+        # Format parameter display with required and optional separated
+        if optional:
+            param_str = f"FILL ONLY: {required} | OPTIONAL: {optional}"
+        else:
+            param_str = f"FILL ONLY: {required}"
+        lines.append(f"{idx}) {schema}{bindings_str} - {param_str}")
     
     lines.append("")
     

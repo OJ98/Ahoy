@@ -36,7 +36,9 @@ def extract_completion_rule_from_protocol(protocol_name: str, role_name: str) ->
         import json
         
         # Read BSPL protocol file
-        protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{protocol_name.lower()}.bspl"
+        # Convert camelCase to snake_case: FlexiblePurchase -> flexible_purchase
+        snake_case_name = ''.join(['_' + c.lower() if c.isupper() else c for c in protocol_name]).lstrip('_')
+        protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{snake_case_name}.bspl"
         
         if not protocol_file.exists():
             return None
@@ -163,7 +165,9 @@ async def extract_event_completion_rule(
         import json
         
         # Read BSPL protocol file
-        protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{protocol_name.lower()}.bspl"
+        # Convert camelCase to snake_case: FlexiblePurchase -> flexible_purchase
+        snake_case_name = ''.join(['_' + c.lower() if c.isupper() else c for c in protocol_name]).lstrip('_')
+        protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{snake_case_name}.bspl"
         
         if not protocol_file.exists():
             return None
@@ -274,7 +278,9 @@ Return JSON only:"""
         import json
         
         # Read BSPL protocol file
-        protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{protocol_name.lower()}.bspl"
+        # Convert camelCase to snake_case: FlexiblePurchase -> flexible_purchase
+        snake_case_name = ''.join(['_' + c.lower() if c.isupper() else c for c in protocol_name]).lstrip('_')
+        protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{snake_case_name}.bspl"
         
         if not protocol_file.exists():
             return None
@@ -391,7 +397,9 @@ def extract_request_response_from_protocol(protocol_name: str) -> Dict[str, str]
         import asyncio
         
         # Read the BSPL protocol file
-        protocol_file = Path(__file__).parent.parent / "protocols" / f"{protocol_name.lower()}.bspl"
+        # Convert camelCase to snake_case: FlexiblePurchase -> flexible_purchase
+        snake_case_name = ''.join(['_' + c.lower() if c.isupper() else c for c in protocol_name]).lstrip('_')
+        protocol_file = Path(__file__).parent.parent / "protocols" / f"{snake_case_name}.bspl"
         if not protocol_file.exists():
             return {}
         
