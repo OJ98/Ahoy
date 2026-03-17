@@ -8,11 +8,13 @@ FlexiblePurchase {
   FlexibleCustomer -> FlexibleMerchant: accept[in ID, in item, in price, out confirmation]
   
   FlexibleCustomer -> FlexibleMerchant: standard_delivery_request[in ID, in item, in confirmation, out standard_delivery]
-  FlexibleMerchant -> FlexibleCustomer: standard_delivery[in ID, in item, in standard_delivery]
+  FlexibleMerchant -> FlexibleCustomer: standard_delivery[in ID, in item, in standard_delivery, nil express_delivery]
   
   FlexibleCustomer -> FlexibleMerchant: express_delivery_request[in ID, in item, in confirmation, out express_delivery]
-  FlexibleMerchant -> FlexibleCustomer: express_delivery[in ID, in item, in express_delivery]
+  FlexibleMerchant -> FlexibleCustomer: express_delivery[in ID, in item, in express_delivery, nil standard_delivery]
   
-  FlexibleCustomer -> FlexibleMerchant: pay[in ID, in price, out payment]
+  FlexibleCustomer -> FlexibleMerchant: pay_express[in ID, in price, nil standard_delivery, in express_delivery, out payment]
+  FlexibleCustomer -> FlexibleMerchant: pay_standard[in ID, in price, in standard_delivery, nil express_delivery, out payment]
+  
   FlexibleMerchant -> FlexibleCustomer: receipt[in ID, in item, in payment, out done]
 }

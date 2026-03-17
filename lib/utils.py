@@ -137,102 +137,42 @@ def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: s
             else:
                 enhanced_prompt = f"You are a {agent_names_list[0]} agent.\n\nThe user has communicated the requirements to be as follows: {enhanced_prompt}. The following is an explanation of the environment in which you operate: \n\n"
 
-            # BSPL Protocol Explanation Strings
+            # BSPL Protocol Explanation Strings (optimized for efficiency and clarity)
             bspl_highlevel_explanation = """
-            You are participating in BSPL (Blindingly Simple Protocol Language) protocol enactments. 
-            BSPL defines multi-agent protocols where:
-            - Roles are named agents (e.g., Merchant, Buyer)
-            - Messages are directed communication between roles with parameters marked as `out` (sender provides) or `in` (requires prior binding from other messages)
-            - Parameters marked `key` identify protocol instances
+            BSPL defines multi-agent protocols where agents play roles and coordinate via information causality.
+
+            PARAMETER ADORNMENTS (three types):
+            1. **in** (Causal): Must already know from prior messages. Example: Seller sends Quote after RFQ.
+            2. **out** (Generation): You provide this binding only if it is not already known. One immutable binding per enactment.
+            3. **nil** (Negative): Must NOT know this binding. Used for mutually exclusive paths.
+
+            Key parameters identify protocol instances. Messages ordered by information flow, not procedure.
             """
-            
-            if is_multi_protocol:
-                bspl_highlevel_explanation += """
-            - You play MULTIPLE roles across different protocols simultaneously
-            - Each role has its own message flow and state
-            - You must carefully coordinate which role acts at each step
-            - Consider protocol dependencies and prioritize appropriately
-            """
-            else:
-                bspl_highlevel_explanation += """
-            - You play one role and must track received messages to determine which messages you can legally send next
-            - A message can only be sent when all its `in` parameters are bound by prior messages
-            - When multiple messages are enabled, choose based on domain reasoning and the protocol's intended flow"""
             
             enhanced_prompt = enhanced_prompt + bspl_highlevel_explanation
-            
-            # Add protocol-aware guidance
-            protocol_guidance = _generate_protocol_aware_guidance(agent_names_list)
-            if protocol_guidance:
-                enhanced_prompt = enhanced_prompt + protocol_guidance
  
             # Consolidated Option Selection & Parameter Guidance
             option_selection = """
-            EXTERNAL EVENTS AND INTEGRATION:
-            - When external events appear in your decision prompt (marked with === PENDING EXTERNAL EVENTS ===), these represent NEW real-world requests you must ACTIVELY HANDLE
-            - External events are NOT informational - they are MANDATORY tasks to be fulfilled using protocol messages
-            - CRITICAL: External events are IN ADDITION to existing protocol flow - do NOT ignore them or treat them as conflicts
-            - Each external event should trigger corresponding protocol messages (e.g., each "Buy X" event triggers an RFQ for that item)
-            - You may need to send MULTIPLE messages of the same type if multiple events request the same action
-            - Example: If your regular requirement is "buy pen" and you receive external event "buy bat", you should send RFQs for BOTH pen AND bat
-            - Each external event represents a separate business transaction - handle each one with appropriate protocol messages
-            - Do NOT treat an external event as conflicting with prior messages - they are parallel transactions
+            EXTERNAL EVENTS: Represent NEW tasks IN ADDITION to protocol flow. Handle each as separate transaction.
+
+            PARAMETER RULES:
+            - [in: ...] AUTO-PROVIDED from prior messages: do NOT provide
+            - [out: ...] REQUIRED: you must provide all
+            - [nil: ...] OPTIONAL: may omit
+            IDs auto-generated; do NOT create them.
+
+            MESSAGE SELECTION PREFERENCE:
+            1. Options with in parameters (ready immediately)
+            2. Options requiring out parameters (need your input)
+            3. null (no viable options)
+
+            PARALLEL MESSAGES: If protocol needs multiple message types from your role, send them in separate decisions.
+
+            TOOLS: save_state_to_memory(agent_name, key, value)
             
-            Your choice will directly determine what message gets SENT and what happens next:
-            - The BOUND parameters shown above (in [BOUND: ...]) are already set and will be used
-            - You only need to provide values for parameters marked in FILL ONLY
-            - Your selection will trigger protocol actions based on the message type and parameters
-            
-            CRITICAL: BOUND PARAMETERS ARE READY TO USE
-            - When you see a message option with [BOUND: orderID=xyz, ...], those parameters are ALREADY SET
-            - BOUND parameters do NOT mean the message is "blocked" or "already sent"
-            - BOUND parameters mean the system has AUTO-PROVIDED those values for you to use
-            - Do NOT skip or avoid options just because they have BOUND parameters
-            - BOUND parameters are HELPFUL - they reduce the number of values you need to fill in
-            - Example: "RequestWrapping [BOUND: orderID=123]" means you can use orderID=123 in your wrapping request
-            
-            IMPORTANT: When multiple message options are available, carefully consider which ones you need to send:
-            - Do NOT assume you only need to send one message type
-            - Some protocols require sending BOTH RequestLabel AND RequestWrapping for the same order (they are PARALLEL, not sequential)
-            - Parallel messages can be sent in separate decisions - you will see them again in the next decision cycle
-            - If the protocol needs both message A and message B to be sent by your role, you should send BOTH (in separate decisions)
-            - Only return null if NO viable messages are available right now
-            
-            PREFERENCE ORDER for message selection:
-            1. Options with BOUND parameters (these are ready to use immediately)
-            2. Options requiring all parameters (these still need your input)
-            3. null (only if absolutely no viable option exists)
-            
-            CRITICAL PARAMETER RULES:
-            1. Parameters marked [BOUND: ...] are ALREADY SET - do NOT provide them
-            2. Parameters marked 'FILL ONLY: [...]' are REQUIRED - you must provide all of them
-            3. Do not provide values for BOUND parameters - they will cause errors
-            
-            NIL PARAMETERS (Optional Fields):
-            - Parameters marked OPTIONAL: [...] are nil parameters that you may omit
-            - You are NOT required to provide values for nil parameters
-            - If you don't provide a value for a nil parameter, it will be treated as not-set
-            - You may provide values for nil parameters if they are needed and you know what to use
-            - Example: A message might have FILL ONLY: [payment] | OPTIONAL: [delivery_type] - you must fill payment but may skip delivery_type
-            - Either provide all FILL ONLY parameters (and any OPTIONAL ones you choose), or return null
-            
-            AVAILABLE TOOLS:
-            1. **save_state_to_memory** - Records decisions for later recall
-               Parameters: agent_name, key (state name), value (state content)
-            
-            ID MANAGEMENT:
-            - The system AUTOMATICALLY generates unique IDs for ID parameters (marked as 'key')
-            - You DO NOT need to generate IDs - they're created automatically
-            - Simply select the option you want, and required IDs will be generated
-            - Only provide IDs if explicitly required as 'FILL ONLY' parameters
-            
-            RESPONSE FORMAT:
-            - To choose: {"choice": 0, "params": {"field": "value"}, "tool_requests": []}
-            - To decline: {"choice": null, "params": {}, "tool_requests": []}
-            - For tools: include tool_requests array with {"tool": "name", "args": {...}}
-            
-            DECISION RULE: Always choose if you have viable parameters.
-            Return null only if NO viable option exists.
+            RESPONSE: {"choice": 0|null, "params": {...}, "tool_requests": [{"tool": "...", "args": {...}}]}
+
+            RULE: Choose if viable. Null only if no options.
             """
             enhanced_prompt = enhanced_prompt + option_selection
             return enhanced_prompt
@@ -468,13 +408,13 @@ def build_user_prompt(
             if bound_params:
                 display_bindings = [f"{key}={value}" for key, value in bound_params.items()]
                 if display_bindings:
-                    bindings_str = f" [BOUND: {', '.join(display_bindings)}]"
+                    bindings_str = f" [in: {', '.join(display_bindings)}]"
         
         # Format parameter display with required and optional separated
         if optional:
-            param_str = f"FILL ONLY: {required} | OPTIONAL: {optional}"
+            param_str = f"out: {required} | nil: {optional}"
         else:
-            param_str = f"FILL ONLY: {required}"
+            param_str = f"out: {required}"
         lines.append(f"{idx}) {schema}{bindings_str} - {param_str}")
     
     lines.append("")
@@ -601,9 +541,9 @@ def build_custom_event_user_prompt(
             if bound_params:
                 display_bindings = [f"{key}={value}" for key, value in bound_params.items()]
                 if display_bindings:
-                    bindings_str = f" [BOUND: {', '.join(display_bindings)}]"
+                    bindings_str = f" [in: {', '.join(display_bindings)}]"
         
-        lines.append(f"{idx}) {schema}{bindings_str} - FILL ONLY: {missing}")
+        lines.append(f"{idx}) {schema}{bindings_str} - {param_str}")
     
     lines.append("")
     

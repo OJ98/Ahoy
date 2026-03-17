@@ -34,7 +34,7 @@ def log_debug(msg):
 
 # Import the protocol
 import FlexiblePurchase
-from FlexiblePurchase import FlexibleMerchant, rfq, offer, accept, standard_delivery_request, standard_delivery, express_delivery_request, express_delivery, pay, receipt
+from FlexiblePurchase import FlexibleMerchant, rfq, offer, accept, standard_delivery_request, standard_delivery, express_delivery_request, express_delivery, pay_express, pay_standard, receipt
 
 log_debug("Initializing FlexibleMerchant adapter...")
 adapter = Adapter(FlexibleMerchant, systems, agents, color=COLORS[1])
@@ -145,9 +145,9 @@ async def handle_express_delivery_request(msg):
         log_debug(traceback.format_exc())
 
 
-@adapter.reaction(pay)
+@adapter.reaction(pay_standard)
 async def handle_pay(msg):
-    """React to payment by sending receipt."""
+    """React to standard payment by sending receipt."""
     global orders_completed
     
     ID = msg["ID"]
@@ -177,6 +177,40 @@ async def handle_pay(msg):
         log_debug(f"[PAYMENT] ✗ ERROR sending receipt: {e}")
         import traceback
         log_debug(traceback.format_exc())
+
+@adapter.reaction(pay_express)
+async def handle_pay_express(msg):
+    """React to express payment by sending receipt."""
+    global orders_completed
+    
+    ID = msg["ID"]
+    payment = msg["payment"]
+    log_debug(f"[PAYMENT] Received payment from FlexibleCustomer")
+    log_debug(f"[PAYMENT]   ID: {ID}, payment: ${payment}")
+    
+    try:
+        # Retrieve stored item from transaction tracker
+        item = transaction_tracker.get(ID, {}).get("item", "unknown")
+        
+        await adapter.send(
+            receipt(
+                ID=ID,
+                item=item,
+                payment=payment,
+                done="completed"
+            )
+        )
+        log_debug(f"[PAYMENT] ✓ Sent receipt (order #{orders_completed + 1})")
+        orders_completed += 1
+        
+        # Clean up transaction tracker
+        if ID in transaction_tracker:
+            del transaction_tracker[ID]
+    except Exception as e:
+        log_debug(f"[PAYMENT] ✗ ERROR sending receipt: {e}")
+        import traceback
+        log_debug(traceback.format_exc())
+
 
 
 if __name__ == "__main__":
