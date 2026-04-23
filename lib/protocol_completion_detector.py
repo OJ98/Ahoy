@@ -31,7 +31,7 @@ def extract_completion_rule_from_protocol(protocol_name: str, role_name: str) ->
         Tuple of (message_type, direction, count) or None if extraction fails
     """
     try:
-        from lib.llm_client import AnthropicLLMClient
+        from lib.llm_client import create_llm_client
         import asyncio
         import json
         
@@ -52,7 +52,7 @@ def extract_completion_rule_from_protocol(protocol_name: str, role_name: str) ->
             user_instructions = input_file.read_text()
         
         # Create LLM client
-        llm = AnthropicLLMClient()
+        llm = create_llm_client()
         
         prompt = (
             f"""Analyze this BSPL protocol and user instructions to determine the completion rule for the {role_name} role in the {protocol_name} protocol.
@@ -161,7 +161,7 @@ async def extract_event_completion_rule(
         Tuple of (message_type, direction, count) or None if extraction fails
     """
     try:
-        from lib.llm_client import AnthropicLLMClient
+        from lib.llm_client import create_llm_client
         import json
         
         # Read BSPL protocol file
@@ -175,7 +175,7 @@ async def extract_event_completion_rule(
         protocol_spec = protocol_file.read_text()
         
         # Create LLM client
-        llm = AnthropicLLMClient()
+        llm = create_llm_client()
         
         # Format metadata for readability
         metadata_str = "\n".join([f"  - {k}: {v}" for k, v in event_metadata.items()])
@@ -255,128 +255,6 @@ Return JSON only:"""
         return None
     except Exception:
         return None
-    """
-    Extract completion rule for a role using LLM analysis of BSPL protocol.
-    
-    Asks the LLM: "What message type and count indicates completion for this role?"
-    Returns: (message_type, "send" or "receive", count)
-    
-    Example:
-        - (Packed, "receive", 4) = Role completes when 4 Packed messages are received
-        - (RequestWrapping, "send", 4) = Role completes when 4 RequestWrapping messages are sent
-    
-    Args:
-        protocol_name: Name of protocol to analyze
-        role_name: Name of role within the protocol
-    
-    Returns:
-        Tuple of (message_type, direction, count) or None if extraction fails
-    """
-    try:
-        from lib.llm_client import AnthropicLLMClient
-        import asyncio
-        import json
-        
-        # Read BSPL protocol file
-        # Convert camelCase to snake_case: FlexiblePurchase -> flexible_purchase
-        snake_case_name = ''.join(['_' + c.lower() if c.isupper() else c for c in protocol_name]).lstrip('_')
-        protocol_file = Path(__file__).resolve().parent.parent / "protocols" / f"{snake_case_name}.bspl"
-        
-        if not protocol_file.exists():
-            return None
-        
-        protocol_spec = protocol_file.read_text()
-        
-        # Try to read user input to understand item count
-        input_file = Path(__file__).resolve().parent.parent / "input.txt"
-        user_instructions = ""
-        if input_file.exists():
-            user_instructions = input_file.read_text()
-        
-        # Create LLM client
-        llm = AnthropicLLMClient()
-        
-        prompt = (
-            f"""Analyze this BSPL protocol and user instructions to determine the completion rule for the {role_name} role in the {protocol_name} protocol.
-
-USER REQUIREMENTS:
-```
-{user_instructions}
-```
-
-BSPL PROTOCOL:
-```
-{protocol_spec}
-```
-
-COMPLETION RULE FORMAT:
-Return a JSON with:
-- "protocol": The protocol name (should be "{protocol_name}")
-- "role": The role name (should be "{role_name}")
-- "message_type": The message that indicates role completion (e.g., "Packed", "Labeled", "RequestWrapping")
-- "direction": Either "send" (role sends the message) or "receive" (role receives the message)
-- "count": How many of that message type indicates completion for this role
-
-ANALYSIS PROCESS:
-1. Count how many items/orders are specified in the user requirements
-2. Determine which message type marks completion for {role_name}
-3. The count should equal the number of items/orders to process
-
-EXAMPLE RESPONSES:
-{{"protocol": "Logistics", "role": "Merchant", "message_type": "Packed", "direction": "receive", "count": 4}}  // Merchant completes after receiving 4 Packed messages
-{{"protocol": "Purchase", "role": "Buyer", "message_type": "completed", "direction": "send", "count": 3}}  // Buyer completes after sending 3 completed messages
-
-Based on the user requirements and protocol structure, return ONLY the JSON completion rule (no explanation):"""
-        )
-        
-        # Run async complete method
-        response = asyncio.run(llm.complete(prompt=prompt))
-        
-        # Parse the JSON response
-        import json
-        import re
-        
-        response_stripped = response.strip()
-        
-        # Extract JSON
-        if '```json' in response_stripped:
-            json_part = response_stripped.split('```json')[1].split('```')[0]
-        elif '```' in response_stripped:
-            json_part = response_stripped.split('```')[1].split('```')[0]
-        else:
-            json_part = response_stripped
-        
-        # Find JSON object
-        json_start = json_part.find('{')
-        json_end = json_part.rfind('}')
-        
-        if json_start != -1 and json_end != -1 and json_start < json_end:
-            json_str = json_part[json_start:json_end+1]
-            try:
-                rule = json.loads(json_str)
-                protocol = rule.get('protocol', protocol_name)
-                role = rule.get('role', role_name)
-                message_type = rule.get('message_type')
-                direction = rule.get('direction')
-                count = rule.get('count')
-                
-                # Ensure count is an integer
-                if isinstance(count, str):
-                    try:
-                        count = int(count)
-                    except (ValueError, TypeError):
-                        return None
-                
-                if message_type and direction in ['send', 'receive'] and isinstance(count, int) and count > 0:
-                    return (message_type, direction, count, protocol, role)
-                else:
-                    return None
-            except json.JSONDecodeError:
-                return None
-        
-        return None
-    except Exception:
-        return None
 
 
 def extract_request_response_from_protocol(protocol_name: str) -> Dict[str, str]:
@@ -406,9 +284,9 @@ def extract_request_response_from_protocol(protocol_name: str) -> Dict[str, str]
         protocol_spec = protocol_file.read_text()
         
         # Use LLM to analyze the protocol
-        from lib.llm_client import AnthropicLLMClient
+        from lib.llm_client import create_llm_client
         
-        llm = AnthropicLLMClient()
+        llm = create_llm_client()
         
         prompt = (
             f"""You are a protocol analyzer. Analyze this BSPL protocol and create a JSON mapping.

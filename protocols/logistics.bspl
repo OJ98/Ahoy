@@ -3,11 +3,18 @@ Logistics {
   parameters out orderID key, out itemID key, out item, out status
   private address, label, wrapping
 
+  // Merchant initiates: requests labeling for an order (provides unique order ID and delivery address)
   Merchant -> Labeler: RequestLabel[out orderID key, out address]
+  
+  // Merchant initiates: requests wrapping for an item (provides order context, wrapper generates unique item ID)
   Merchant -> Wrapper: RequestWrapping[in orderID key, out itemID key, out item]
 
+  // Wrapper completes: item wrapped and ready (provides wrapping material used)
   Wrapper -> Packer: Wrapped[in orderID key, in itemID key, in item, out wrapping]
+  
+  // Labeler completes: label created and ready (provides label for the order)
   Labeler -> Packer: Labeled[in orderID key, in address, out label]
 
+  // Packer completes: all items assembled and packed (provides final status of packing)
   Packer -> Merchant: Packed[in orderID key, in itemID key, in item, in wrapping, in label, out status]
 }

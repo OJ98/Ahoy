@@ -2,3 +2,4 @@ Purchase:Facilitates buyer-seller-shipper coordination for product transactions 
 CreditPurchase:Same as Purchase, but adds a 5% surcharge for credit card transactions.
 Logistics:Manages merchant-packer-labeler-wrapper workflow for order processing and fulfillment
 FlexiblePurchase:A two-party purchase protocol that supports multiple delivery options (standard and express) allowing agents to choose flexibility in service level.
+NetBill:A two-party e-commerce protocol between customer and merchant with document-based verification. Customer requests quotes, accepts offers, submits payment; Merchant provides quotes, ships goods, and issues receipt.

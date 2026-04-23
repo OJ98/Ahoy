@@ -28,7 +28,7 @@ from lib.protocol_discovery import (
     get_protocol_summary_for_llm,
     validate_protocol_and_role,
 )
-from lib.llm_client import AnthropicLLMClient
+from lib.llm_client import create_llm_client
 
 
 class CHIPS:
@@ -39,7 +39,7 @@ class CHIPS:
         self.role: Optional[str] = None
         self.roles_list: List[Tuple[str, str]] = []  # List of (protocol, role) tuples
         self.conversation: str = ""
-        self.llm_client = AnthropicLLMClient()
+        self.llm_client = create_llm_client()
         self.protocols = get_all_protocols()
         self.manual_mode = manual_mode
     

@@ -8,6 +8,8 @@ and tool calling for the multi-agent protocol system.
 from .llm_client import (
     LLMClient,
     AnthropicLLMClient,
+    OpenRouterLLMClient,
+    create_llm_client,
     choose_and_bind,
     call_llm_with_timeout,
     parse_llm_json_reply,
@@ -75,6 +77,8 @@ __all__ = [
     # LLM client
     "LLMClient",
     "AnthropicLLMClient",
+    "OpenRouterLLMClient",
+    "create_llm_client",
     "choose_and_bind",
     "call_llm_with_timeout",
     "parse_llm_json_reply",

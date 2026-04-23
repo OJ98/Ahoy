@@ -8,6 +8,7 @@ PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "purchase.bspl"
 LOGISTICS_PROTOCOL_PATH = BASE_DIR / "protocols" / "logistics.bspl"
 CREDIT_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "credit_purchase.bspl"
 FLEXIBLE_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "flexible_purchase.bspl"
+NETBILL_PROTOCOL_PATH = BASE_DIR / "protocols" / "netbill.bspl"
 
 # Load the Purchase protocol
 purchase_spec = bspl.load_file(str(PURCHASE_PROTOCOL_PATH))
@@ -37,6 +38,13 @@ flexible_purchase_protocol = flexible_purchase_spec.protocols.get("FlexiblePurch
 flexible_purchase_spec.export("FlexiblePurchase")
 from FlexiblePurchase import FlexibleCustomer, FlexibleMerchant
 
+# Load the NetBill protocol
+netbill_spec = bspl.load_file(str(NETBILL_PROTOCOL_PATH))
+netbill_protocol = netbill_spec.protocols.get("NetBill")
+# Export a module named 'NetBill' for convenient imports
+netbill_spec.export("NetBill")
+from NetBill import Customer, Merchant as NetBillMerchant
+
 # MULTI-ROLE SUPPORT: Agent identities (strings) instead of role objects
 # Each agent can have multiple addresses to support playing multiple roles simultaneously
 # Format: agent_name -> list of (host, port) tuples
@@ -53,6 +61,8 @@ agents = {
     "CreditShipper": [("127.0.0.1", 8010)],
     "FlexibleCustomer": [("127.0.0.1", 8011)],
     "FlexibleMerchant": [("127.0.0.1", 8012)],
+    "Customer": [("127.0.0.1", 8013)],
+    "NetBillMerchant": [("127.0.0.1", 8014)],
     # Generic LLM agent for multiprotocol testing (ahoy.py uses this)
     # Running on port 8000 for simplified configuration
     "ahoy": [("127.0.0.1", 8000)],
@@ -80,6 +90,8 @@ agents[FlexibleCustomer] = agents["FlexibleCustomer"]
 agents[FlexibleMerchant] = agents["FlexibleMerchant"]
 agents[CreditSeller] = agents["CreditSeller"]
 agents[CreditShipper] = agents["CreditShipper"]
+agents[Customer] = agents["Customer"]
+agents[NetBillMerchant] = agents["NetBillMerchant"]
 
 # Special agent registry class to handle both string and role object keys
 class AgentRegistry(dict):
@@ -165,6 +177,14 @@ systems = {
             flexible_purchase_protocol.roles["FlexibleMerchant"]: "FlexibleMerchant",
         },
         "protocol": flexible_purchase_protocol,
+    },
+    "NetBill": {
+        # Map Role objects (from the parsed protocol) to agent identities (strings)
+        "roles": {
+            netbill_protocol.roles["Customer"]: "Customer",
+            netbill_protocol.roles["Merchant"]: "NetBillMerchant",
+        },
+        "protocol": netbill_protocol,
     }
 }
 

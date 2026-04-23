@@ -3,14 +3,24 @@ CreditPurchase {
   parameters out ID key, out item, out price, out outcome
   private address, resp, shipped, satisfaction
 
+  // Credit buyer initiates: requests a quote for an item (credit purchase variant)
   CreditBuyer → CreditSeller: rfq[out ID,out item]
+  
+  // Seller responds: provides price for the requested item
   CreditSeller → CreditBuyer: quote[in ID, in item, out price]
 
+  // Credit buyer accepts: provides delivery address and response (credit terms may apply)
   CreditBuyer → CreditSeller: accept[in ID, in item, in price, out address, out resp]
+  
+  // Credit buyer rejects: provides outcome and response (mutually exclusive with accept)
   CreditBuyer → CreditSeller: reject[in ID, in item, in price, out outcome, out resp]
 
+  // Seller ships: notifies shipper to process delivery
   CreditSeller → CreditShipper: ship[in ID, in item, in address, out shipped]
+  
+  // Shipper delivers: confirms delivery with outcome
   CreditShipper → CreditBuyer: deliver[in ID, in item, in address, out outcome]
 
+  // Credit buyer completes: sends satisfaction feedback
   CreditBuyer → CreditSeller: completed[in ID, in item, in price, out satisfaction]
 }

@@ -3,18 +3,33 @@ FlexiblePurchase {
   parameters out ID key, out item, out price, out done
   private confirmation, payment, standard_delivery, express_delivery
   
+  // Customer initiates: requests a quote for an item
   FlexibleCustomer -> FlexibleMerchant: rfq[out ID, out item]
+  
+  // Merchant responds: provides price for the item
   FlexibleMerchant -> FlexibleCustomer: offer[in ID, in item, out price]
+  
+  // Customer accepts: confirms the purchase
   FlexibleCustomer -> FlexibleMerchant: accept[in ID, in item, in price, out confirmation]
   
+  // Customer chooses standard delivery: requests standard shipping
   FlexibleCustomer -> FlexibleMerchant: standard_delivery_request[in ID, in item, in confirmation, out standard_delivery]
+  
+  // Merchant confirms standard delivery: sends item via standard shipping (mutually exclusive with express)
   FlexibleMerchant -> FlexibleCustomer: standard_delivery[in ID, in item, in standard_delivery, nil express_delivery]
   
+  // Customer chooses express delivery: requests expedited shipping
   FlexibleCustomer -> FlexibleMerchant: express_delivery_request[in ID, in item, in confirmation, out express_delivery]
+  
+  // Merchant confirms express delivery: sends item via express shipping (mutually exclusive with standard)
   FlexibleMerchant -> FlexibleCustomer: express_delivery[in ID, in item, in express_delivery, nil standard_delivery]
   
+  // Customer pays for express: payment for express delivery option (only viable if express_delivery is bound)
   FlexibleCustomer -> FlexibleMerchant: pay_express[in ID, in price, nil standard_delivery, in express_delivery, out payment]
+  
+  // Customer pays for standard: payment for standard delivery option (only viable if standard_delivery is bound)
   FlexibleCustomer -> FlexibleMerchant: pay_standard[in ID, in price, in standard_delivery, nil express_delivery, out payment]
   
+  // Merchant sends receipt: transaction complete with receipt
   FlexibleMerchant -> FlexibleCustomer: receipt[in ID, in item, in payment, out done]
 }

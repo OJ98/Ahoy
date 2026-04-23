@@ -10,6 +10,7 @@ import os
 import time
 from typing import Any, Dict, Optional, Tuple, List, TYPE_CHECKING
 import anthropic
+import requests
 import uuid as _uuid
 from datetime import datetime as _datetime
 
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
 
 MODEL_ID = "claude-haiku-4-5-20251001"
+OPENROUTER_MODEL_ID = "anthropic/claude-3.5-haiku"  # Default OpenRouter model
 
 # ============================================================================
 # LLM CALL TRACKING
@@ -163,6 +165,70 @@ class AnthropicLLMClient(LLMClient):
         return response_text
 
 
+class OpenRouterLLMClient(LLMClient):
+    """OpenRouter API client for various models including Claude."""
+
+    def __init__(self, api_key: Optional[str] = None, model: str = OPENROUTER_MODEL_ID):
+        """
+        Initialize the OpenRouter LLM client.
+
+        Args:
+            api_key: API key (defaults to OPENROUTER_API_KEY environment variable)
+            model: Model ID to use (defaults to anthropic/claude-3.5-haiku)
+
+        Raises:
+            ValueError: If API key is not provided and not in environment
+        """
+        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        if not self.api_key:
+            raise ValueError("OPENROUTER_API_KEY environment variable not set")
+        self.model = model
+        self.api_url = "https://openrouter.ai/api/v1/chat/completions"
+
+    async def complete(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 200,
+        system_prompt: Optional[str] = None
+    ) -> str:
+        """Send prompt to OpenRouter API asynchronously."""
+        loop = asyncio.get_event_loop()
+
+        # Build API request payload
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "model": self.model,
+            "max_tokens": max_tokens,
+            "messages": messages,
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        # Run blocking API call in executor
+        def _make_request():
+            response = requests.post(self.api_url, json=payload, headers=headers)
+            response.raise_for_status()
+            return response.json()
+
+        result = await loop.run_in_executor(None, _make_request)
+        response_text = result["choices"][0]["message"]["content"]
+        
+        # Track the LLM call
+        tracker = get_llm_tracker()
+        if tracker:
+            tracker.increment_call()
+        
+        return response_text
+
+
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
@@ -295,6 +361,48 @@ def parse_llm_json_reply(text: str) -> Optional[Dict[str, Any]]:
     
     # If we get here, no valid JSON was found
     return None
+
+
+def create_llm_client(
+    api_key: Optional[str] = None,
+    model: Optional[str] = None,
+    provider: Optional[str] = None
+) -> LLMClient:
+    """
+    Factory function to create the appropriate LLM client.
+    
+    Configuration via environment variables (in order of precedence):
+    - provider: 'openrouter' or 'anthropic' (defaults to 'anthropic')
+    - OPENROUTER_API_KEY or ANTHROPIC_API_KEY
+    - Model defaults: claude-3.5-haiku for OpenRouter, claude-haiku-4-5-20251001 for Anthropic
+    
+    Args:
+        api_key: Optional explicit API key (overrides environment variable)
+        model: Optional explicit model ID (overrides defaults)
+        provider: Optional explicit provider ('anthropic' or 'openrouter')
+    
+    Returns:
+        LLMClient instance (AnthropicLLMClient or OpenRouterLLMClient)
+    
+    Raises:
+        ValueError: If required API key is not provided
+    """
+    # Determine provider from environment or parameter
+    if provider is None:
+        provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+    
+    if provider == "openrouter":
+        # Use OpenRouter client
+        openrouter_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        openrouter_model = model or os.getenv("OPENROUTER_MODEL", OPENROUTER_MODEL_ID)
+        return OpenRouterLLMClient(api_key=openrouter_key, model=openrouter_model)
+    elif provider == "anthropic":
+        # Use Anthropic client
+        anthropic_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        anthropic_model = model or os.getenv("ANTHROPIC_MODEL", MODEL_ID)
+        return AnthropicLLMClient(api_key=anthropic_key, model=anthropic_model)
+    else:
+        raise ValueError(f"Unknown LLM provider: {provider}. Use 'anthropic' or 'openrouter'")
 
 
 async def choose_option_from_llm(

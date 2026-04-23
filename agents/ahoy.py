@@ -23,7 +23,7 @@ import bspl.adapter.receiver as _recv
 
 # Import the helper modules
 from lib import (
-    AnthropicLLMClient,
+    create_llm_client,
     choose_and_bind,
     UserInterface,
     setup_logging,
@@ -81,8 +81,8 @@ adapter_logger.propagate = False
 # Instantiate the user interface
 ui = UserInterface()
 
-# Instantiate the LLM client
-llm_client = AnthropicLLMClient()
+# Instantiate the LLM client (uses LLM_PROVIDER env var, defaults to 'anthropic')
+llm_client = create_llm_client()
 
 # Global counters for transaction statistics
 transactions = 0

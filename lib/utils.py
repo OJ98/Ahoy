@@ -75,6 +75,45 @@ def _generate_protocol_aware_guidance(agent_names: List[str]) -> str:
 
 
 # ============================================================================
+# PROTOCOL DEFINITIONS: Include BSPL files in system prompt
+# ============================================================================
+
+def _include_protocol_definitions() -> str:
+    """
+    Load all BSPL protocol definitions from the protocols folder.
+    
+    Returns:
+        Formatted string with all protocol definitions for inclusion in system prompt
+    """
+    from pathlib import Path
+    
+    protocols_dir = Path(__file__).resolve().parent.parent / "protocols"
+    
+    protocol_section = "\n\n" + "=" * 70 + "\n"
+    protocol_section += "PROTOCOL DEFINITIONS (BSPL specs with inline message explanations):\n"
+    protocol_section += "=" * 70 + "\n\n"
+    
+    bspl_files = sorted(protocols_dir.glob("*.bspl"))
+    
+    if not bspl_files:
+        return protocol_section + "(No BSPL protocol files found)\n"
+    
+    for bspl_file in bspl_files:
+        try:
+            with open(bspl_file, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                protocol_name = bspl_file.stem  # filename without extension
+                protocol_section += f"\n--- {protocol_name.upper()} PROTOCOL ---\n\n"
+                protocol_section += content + "\n"
+        except Exception as e:
+            # Gracefully skip files that can't be read
+            protocol_section += f"\n(Error reading {bspl_file.name}: {e})\n"
+    
+    protocol_section += "\n" + "=" * 70 + "\n"
+    return protocol_section
+
+
+# ============================================================================
 # SYSTEM PROMPT BUILDING
 # ============================================================================
 
@@ -126,34 +165,39 @@ def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: s
                 pass
         
         with open(requirements_file, 'r', encoding='utf-8') as f:
-            enhanced_prompt = f.read()
-            if not enhanced_prompt.strip():
+            user_goal = f.read()
+            if not user_goal.strip():
                 raise ValueError(f"Requirements file '{requirements_file}' is empty")
             
             # Build agent introduction
             if is_multi_protocol:
                 agents_str = ", ".join(agent_names_list)
-                enhanced_prompt = f"You are enacting MULTIPLE roles: {agents_str}.\n\nThe user has communicated the requirements to be as follows: {enhanced_prompt}. The following is an explanation of the environment in which you operate: \n\n"
+                system_prompt = f"You are enacting MULTIPLE roles: {agents_str}.\n\n"
             else:
-                enhanced_prompt = f"You are a {agent_names_list[0]} agent.\n\nThe user has communicated the requirements to be as follows: {enhanced_prompt}. The following is an explanation of the environment in which you operate: \n\n"
+                system_prompt = f"You are a {agent_names_list[0]} agent.\n\n"
+            
+            # Connect user goal to protocol interaction
+            system_prompt += f"Your user wants you to fulfill the goal described in input.txt contents:\n{user_goal}\n\n"
+            system_prompt += "To accomplish this goal, you may need to interact with other agents on the basis of interaction protocols.\n\n"
+            system_prompt += "The following is an explanation of the environment in which you operate:\n\n"
 
             # BSPL Protocol Explanation Strings (optimized for efficiency and clarity)
             bspl_highlevel_explanation = """
-            BSPL defines multi-agent protocols where agents play roles and coordinate via information causality.
+                BSPL defines multiagent protocols where agents play roles and coordinate via information causality.
 
-            PARAMETER ADORNMENTS (three types):
-            1. **in** (Causal): Must already know from prior messages. Example: Seller sends Quote after RFQ.
-            2. **out** (Generation): You provide this binding only if it is not already known. One immutable binding per enactment.
-            3. **nil** (Negative): Must NOT know this binding. Used for mutually exclusive paths.
+                PARAMETER ADORNMENTS (three types):
+                1. **in** (Causal): Must already know from prior messages. Information provided from previous messages in the protocol.
+                2. **out** (Generation): You generate this binding; it appears once per enactment, creating mutual exclusion. Your role generates unique values for protocol instances.
+                3. **nil** (Negative): Must NOT know this binding. Used for mutually exclusive paths where an agent cannot act until certain information remains unknown.
 
-            Key parameters identify protocol instances. Messages ordered by information flow, not procedure.
+                Key parameters identify protocol instances. Messages are ordered by information flow according to causal dependencies.
             """
             
-            enhanced_prompt = enhanced_prompt + bspl_highlevel_explanation
+            system_prompt = system_prompt + bspl_highlevel_explanation
  
             # Consolidated Option Selection & Parameter Guidance
             option_selection = """
-            EXTERNAL EVENTS: Represent NEW tasks IN ADDITION to protocol flow. Handle each as separate transaction.
+            EXTERNAL EVENTS: External events represent new tasks that occur during protocol enactment. Each external event is treated as a separate transaction and may trigger new message sequences according to the protocol.
 
             PARAMETER RULES:
             - [in: ...] AUTO-PROVIDED from prior messages: do NOT provide
@@ -161,21 +205,18 @@ def build_system_prompt(agent_names: Union[str, List[str]], requirements_file: s
             - [nil: ...] OPTIONAL: may omit
             IDs auto-generated; do NOT create them.
 
-            MESSAGE SELECTION PREFERENCE:
-            1. Options with in parameters (ready immediately)
-            2. Options requiring out parameters (need your input)
-            3. null (no viable options)
-
-            PARALLEL MESSAGES: If protocol needs multiple message types from your role, send them in separate decisions.
-
             TOOLS: save_state_to_memory(agent_name, key, value)
             
             RESPONSE: {"choice": 0|null, "params": {...}, "tool_requests": [{"tool": "...", "args": {...}}]}
 
             RULE: Choose if viable. Null only if no options.
             """
-            enhanced_prompt = enhanced_prompt + option_selection
-            return enhanced_prompt
+            system_prompt = system_prompt + option_selection
+            
+            # Include all BSPL protocol definitions from the protocols folder
+            system_prompt += _include_protocol_definitions()
+            
+            return system_prompt
     except FileNotFoundError:
         raise FileNotFoundError(
             f"System prompt file '{requirements_file}' not found. "
