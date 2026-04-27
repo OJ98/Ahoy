@@ -278,6 +278,46 @@ summary = get_protocol_summary_for_llm()
 validate_protocol_and_role("Purchase", "Buyer")  # Raises if invalid
 ```
 
+### `event_injector.py` - External Event Injection
+
+Interface for external systems (inventory management, market data feeds) to inject events into running agents without modifying agent code.
+
+**Usage**:
+```python
+from lib.event_injector import post_event_to_agent
+
+# Inject an event
+post_event_to_agent(
+    event_type="user_defined",
+    message="Purchase request: Buy a widget",
+    priority="high",
+    metadata={"item": "widget", "delivery_address": "...", "budget": 99.99},
+    protocol_name="Purchase",
+    role="Buyer"
+)
+```
+
+### `termination_condition_manager.py` - Protocol Termination Tracking
+
+Generates and tracks termination conditions for protocol transactions. Monitors when protocol requirements are satisfied:
+
+**Capabilities**:
+- Tracks event metadata and user requirements
+- Specifies required protocol messages for completion
+- Monitors progress toward completion
+- Generates termination criteria based on protocol completion rules
+
+```python
+from lib.termination_condition_manager import (
+    get_termination_condition_file,
+    get_termination_history_file
+)
+
+# Access termination tracking files
+condition_file = get_termination_condition_file()
+history_file = get_termination_history_file()
+```
+
 ### `agent_notes.py` - Persistent Agent Memory
 
 Lightweight key-value store for agents to save state across decisions. Notes reset each run:
@@ -839,25 +879,48 @@ metrics = dispatcher.get_metrics()
 - **Opt-in feature**: Only agents that call `create_event_dispatcher_for_role()` enable it
 - **Non-breaking**: All existing imports and code patterns work unchanged
 
-### Demo 6: Full Working Example
+## Ablation Study
 
-See `demo/demo6/` for a complete implementation:
-- Buyer agent with concurrent custom events
-- Inventory alerts at scheduled times
-- Shared LLM decision endpoint with proper synchronization
-- Metrics collection and analysis
+The `ablation/` directory contains a comprehensive study isolating the value of two information sources in the AHOY system:
+
+### Baselines
+
+1. **Baseline 0 - Full AHOY** (`baseline0_full/`)
+   - Full system with BSPL message comments and enabled set filtering
+   - Reference implementation
+
+2. **Baseline 1 - No Comments** (`baseline1_no_comments/`)
+   - Same as Full AHOY, but BSPL comments stripped
+   - Tests whether message comments improve decision quality
+
+3. **Baseline 2 - No Filtering** (`baseline2_no_filtering/`)
+   - LLM sees all possible messages (no enabled set filtering)
+   - Uses exception-driven learning when invalid messages are chosen
+   - Tests whether constraint filtering is necessary
+
+### Measurement
+
+Each baseline collects:
+- **Accuracy**: % of valid (protocol-compliant) message choices
+- **Exception Count**: Constraint violations (mainly for Baseline 2)
+- **Transaction Success**: Completion of all required protocol steps
+- **Latency**: Decision time per message
+- **Recovery Pattern**: Correction after exceptions
+
+### Running the Ablation Study
 
 ```bash
-cd demo/demo6
-./run_demo6.ps1  # Windows
-./run_demo6.sh   # Unix
+# Run all baselines on multiple protocols (3 runs each)
+python ablation/run_ablation.py --protocols Purchase Logistics --runs 3
+
+# Run specific baseline only
+python ablation/run_ablation.py --baselines baseline1_no_comments --protocols Purchase --runs 1
+
+# Analyze results
+python ablation/analyze_results.py
 ```
 
-Demonstrates:
-- ✓ Custom events fire concurrently with adapter reactions
-- ✓ Both event sources use same LLM decision logic
-- ✓ Constraint preservation under concurrent load
-- ✓ Lock safety and deadlock detection
+Results are stored in `logs/ablation/` with per-baseline metrics and transaction logs.
 
 ## Known Limitations
 
