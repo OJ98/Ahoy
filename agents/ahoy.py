@@ -35,6 +35,7 @@ from lib import (
     get_termination_condition_summary,
     reset_termination_conditions,
 )
+from lib.utils import get_log_dir
 from lib.llm_client import initialize_llm_tracker, get_llm_tracker
 from lib.agent_notes import get_agent_notes, reset_agent_notes
 from lib.protocol_completion_detector import (
@@ -46,13 +47,13 @@ from lib.custom_event_handler import EventQueue
 # Set global timeout
 TIMEOUT = 30.0
 
-LOG_DIR = PROJECT_ROOT / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
-
 # Initialize logging system
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-log_filename = str(LOG_DIR / f"generic_agent_debug_{timestamp}.log")
+log_filename_template = f"generic_agent_debug_{timestamp}.log"
+LOG_DIR = get_log_dir(PROJECT_ROOT, log_filename_template)
+STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
+
+log_filename = str(LOG_DIR / log_filename_template)
 
 debug_logger, console_logger = setup_logging(log_filename, mode='a')
 
@@ -516,7 +517,7 @@ async def main():
         raise
 
 
-async def _get_llm_decision_handler():
+async def _get_llm_decision_handler(input_tokens, output_tokens):
     """
     Return the LLM decision handler as an async function.
     This is called after adapter is created so we can decorate it.
@@ -654,7 +655,8 @@ async def _get_llm_decision_handler():
         
         # Display status after LLM call
         _update_llm_status()
-        
+    
+
         # Check threshold after making LLM call
         should_continue, reason = _check_threshold()
         if not should_continue:
@@ -811,7 +813,7 @@ async def _get_llm_decision_handler():
         else:
             log_debug(f"[DEBUG] completion_via_sent is True, skipping received completion check")
         
-        return instance
+        return instance,
     
     return llm_decision
 def _check_for_received_completion_message():
@@ -1016,6 +1018,16 @@ def _cleanup_logging():
         handler.close()
 
 
+def _log_final_token_counts():
+    """Log final token usage before shutdown."""
+    tracker = get_llm_tracker()
+    if tracker:
+        log_debug(
+            f"Final LLM token usage: input_tokens={tracker.input_tokens}, "
+            f"output_tokens={tracker.output_tokens}"
+        )
+
+
 async def _initialize_protocol_and_role():
     """
     Read protocol and role(s) from CHIPS config file.
@@ -1055,9 +1067,11 @@ async def _initialize_protocol_and_role():
             return None, []
         
         # Read config and remove BOM if present (UTF-8 with BOM writes '\ufeff' as first char)
-        config_content = config_file.read_text().strip()
+        # IMPORTANT: Read with encoding detection to handle BOM properly
+        config_content = config_file.read_text(encoding='utf-8-sig').strip()
+        # Also handle case where BOM wasn't stripped by encoding
         if config_content.startswith('\ufeff'):
-            config_content = config_content[1:]
+            config_content = config_content[1:].strip()
         log_debug(f"Read config: {config_content}")
         
         roles_list = []
@@ -1267,7 +1281,7 @@ def initialize_ahoy_from_globals():
     
     # Register LLM decision handler
     try:
-        llm_decision_handler = loop.run_until_complete(_get_llm_decision_handler())
+        llm_decision_handler = loop.run_until_complete(_get_llm_decision_handler(input_tokens, output_tokens))
     except Exception as e:
         log_debug(f"Error getting LLM decision handler: {e}")
         raise
@@ -1281,6 +1295,11 @@ if __name__ == "__main__":
     try:
         # Initialize tracking systems
         _initialize_tracking_systems()
+
+        # Initialize token trackers
+        input_tokens = 0
+        output_tokens = 0
+        log_debug("Token trackers initialized")
         
         # Phase 1: Initialize protocol and roles from CHIPS config
         loop = asyncio.get_event_loop()
@@ -1356,7 +1375,7 @@ if __name__ == "__main__":
         
         # Phase 3: Register LLM decision handler
         log_debug("Phase 3: Registering LLM decision handler")
-        llm_decision_handler = loop.run_until_complete(_get_llm_decision_handler())
+        llm_decision_handler = loop.run_until_complete(_get_llm_decision_handler(input_tokens, output_tokens))
         
         # Wait for other agents to start listening before enabling the adapter
         # This prevents race conditions where the InitEvent triggers decision handlers
@@ -1390,5 +1409,6 @@ if __name__ == "__main__":
         log_debug(f"Full traceback:\n{traceback.format_exc()}")
         print(f"Error: {e}")
     finally:
+        _log_final_token_counts()
         log_debug(f"Logs written to: {log_filename}")
         _cleanup_logging()

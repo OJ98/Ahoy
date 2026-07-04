@@ -7,7 +7,50 @@ Provides: message history building, user prompt construction, and adapter shutdo
 import asyncio
 import os
 import uuid
+from pathlib import Path
 from typing import Any, Dict, Optional, Union, List, Tuple
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def get_log_dir(project_root: Path, log_filename: str = None) -> Path:
+    """
+    Determine log directory based on ablation mode and log type.
+    
+    For ablation studies:
+    - generic_agent_debug logs go to ablation/baseline{X}_logs/
+    - All other logs (wrapper.log, merchant.log, etc.) go to logs/
+    
+    Args:
+        project_root: Path to project root directory
+        log_filename: Optional log filename to check type (e.g., "generic_agent_debug_*.log")
+    
+    Returns:
+        Path to appropriate log directory
+    """
+    # Check for ablation mode
+    ablation_mode = os.getenv("ABLATION_MODE", "").lower()
+    
+    # Only redirect generic_agent_debug logs to ablation folder
+    redirect_to_ablation = (
+        ablation_mode and 
+        log_filename and 
+        "generic_agent_debug" in log_filename
+    )
+    
+    if redirect_to_ablation:
+        # Convert ablation mode to log directory name
+        # e.g., "baseline0_full" -> "baseline0_logs"
+        baseline_num = ablation_mode.split('_')[0].replace('baseline', '')
+        log_dir_name = f"baseline{baseline_num}_logs"
+        log_dir = project_root / "ablation" / log_dir_name
+    else:
+        # Standard logging to main logs folder
+        log_dir = project_root / "logs"
+    
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
 
 # ============================================================================
 # MODULE-LEVEL CACHES FOR OPTIMIZATION

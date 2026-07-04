@@ -4,7 +4,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 # Virtual envs and environment files
-venv/
 env/
 .env
 # Ignore Paper files
@@ -13,3 +12,4 @@ paper/
 demo/*/results/
 # Editor folders
 .vscode/
+.github/

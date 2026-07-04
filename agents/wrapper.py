@@ -15,12 +15,11 @@ from bspl.adapter import Adapter
 from configuration import systems, agents
 from Logistics import Wrapped, RequestWrapping, Wrapper
 from lib import setup_logging
-from lib.utils import shutdown_watcher
+from lib.utils import shutdown_watcher, get_log_dir
 
 STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
 
-LOG_DIR = PROJECT_ROOT / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR = get_log_dir(PROJECT_ROOT)
 
 # Initialize logging system
 # Use fixed filename (no timestamp) so logs are overwritten each run

@@ -144,11 +144,42 @@ $claimedRoleFile = Join-Path $env:TEMP "maf_claimed_role_$($proc.Id).txt"
 
 # Start ahoy first to determine which role it will claim
 Write-Host "Starting ahoy first to determine claimed role..."
-$genericAgent = "agents/ahoy.py"
+
+# Determine which ahoy script to run
+# Priority: MAF_AHOY_SCRIPT (set by baseline scripts) > ABLATION_MODE (legacy) > default
+if ($env:MAF_AHOY_SCRIPT) {
+	$genericAgent = $env:MAF_AHOY_SCRIPT
+	Write-Host "Using MAF_AHOY_SCRIPT: $genericAgent" -ForegroundColor Cyan
+} else {
+	# Fallback to ABLATION_MODE check for backward compatibility
+	$ablationMode = $env:ABLATION_MODE
+	if ($ablationMode) {
+		Write-Host "ABLATION_MODE detected: $ablationMode" -ForegroundColor Yellow
+		switch ($ablationMode) {
+			"baseline0_full" {
+				$genericAgent = "ablation/baseline0_full/ahoy.py"
+			}
+			"baseline1_no_comments" {
+				$genericAgent = "ablation/baseline1_no_comments/ahoy.py"
+			}
+			"baseline2_no_filtering" {
+				$genericAgent = "ablation/baseline2_no_filtering/ahoy.py"
+			}
+			default {
+				$genericAgent = "agents/ahoy.py"
+			}
+		}
+	} else {
+		$genericAgent = "agents/ahoy.py"
+	}
+}
 $full = Join-Path $scriptDir $genericAgent
 if (Test-Path $full) {
 	try {
-		$scriptWorkingDir = Split-Path -Parent $full
+		# CRITICAL: Always use repository root as working directory
+		# Baseline agents (ablation/baseline*/ahoy.py) import from agents.ahoy
+		# which requires running from the project root
+		$scriptWorkingDir = $scriptDir
 		$agentName = [System.IO.Path]::GetFileNameWithoutExtension($genericAgent)
 		$agentLog = Join-Path $logDir ("$agentName.log")
 		$tempName = "$agentName-$([guid]::NewGuid().ToString()).err"
@@ -203,7 +234,14 @@ if (Test-Path $full) {
 Write-Host ""
 Write-Host "Starting hardcoded background agents (excluding roles claimed by ahoy)..."
 Write-Host "  Note: Ahoy can now claim multiple roles across different protocols"
-$agents = $allAgents | Where-Object { $_ -ne $genericAgent }
+
+# Filter out:
+# 1. The generic agent (exact match)
+# 2. agents/ahoy.py if using a custom generic agent (to avoid launching the standard ahoy when using baselines)
+$agents = $allAgents | Where-Object { 
+	$_ -ne $genericAgent -and
+	-not (($_ -eq "agents/ahoy.py") -and ($genericAgent -ne "agents/ahoy.py"))
+}
 
 $startedAny = $false
 

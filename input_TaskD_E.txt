@@ -1,0 +1,11 @@
+I need to buy and redistribute the following items:
+- A glass vase upto $100
+- A ceramic plate upto $50
+- A wooden bat upto $50
+Send only one rfq per item.
+Delivery location: 123 Main Street, Portland, OR 97201
+I want it delivered urgently.
+Once an item is received, they need to be prepared for redistribution by wrapping appropriately.
+Orders to prepare for shipment:
+1. Destination: Alice's House, Items: glass vase
+2. Destination: Bob's House, Items: ceramic plate + wooden bat

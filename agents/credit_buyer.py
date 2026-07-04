@@ -12,7 +12,7 @@ import tempfile
 from bspl.adapter import Adapter
 from bspl.adapter.core import COLORS
 from configuration import systems, agents
-from lib.utils import shutdown_watcher
+from lib.utils import shutdown_watcher, get_log_dir
 
 STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
 

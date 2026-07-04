@@ -14,13 +14,12 @@ if str(PROJECT_ROOT) not in sys.path:
 from bspl.adapter import Adapter
 from bspl.adapter.core import COLORS
 from configuration import systems, agents
-from lib.utils import shutdown_watcher
+from lib.utils import shutdown_watcher, get_log_dir
 from lib import setup_logging
 import bspl.adapter.receiver as _recv
-
-LOG_DIR = PROJECT_ROOT / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
 import tempfile
+
+LOG_DIR = get_log_dir(PROJECT_ROOT)
 
 STOP_SIGNAL_PATH = Path(tempfile.gettempdir()) / "maf_stop_signal.txt"
 

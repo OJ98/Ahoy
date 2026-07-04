@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent
 PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "purchase.bspl"
 LOGISTICS_PROTOCOL_PATH = BASE_DIR / "protocols" / "logistics.bspl"
 CREDIT_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "credit_purchase.bspl"
-FLEXIBLE_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "flexible_purchase.bspl"
+# FLEXIBLE_PURCHASE_PROTOCOL_PATH = BASE_DIR / "protocols" / "flexible_purchase.bspl"
 NETBILL_PROTOCOL_PATH = BASE_DIR / "protocols" / "netbill.bspl"
 
 # Load the Purchase protocol
@@ -31,12 +31,12 @@ logistics_protocol = logistics_spec.protocols.get("Logistics")
 logistics_spec.export("Logistics")
 from Logistics import Labeler, Merchant, Packer, Wrapper
 
-# Load the FlexiblePurchase protocol
-flexible_purchase_spec = bspl.load_file(str(FLEXIBLE_PURCHASE_PROTOCOL_PATH))
-flexible_purchase_protocol = flexible_purchase_spec.protocols.get("FlexiblePurchase")
-# Export a module named 'FlexiblePurchase' for convenient imports
-flexible_purchase_spec.export("FlexiblePurchase")
-from FlexiblePurchase import FlexibleCustomer, FlexibleMerchant
+# # Load the FlexiblePurchase protocol
+# flexible_purchase_spec = bspl.load_file(str(FLEXIBLE_PURCHASE_PROTOCOL_PATH))
+# flexible_purchase_protocol = flexible_purchase_spec.protocols.get("FlexiblePurchase")
+# # Export a module named 'FlexiblePurchase' for convenient imports
+# flexible_purchase_spec.export("FlexiblePurchase")
+# from FlexiblePurchase import FlexibleCustomer, FlexibleMerchant
 
 # Load the NetBill protocol
 netbill_spec = bspl.load_file(str(NETBILL_PROTOCOL_PATH))
@@ -59,8 +59,8 @@ agents = {
     "CreditBuyer": [("127.0.0.1", 8008)],
     "CreditSeller": [("127.0.0.1", 8009)],
     "CreditShipper": [("127.0.0.1", 8010)],
-    "FlexibleCustomer": [("127.0.0.1", 8011)],
-    "FlexibleMerchant": [("127.0.0.1", 8012)],
+    # "FlexibleCustomer": [("127.0.0.1", 8011)],
+    # "FlexibleMerchant": [("127.0.0.1", 8012)],
     "Customer": [("127.0.0.1", 8013)],
     "NetBillMerchant": [("127.0.0.1", 8014)],
     # Generic LLM agent for multiprotocol testing (ahoy.py uses this)
@@ -86,8 +86,8 @@ agents[Merchant] = agents["Merchant"]
 agents[Packer] = agents["Packer"]
 agents[Wrapper] = agents["Wrapper"]
 agents[CreditBuyer] = agents["CreditBuyer"]
-agents[FlexibleCustomer] = agents["FlexibleCustomer"]
-agents[FlexibleMerchant] = agents["FlexibleMerchant"]
+# agents[FlexibleCustomer] = agents["FlexibleCustomer"]
+# agents[FlexibleMerchant] = agents["FlexibleMerchant"]
 agents[CreditSeller] = agents["CreditSeller"]
 agents[CreditShipper] = agents["CreditShipper"]
 agents[Customer] = agents["Customer"]
@@ -170,14 +170,14 @@ systems = {
         },
         "protocol": logistics_protocol,
     },
-    "FlexiblePurchase": {
-        # Map Role objects (from the parsed protocol) to agent identities (strings)
-        "roles": {
-            flexible_purchase_protocol.roles["FlexibleCustomer"]: "FlexibleCustomer",
-            flexible_purchase_protocol.roles["FlexibleMerchant"]: "FlexibleMerchant",
-        },
-        "protocol": flexible_purchase_protocol,
-    },
+    # "FlexiblePurchase": {
+    #     # Map Role objects (from the parsed protocol) to agent identities (strings)
+    #     "roles": {
+    #         flexible_purchase_protocol.roles["FlexibleCustomer"]: "FlexibleCustomer",
+    #         flexible_purchase_protocol.roles["FlexibleMerchant"]: "FlexibleMerchant",
+    #     },
+    #     "protocol": flexible_purchase_protocol,
+    # },
     "NetBill": {
         # Map Role objects (from the parsed protocol) to agent identities (strings)
         "roles": {

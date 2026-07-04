@@ -33,11 +33,15 @@ class LLMCallTracker:
         self.max_calls = max_calls
         self.max_duration_seconds = max_duration_seconds
         self.call_count = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
         self.start_time = time.time()
     
-    def increment_call(self) -> None:
+    def increment_call(self, input_tokens: int = 0, output_tokens: int = 0) -> None:
         """Increment the call counter."""
         self.call_count += 1
+        self.input_tokens += input_tokens or 0
+        self.output_tokens += output_tokens or 0
     
     def get_elapsed_seconds(self) -> float:
         """Get elapsed time since tracker creation."""
@@ -58,7 +62,10 @@ class LLMCallTracker:
     def get_status(self) -> str:
         """Get current status: calls and elapsed time."""
         elapsed = self.get_elapsed_seconds()
-        return f"{self.call_count} messages, {elapsed:.0f}s elapsed"
+        return (
+            f"{self.call_count} messages, {elapsed:.0f}s elapsed, "
+            f"{self.input_tokens} input tokens, {self.output_tokens} output tokens"
+        )
 
 
 # Global tracker instance
@@ -156,11 +163,15 @@ class AnthropicLLMClient(LLMClient):
             lambda: self.client.messages.create(**kwargs)
         )
         response_text = message.content[0].text
+        usage = getattr(message, "usage", None)
         
         # Track the LLM call
         tracker = get_llm_tracker()
         if tracker:
-            tracker.increment_call()
+            tracker.increment_call(
+                getattr(usage, "input_tokens", 0),
+                getattr(usage, "output_tokens", 0),
+            )
         
         return response_text
 
@@ -168,13 +179,21 @@ class AnthropicLLMClient(LLMClient):
 class OpenRouterLLMClient(LLMClient):
     """OpenRouter API client for various models including Claude."""
 
-    def __init__(self, api_key: Optional[str] = None, model: str = OPENROUTER_MODEL_ID):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = OPENROUTER_MODEL_ID,
+        http_referer: Optional[str] = None,
+        app_title: Optional[str] = None,
+    ):
         """
         Initialize the OpenRouter LLM client.
 
         Args:
             api_key: API key (defaults to OPENROUTER_API_KEY environment variable)
             model: Model ID to use (defaults to anthropic/claude-3.5-haiku)
+            http_referer: Optional site URL for OpenRouter attribution
+            app_title: Optional app title for OpenRouter attribution
 
         Raises:
             ValueError: If API key is not provided and not in environment
@@ -184,6 +203,8 @@ class OpenRouterLLMClient(LLMClient):
             raise ValueError("OPENROUTER_API_KEY environment variable not set")
         self.model = model
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
+        self.http_referer = http_referer or os.getenv("OPENROUTER_HTTP_REFERER")
+        self.app_title = app_title or os.getenv("OPENROUTER_APP_TITLE")
 
     async def complete(
         self,
@@ -211,20 +232,28 @@ class OpenRouterLLMClient(LLMClient):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        if self.http_referer:
+            headers["HTTP-Referer"] = self.http_referer
+        if self.app_title:
+            headers["X-OpenRouter-Title"] = self.app_title
 
         # Run blocking API call in executor
         def _make_request():
-            response = requests.post(self.api_url, json=payload, headers=headers)
+            response = requests.post(self.api_url, json=payload, headers=headers, timeout=60)
             response.raise_for_status()
             return response.json()
 
         result = await loop.run_in_executor(None, _make_request)
         response_text = result["choices"][0]["message"]["content"]
+        usage = result.get("usage", {})
         
         # Track the LLM call
         tracker = get_llm_tracker()
         if tracker:
-            tracker.increment_call()
+            tracker.increment_call(
+                usage.get("input_tokens", usage.get("prompt_tokens", 0)),
+                usage.get("output_tokens", usage.get("completion_tokens", 0)),
+            )
         
         return response_text
 
@@ -389,7 +418,8 @@ def create_llm_client(
     """
     # Determine provider from environment or parameter
     if provider is None:
-        provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+        provider = os.getenv("LLM_PROVIDER", "anthropic")
+    provider = provider.strip().lower()
     
     if provider == "openrouter":
         # Use OpenRouter client
